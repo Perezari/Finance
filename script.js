@@ -76,6 +76,7 @@ function parseGoogleSheetsData(response) {
       notesStatus: (row[10]?.v || '').includes('✔️') ? 'positive' : 'negative'
     };
     renderCard(data, 'container');
+	document.getElementById('loader').style.display = 'none';
   } catch (err) {
     document.getElementById('container').innerHTML = '<p class="error">שגיאה בטעינת נתוני הדוח הנוכחי.</p>';
   }

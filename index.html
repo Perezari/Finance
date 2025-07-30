@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>📊 דוח פיננסי - כרטיסיות מעוצבות</title>
+  <title>📊 דוח פיננסי</title>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap');
@@ -73,7 +73,7 @@
 </head>
 <body>
 
-  <h1>📊 דוח פיננסי - עדכונים</h1>
+  <h1>דוח פיננסי 📊</h1>
   <div class="container" id="container">טוען נתונים...</div>
 
   <script>
@@ -135,7 +135,7 @@ function renderCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `
-    <div class="date">🗓️ חודש שיא צמיחה: ${data.peakGrowthDate}</div>
+    <div class="date">🗓️ חודש שיא: ${data.peakGrowthDate}</div>
     <div class="item"><strong>💰 מזומן:</strong> ${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
     <div class="item"><strong>🏦 עו"ש:</strong> ${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
     <div class="item"><strong>🏛️ פיקדון (4%):</strong> ${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>

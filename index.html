@@ -116,32 +116,39 @@
       }
     }
 
-    function renderCard(data) {
-      const container = document.getElementById('container');
-      container.innerHTML = '';
+function renderCard(data) {
+  const container = document.getElementById('container');
+  container.innerHTML = '';
 
-      // המרה לאחוז עם 2 ספרות אחרי הנקודה
-      const growthPercentFormatted = (typeof data.growthPercentRaw === 'number')
-        ? (data.growthPercentRaw * 100).toFixed(2) + '%'
-        : data.growthPercentRaw;
+  // המרה לאחוז עם 2 ספרות אחרי הנקודה
+  const growthPercentFormatted = (typeof data.growthPercentRaw === 'number')
+    ? (data.growthPercentRaw * 100).toFixed(2) + '%'
+    : data.growthPercentRaw;
 
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="date">חודש שיא צמיחה: ${data.peakGrowthDate}</div>
-        <div class="item"><strong>מזומן:</strong> ${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>עו"ש:</strong> ${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>פיקדון (4%):</strong> ${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>קרן השתלמות:</strong> ${data.savingsFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>קרן פנסיה:</strong> ${data.pensionFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>סך נכסים נוכחי:</strong> ${data.totalAssets.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>צמיחה:</strong> ${data.growth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>אחוז צמיחה:</strong> ${growthPercentFormatted}</div>
-        <div class="item"><strong>צמיחה ממוצעת:</strong> ${data.avgGrowth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item notes ${data.notesStatus === 'positive' ? '' : 'negative'}">${data.notes}</div>
-      `;
-      container.appendChild(card);
-    }
+  // קביעה של צבע לפי הערך (חיובי = ירוק, שלילי = אדום, 0 = שחור)
+  let growthColor = '#000'; // ברירת מחדל - שחור
+  if (typeof data.growthPercentRaw === 'number') {
+    if (data.growthPercentRaw > 0) growthColor = '#27ae60';    // ירוק
+    else if (data.growthPercentRaw < 0) growthColor = '#e74c3c'; // אדום
+  }
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="date">🗓️ חודש שיא צמיחה: ${data.peakGrowthDate}</div>
+    <div class="item"><strong>💰 מזומן:</strong> ${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item"><strong>🏦 עו"ש:</strong> ${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item"><strong>🏛️ פיקדון (4%):</strong> ${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item"><strong>🎓 קרן השתלמות:</strong> ${data.savingsFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item"><strong>🛡️ קרן פנסיה:</strong> ${data.pensionFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item"><strong>📈 סך נכסים נוכחי:</strong> ${data.totalAssets.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item"><strong>📊 צמיחה:</strong> ${data.growth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+	<div class="item"><strong>📉 אחוז צמיחה:</strong> <span style="color:${growthColor}; font-weight: bold;">${growthPercentFormatted}</span></div>
+    <div class="item"><strong>📅 צמיחה ממוצעת:</strong> ${data.avgGrowth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+    <div class="item notes ${data.notesStatus === 'positive' ? '' : 'negative'}">${data.notes}</div>
+  `;
+  container.appendChild(card);
+}
 
     const script = document.createElement('script');
     script.src = "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&sheet=סיכום%20חסכונות&gid=425922794";

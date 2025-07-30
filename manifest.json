@@ -1,0 +1,16 @@
+{
+  "name": "דוח פיננסי",
+  "short_name": "דוח",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#16a085",
+  "icons": [
+    {
+      "src": "https://perezari.github.io/Finance/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "lang": "he"
+}

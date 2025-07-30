@@ -3,144 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>דוח השקעות - Google Sheets</title>
-
-  <!-- favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>📊</text></svg>" />
-
-  <!-- פונט מקצועי -->
-  <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet" />
+  <title>📊 דוח פיננסי - כרטיסיות מעוצבות</title>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap');
     body {
-      font-family: 'Varela Round', sans-serif;
+      font-family: 'Heebo', sans-serif;
+      background: #f0f2f5;
       margin: 0;
-      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      color: #333;
-      overflow-x: hidden;
+      padding: 20px;
+      color: #2c3e50;
       direction: rtl;
     }
-
     h1 {
-      margin: 30px 0 10px;
-      font-size: 2.5rem;
       text-align: center;
-      user-select: none;
+      font-size: 2.5rem;
+      color: #34495e;
+      margin-bottom: 30px;
     }
-
-    .iframe-container {
-      position: relative;
-      width: 90vw;
-      height: 80vh;
-      max-width: 1600px;
-      border-radius: 15px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-      overflow: hidden;
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
       background: white;
-      border: 1px solid #ccc;
-      user-select: none;
-    }
-
-    iframe {
-      width: 117.65%; /* 100 / 0.85 */
-      height: 117.65%;
-      border: none;
       border-radius: 15px;
-      animation: fadeIn 0.7s ease forwards;
-      opacity: 0;
-      transform: scale(0.85);
-      transform-origin: top left;
-      backface-visibility: hidden;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      padding: 24px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+      transition: 0.25s ease;
     }
-
-    #loader {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+    .date {
+      font-weight: 700;
+      font-size: 1.3rem;
+      color: #1abc9c;
+      border-bottom: 2px solid #1abc9c;
+      margin-bottom: 16px;
+      padding-bottom: 6px;
+    }
+    .item {
+      margin-bottom: 12px;
+      font-size: 1.05rem;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 6px;
+    }
+    .item:last-child {
+      border: none;
+      margin-bottom: 0;
+    }
+    .notes {
       display: flex;
       align-items: center;
-      gap: 10px;
-      user-select: none;
-      font-weight: 600;
-      font-size: 1rem;
-      color: #007bff;
+      font-weight: bold;
+      color: #27ae60;
+      margin-top: 10px;
     }
-
-    #loader .spinner {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid #007bff;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
-    }
-
-    .note {
-      margin-top: 15px;
-      font-size: 0.9rem;
-      color: #555;
-      user-select: none;
-      text-align: center;
-      max-width: 600px;
-      padding-bottom: 20px;
-    }
-
-    /* רספונסיביות לנייד */
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 2rem;
-      }
-
-      .iframe-container {
-        width: 100vw;
-        height: 85vh;
-        border-radius: 0;
-      }
-
-      iframe {
-        width: 100%;
-        height: 100%;
-        transform: none;
-      }
+    .notes.negative {
+      color: #e74c3c;
     }
   </style>
 </head>
 <body>
 
-  <h1>דוח השקעות - Google Sheets 📊</h1>
+  <h1>📊 דוח פיננסי - עדכונים</h1>
+  <div class="container" id="container">טוען נתונים...</div>
 
-  <div class="iframe-container">
-    <div id="loader">
-      <div class="spinner"></div>
-      טוען דוח...
-    </div>
-    <iframe
-      src="https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/edit?usp=sharing"
-      allowfullscreen
-      scrolling="no"
-      onload="document.getElementById('loader').style.display='none'; this.style.opacity=1;"
-    ></iframe>
-  </div>
+  <script>
+    function parseGoogleSheetsData(response) {
+      try {
+        const row = response.table.rows[0].c;
 
-  <p class="note">אם אינך רואה את הדוח, ודא שגוגל שיטס מוגדר כציבורי או אפשר שיתוף באמצעות הטמעה (Embed).</p>
+        const cash = row[0]?.v || 0;
+        const currentAcc = row[1]?.v || 0;
+        const deposit = row[2]?.v || 0;
+        const savingsFund = row[3]?.v || 0;
+        const pensionFund = row[4]?.v || 0;
+        const totalAssets = row[5]?.v || 0;
+        const growth = row[6]?.v || 0;
+        const growthPercentRaw = row[7]?.v || 0;
+        const peakGrowthDate = row[8]?.f || '—';
+        const avgGrowth = row[9]?.v || 0;
+        const notes = row[10]?.v || 'אין הערות';
+
+        const isPositive = notes.includes('✅');
+
+        const data = {
+          cash,
+          currentAcc,
+          deposit,
+          savingsFund,
+          pensionFund,
+          totalAssets,
+          growth,
+          growthPercentRaw,
+          peakGrowthDate,
+          avgGrowth,
+          notes,
+          notesStatus: isPositive ? 'positive' : 'negative'
+        };
+
+        renderCard(data);
+      } catch (err) {
+        document.getElementById('container').innerHTML = '<p style="color:red;">שגיאה בעיבוד הנתונים</p>';
+      }
+    }
+
+    function renderCard(data) {
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+
+      // המרה לאחוז עם 2 ספרות אחרי הנקודה
+      const growthPercentFormatted = (typeof data.growthPercentRaw === 'number')
+        ? (data.growthPercentRaw * 100).toFixed(2) + '%'
+        : data.growthPercentRaw;
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="date">חודש שיא צמיחה: ${data.peakGrowthDate}</div>
+        <div class="item"><strong>מזומן:</strong> ${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>עו"ש:</strong> ${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>פיקדון (4%):</strong> ${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>קרן השתלמות:</strong> ${data.savingsFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>קרן פנסיה:</strong> ${data.pensionFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>סך נכסים נוכחי:</strong> ${data.totalAssets.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>צמיחה:</strong> ${data.growth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item"><strong>אחוז צמיחה:</strong> ${growthPercentFormatted}</div>
+        <div class="item"><strong>צמיחה ממוצעת:</strong> ${data.avgGrowth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+        <div class="item notes ${data.notesStatus === 'positive' ? '' : 'negative'}">${data.notes}</div>
+      `;
+      container.appendChild(card);
+    }
+
+    const script = document.createElement('script');
+    script.src = "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&sheet=סיכום%20חסכונות&gid=425922794";
+    script.onerror = () => {
+      document.getElementById('container').innerHTML = '<p style="color:red;">אירעה שגיאה בטעינת הדו"ח.</p>';
+    };
+    document.body.appendChild(script);
+
+    window.google = { visualization: { Query: { setResponse: parseGoogleSheetsData } } };
+  </script>
 
 </body>
 </html>

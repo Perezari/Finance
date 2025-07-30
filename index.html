@@ -8,101 +8,142 @@
   <style>
     /* --- אותו CSS שלך --- */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap');
-    body {
-      font-family: 'Heebo', sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 20px;
-      color: #2c3e50;
-      direction: rtl;
-    }
-    h1 {
-      text-align: center;
-      font-size: 2.5rem;
-      color: #34495e;
-      margin-bottom: 30px;
-    }
-    .nav-buttons {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .nav-button {
-      background: linear-gradient(135deg, #3498db, #2980b9);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      margin: 0 10px;
-      border-radius: 25px;
-      font-family: 'Heebo', sans-serif;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-    }
-    .nav-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-    }
-    .nav-button.active {
-      background: linear-gradient(135deg, #1abc9c, #16a085);
-      box-shadow: 0 4px 15px rgba(26, 188, 156, 0.3);
-    }
-    .container {
-      max-width: 700px;
-      margin: 0 auto;
-    }
-    .card {
-      background: white;
-      border-radius: 15px;
-      padding: 24px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.1);
-      transition: 0.25s ease;
-      margin-top: 10px;
-    }
-    .date {
-      font-weight: 700;
-      font-size: 1.3rem;
-      color: #1abc9c;
-      border-bottom: 2px solid #1abc9c;
-      margin-bottom: 16px;
-      padding-bottom: 6px;
-    }
-    .item {
-      margin-bottom: 12px;
-      font-size: 1.05rem;
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid #ecf0f1;
-      padding-bottom: 6px;
-    }
-    .item:last-child {
-      border: none;
-      margin-bottom: 0;
-    }
-    .notes {
-      display: flex;
-      align-items: center;
-      font-weight: bold;
-      color: #27ae60;
-      margin-top: 10px;
-    }
-    .notes.negative {
-      color: #e74c3c;
-    }
-    #history-view {
-      display: none;
-    }
-    select {
-      font-size: 1.1rem;
-      padding: 8px 12px;
-      border-radius: 10px;
-      border: 1.5px solid #1abc9c;
-      margin-bottom: 20px;
-      width: 100%;
-      max-width: 300px;
-      direction: ltr;
-    }
+body {
+  font-family: 'Heebo', sans-serif;
+  background: #fafafa;
+  margin: 0;
+  padding: 16px 12px;
+  color: #34495e;
+  direction: rtl;
+  line-height: 1.4;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  color: #2c3e50;
+  margin-bottom: 24px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.nav-buttons {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.nav-button {
+  background: linear-gradient(135deg, #2a80b9, #1c5980);
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  margin: 0 6px;
+  border-radius: 20px;
+  font-family: 'Heebo', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 3px 10px rgba(42, 128, 185, 0.25);
+  min-width: 100px;
+}
+
+.nav-button:hover {
+  background: linear-gradient(135deg, #1c5980, #14506a);
+  box-shadow: 0 5px 16px rgba(28, 89, 128, 0.35);
+  transform: translateY(-1.5px);
+}
+
+.nav-button.active {
+  background: linear-gradient(135deg, #16a085, #0e6d5c);
+  box-shadow: 0 4px 14px rgba(22, 160, 133, 0.35);
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+  transition: box-shadow 0.3s ease;
+  margin-top: 12px;
+  font-size: 0.95rem;
+}
+
+.card:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.date {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #16a085;
+  border-bottom: 2px solid #16a085;
+  margin-bottom: 14px;
+  padding-bottom: 5px;
+  letter-spacing: 0.02em;
+}
+
+.item {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #e0e6e9;
+  padding-bottom: 5px;
+  color: #4a5a6a;
+}
+
+.item:last-child {
+  border: none;
+  margin-bottom: 0;
+}
+
+.notes {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #27ae60;
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.notes.negative {
+  color: #e74c3c;
+}
+
+#history-view {
+  display: none;  /* מסתיר כברירת מחדל */
+  text-align: center;
+}
+
+select {
+  display: inline-block;
+  width: 280px;
+  max-width: 100%;
+}
+
+select {
+  font-size: 1rem;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #16a085;
+  margin-bottom: 18px;
+  width: 100%;
+  max-width: 280px;
+  direction: ltr;
+  outline-offset: 2px;
+  transition: border-color 0.3s ease;
+}
+
+select:focus {
+  border-color: #1abc9c;
+  box-shadow: 0 0 6px rgba(22, 188, 156, 0.5);
+}
+
   </style>
 </head>
 <body>

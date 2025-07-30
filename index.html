@@ -6,6 +6,7 @@
   <title>📊 דוח פיננסי</title>
 
   <style>
+    /* --- אותו CSS שלך --- */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap');
     body {
       font-family: 'Heebo', sans-serif;
@@ -48,10 +49,7 @@
       box-shadow: 0 4px 15px rgba(26, 188, 156, 0.3);
     }
     .container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-      max-width: 1200px;
+      max-width: 700px;
       margin: 0 auto;
     }
     .card {
@@ -60,10 +58,7 @@
       padding: 24px;
       box-shadow: 0 4px 18px rgba(0,0,0,0.1);
       transition: 0.25s ease;
-    }
-    .card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      margin-top: 10px;
     }
     .date {
       font-weight: 700;
@@ -98,73 +93,15 @@
     #history-view {
       display: none;
     }
-    .history-card {
-      background: white;
-      border-radius: 15px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.1);
-      transition: 0.25s ease;
-      border-right: 5px solid #3498db;
-    }
-    .history-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    .history-date {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #2c3e50;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .history-item {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 12px;
-      padding: 8px 0;
-    }
-    .history-label {
-      font-weight: 600;
-      color: #34495e;
-    }
-    .history-value {
-      text-align: left;
-      font-weight: 700;
-    }
-    .growth-positive {
-      color: #27ae60;
-    }
-    .growth-negative {
-      color: #e74c3c;
-    }
-    .growth-neutral {
-      color: #7f8c8d;
-    }
-    .total-assets {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 12px;
-      border-radius: 10px;
-      margin-top: 12px;
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: 700;
-    }
-    .loading {
-      text-align: center;
-      font-size: 1.2rem;
-      color: #7f8c8d;
-      padding: 40px;
-    }
-    .error {
-      color: #e74c3c;
-      text-align: center;
-      padding: 40px;
+    select {
       font-size: 1.1rem;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1.5px solid #1abc9c;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 300px;
+      direction: ltr;
     }
   </style>
 </head>
@@ -177,241 +114,172 @@
     <button class="nav-button" onclick="showHistory()">📈 היסטוריה</button>
   </div>
 
-  <div id="current-view">
-    <div class="container" id="container">טוען נתונים...</div>
+  <div id="current-view" class="container">
+    <div id="container">טוען נתונים...</div>
   </div>
 
-  <div id="history-view">
-    <div id="history-container" class="loading">טוען היסטוריה...</div>
+  <div id="history-view" class="container">
+    <select id="dateSelect" onchange="onDateChange()">
+      <option value="" disabled selected>בחר תאריך</option>
+    </select>
+    <div id="history-card" class="card" style="display:none;"></div>
   </div>
 
-  <script>
-    let currentView = 'current';
+<script>
+  let currentView = 'current';
+  let historyData = [];
 
-    function showCurrentReport() {
-      document.getElementById('current-view').style.display = 'block';
-      document.getElementById('history-view').style.display = 'none';
-      document.querySelectorAll('.nav-button')[0].classList.add('active');
-      document.querySelectorAll('.nav-button')[1].classList.remove('active');
-      currentView = 'current';
+  function showCurrentReport() {
+    currentView = 'current';
+    document.getElementById('current-view').style.display = 'block';
+    document.getElementById('history-view').style.display = 'none';
+    document.querySelectorAll('.nav-button')[0].classList.add('active');
+    document.querySelectorAll('.nav-button')[1].classList.remove('active');
+  }
+
+  function showHistory() {
+    currentView = 'history';
+    document.getElementById('current-view').style.display = 'none';
+    document.getElementById('history-view').style.display = 'block';
+    document.querySelectorAll('.nav-button')[0].classList.remove('active');
+    document.querySelectorAll('.nav-button')[1].classList.add('active');
+    
+    if (historyData.length === 0) {
+      loadHistoryData();
+    }
+  }
+
+  function renderCard(data, containerId = 'container') {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    const growthPercentFormatted = (typeof data.growthPercentRaw === 'number')
+      ? (data.growthPercentRaw * 100).toFixed(2) + '%'
+      : data.growthPercentRaw;
+
+    let growthColor = '#000';
+    if (typeof data.growthPercentRaw === 'number') {
+      if (data.growthPercentRaw > 0) growthColor = '#27ae60';
+      else if (data.growthPercentRaw < 0) growthColor = '#e74c3c';
     }
 
-    function showHistory() {
-      document.getElementById('current-view').style.display = 'none';
-      document.getElementById('history-view').style.display = 'block';
-      document.querySelectorAll('.nav-button')[0].classList.remove('active');
-      document.querySelectorAll('.nav-button')[1].classList.add('active');
-      currentView = 'history';
-      
-      if (!window.historyLoaded) {
-        loadHistoryData();
-      }
+    const notesClass = data.notesStatus === 'positive' ? '' : 'negative';
+
+    // תוכן הכרטיסיה בלי העטיפה
+    const innerHTML = `
+      <div class="date">🗓️ חודש שיא: ${data.peakGrowthDate || data.date}</div>
+      <div class="item"><strong>💰 מזומן:</strong> ${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>🏦 עו"ש:</strong> ${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>🏛️ פיקדון (4%):</strong> ${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>🎓 קרן השתלמות:</strong> ${data.savingsFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>🛡️ קרן פנסיה:</strong> ${data.pensionFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>📈 סך נכסים נוכחי:</strong> ${data.totalAssets.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>📊 צמיחה:</strong> ${data.growth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
+      <div class="item"><strong>📉 אחוז צמיחה:</strong> <span style="color:${growthColor}; font-weight: bold;">${growthPercentFormatted}</span></div>
+      ${data.avgGrowth !== undefined ? `<div class="item"><strong>📅 צמיחה ממוצעת:</strong> ${data.avgGrowth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>` : ''}
+      ${data.notes ? `<div class="item notes ${notesClass}">${data.notes}</div>` : ''}
+    `;
+
+    if (containerId === 'container') {
+      // דוח נוכחי - עטיפה בכרטיסיה
+      container.innerHTML = `<div class="card">${innerHTML}</div>`;
+    } else {
+      // דוח היסטוריה - כבר עטוף בכרטיסיה (האלמנט עצמו הוא כרטיסיה)
+      container.innerHTML = innerHTML;
     }
+  }
 
-    function parseGoogleSheetsData(response) {
-      try {
-        const row = response.table.rows[0].c;
+  function parseGoogleSheetsData(response) {
+    try {
+      const row = response.table.rows[0].c;
+      const data = {
+        cash: row[0]?.v || 0,
+        currentAcc: row[1]?.v || 0,
+        deposit: row[2]?.v || 0,
+        savingsFund: row[3]?.v || 0,
+        pensionFund: row[4]?.v || 0,
+        totalAssets: row[5]?.v || 0,
+        growth: row[6]?.v || 0,
+        growthPercentRaw: row[7]?.v || 0,
+        peakGrowthDate: row[8]?.f || '—',
+        avgGrowth: row[9]?.v || 0,
+        notes: row[10]?.v || 'אין הערות',
+        notesStatus: (row[10]?.v || '').includes('✅') ? 'positive' : 'negative'
+      };
+      renderCard(data, 'container');
+    } catch (err) {
+      document.getElementById('container').innerHTML = '<p class="error">שגיאה בעיבוד הנתונים</p>';
+    }
+  }
 
-        const cash = row[0]?.v || 0;
-        const currentAcc = row[1]?.v || 0;
-        const deposit = row[2]?.v || 0;
-        const savingsFund = row[3]?.v || 0;
-        const pensionFund = row[4]?.v || 0;
-        const totalAssets = row[5]?.v || 0;
-        const growth = row[6]?.v || 0;
-        const growthPercentRaw = row[7]?.v || 0;
-        const peakGrowthDate = row[8]?.f || '—';
-        const avgGrowth = row[9]?.v || 0;
-        const notes = row[10]?.v || 'אין הערות';
-
-        const isPositive = notes.includes('✅');
-
-        const data = {
-          cash,
-          currentAcc,
-          deposit,
-          savingsFund,
-          pensionFund,
-          totalAssets,
-          growth,
-          growthPercentRaw,
-          peakGrowthDate,
-          avgGrowth,
-          notes,
-          notesStatus: isPositive ? 'positive' : 'negative'
+  function parseHistoryData(response) {
+    try {
+      const rows = response.table.rows;
+      historyData = rows.map(row => {
+        const c = row.c;
+        return {
+          date: c[0]?.f || c[0]?.v || '—',
+          cash: c[1]?.v || 0,
+          currentAcc: c[2]?.v || 0,
+          deposit: c[3]?.v || 0,
+          savingsFund: c[4]?.v || 0,
+          pensionFund: c[5]?.v || 0,
+          totalAssets: c[6]?.v || 0,
+          growth: c[7]?.v || 0,
+          growthPercentRaw: c[8]?.v || 0,
         };
+      });
 
-        renderCard(data);
-      } catch (err) {
-        document.getElementById('container').innerHTML = '<p class="error">שגיאה בעיבוד הנתונים</p>';
+      populateDateSelect();
+    } catch (err) {
+      document.getElementById('history-view').innerHTML = '<p class="error">שגיאה בעיבוד נתוני ההיסטוריה</p>';
+    }
+  }
+
+  function populateDateSelect() {
+    const select = document.getElementById('dateSelect');
+    select.innerHTML = '<option value="" disabled selected>בחר תאריך</option>';
+    historyData.forEach((item, index) => {
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = item.date;
+      select.appendChild(option);
+    });
+  }
+
+  function onDateChange() {
+    const select = document.getElementById('dateSelect');
+    const idx = select.value;
+    if (idx !== '') {
+      const data = historyData[idx];
+      if (data) {
+        document.getElementById('history-card').style.display = 'block';
+        renderCard(data, 'history-card');
       }
     }
+  }
 
-    function parseHistoryData(response) {
-      try {
-        const historyContainer = document.getElementById('history-container');
-        historyContainer.innerHTML = '';
-        
-        const rows = response.table.rows;
-        
-        if (!rows || rows.length === 0) {
-          historyContainer.innerHTML = '<p class="error">לא נמצאו נתוני היסטוריה</p>';
-          return;
-        }
-
-        rows.forEach((row, index) => {
-          if (!row.c) return;
-          
-          const date = row.c[0]?.f || row.c[0]?.v || `תאריך ${index + 1}`;
-          const cash = row.c[1]?.v || 0;
-          const currentAcc = row.c[2]?.v || 0;
-          const deposit = row.c[3]?.v || 0;
-          const savingsFund = row.c[4]?.v || 0;
-          const pensionFund = row.c[5]?.v || 0;
-          const totalAssets = row.c[6]?.v || 0;
-          const growth = row.c[7]?.v || 0;
-          const growthPercent = row.c[8]?.v || 0;
-
-          renderHistoryCard({
-            date,
-            cash,
-            currentAcc,
-            deposit,
-            savingsFund,
-            pensionFund,
-            totalAssets,
-            growth,
-            growthPercent
-          });
-        });
-
-        window.historyLoaded = true;
-      } catch (err) {
-        document.getElementById('history-container').innerHTML = '<p class="error">שגיאה בעיבוד נתוני ההיסטוריה</p>';
-      }
-    }
-
-    function renderCard(data) {
-      const container = document.getElementById('container');
-      container.innerHTML = '';
-
-      const growthPercentFormatted = (typeof data.growthPercentRaw === 'number')
-        ? (data.growthPercentRaw * 100).toFixed(2) + '%'
-        : data.growthPercentRaw;
-
-      let growthColor = '#000';
-      if (typeof data.growthPercentRaw === 'number') {
-        if (data.growthPercentRaw > 0) growthColor = '#27ae60';
-        else if (data.growthPercentRaw < 0) growthColor = '#e74c3c';
-      }
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="date">🗓️ חודש שיא: ${data.peakGrowthDate}</div>
-        <div class="item"><strong>💰 מזומן:</strong> ${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>🏦 עו"ש:</strong> ${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>🏛️ פיקדון (4%):</strong> ${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>🎓 קרן השתלמות:</strong> ${data.savingsFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>🛡️ קרן פנסיה:</strong> ${data.pensionFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>📈 סך נכסים נוכחי:</strong> ${data.totalAssets.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>📊 צמיחה:</strong> ${data.growth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item"><strong>📉 אחוז צמיחה:</strong> <span style="color:${growthColor}; font-weight: bold;">${growthPercentFormatted}</span></div>
-        <div class="item"><strong>📅 צמיחה ממוצעת:</strong> ${data.avgGrowth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        <div class="item notes ${data.notesStatus === 'positive' ? '' : 'negative'}">${data.notes}</div>
-      `;
-      container.appendChild(card);
-    }
-
-    function renderHistoryCard(data) {
-      const historyContainer = document.getElementById('history-container');
-      
-      const growthPercentFormatted = (typeof data.growthPercent === 'number')
-        ? (data.growthPercent * 100).toFixed(2) + '%'
-        : data.growthPercent + '%';
-
-      let growthClass = 'growth-neutral';
-      if (typeof data.growthPercent === 'number') {
-        if (data.growthPercent > 0) growthClass = 'growth-positive';
-        else if (data.growthPercent < 0) growthClass = 'growth-negative';
-      }
-
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      card.innerHTML = `
-        <div class="history-date">📅 ${data.date}</div>
-        <div class="history-item">
-          <div class="history-label">💰 מזומן:</div>
-          <div class="history-value">${data.cash.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        </div>
-        <div class="history-item">
-          <div class="history-label">🏦 עו"ש:</div>
-          <div class="history-value">${data.currentAcc.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        </div>
-        <div class="history-item">
-          <div class="history-label">🏛️ פיקדון (4%):</div>
-          <div class="history-value">${data.deposit.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        </div>
-        <div class="history-item">
-          <div class="history-label">🎓 קרן השתלמות:</div>
-          <div class="history-value">${data.savingsFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        </div>
-        <div class="history-item">
-          <div class="history-label">🛡️ קרן פנסיה:</div>
-          <div class="history-value">${data.pensionFund.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        </div>
-        <div class="history-item">
-          <div class="history-label">📊 צמיחה:</div>
-          <div class="history-value ${growthClass}">${data.growth.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}</div>
-        </div>
-        <div class="history-item">
-          <div class="history-label">📉 אחוז צמיחה:</div>
-          <div class="history-value ${growthClass}">${growthPercentFormatted}</div>
-        </div>
-        <div class="total-assets">
-          📈 סך נכסים: ${data.totalAssets.toLocaleString('he-IL', {style:'currency', currency:'ILS'})}
-        </div>
-      `;
-      historyContainer.appendChild(card);
-    }
-
-    function loadHistoryData() {
-      const script = document.createElement('script');
-      script.src = "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&sheet=מעקב%20חסכונות&gid=353171664&tq=select%20*";
-      script.onerror = () => {
-        document.getElementById('history-container').innerHTML = '<p class="error">אירעה שגיאה בטעינת נתוני ההיסטוריה.</p>';
-      };
-      document.body.appendChild(script);
-
-      // Override the callback for history data
-      const originalCallback = window.google?.visualization?.Query?.setResponse;
-      window.google = { 
-        visualization: { 
-          Query: { 
-            setResponse: function(response) {
-              if (currentView === 'history') {
-                parseHistoryData(response);
-              } else if (originalCallback) {
-                originalCallback(response);
-              } else {
-                parseGoogleSheetsData(response);
-              }
-            }
-          } 
-        } 
-      };
-    }
-
-    // Load current report data
+  function loadHistoryData() {
     const script = document.createElement('script');
-    script.src = "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&sheet=סיכום%20חסכונות&gid=425922794";
+    script.src = "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&sheet=מעקב%20חסכונות&gid=353171664";
     script.onerror = () => {
-      document.getElementById('container').innerHTML = '<p class="error">אירעה שגיאה בטעינת הדו"ח.</p>';
+      document.getElementById('history-view').innerHTML = '<p class="error">אירעה שגיאה בטעינת נתוני ההיסטוריה.</p>';
     };
     document.body.appendChild(script);
 
-    window.google = { visualization: { Query: { setResponse: parseGoogleSheetsData } } };
-  </script>
+    window.google = { visualization: { Query: { setResponse: parseHistoryData } } };
+  }
+
+  // טעינת הדוח הנוכחי בהתחלה
+  const script = document.createElement('script');
+  script.src = "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&sheet=סיכום%20חסכונות&gid=425922794";
+  script.onerror = () => {
+    document.getElementById('container').innerHTML = '<p class="error">אירעה שגיאה בטעינת הדו"ח.</p>';
+  };
+  document.body.appendChild(script);
+
+  window.google = { visualization: { Query: { setResponse: parseGoogleSheetsData } } };
+</script>
 
 </body>
 </html>

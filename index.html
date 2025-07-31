@@ -14,8 +14,11 @@
 
   <h1>דוח פיננסי 🏦</h1>
   
+  <!-- כפתור הסתרה בפינה -->
+<button id="blur-toggle" class="floating-toggle" onclick="toggleBlur()">🔓</button>
+
   <div class="nav-buttons">
-    <button class="nav-button active" onclick="showCurrentReport()">דוח נוכחי</button>
+    <button class="nav-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
     <button class="nav-button" onclick="showHistory()">היסטוריית דוחות</button>
   </div>
 
@@ -25,7 +28,24 @@
 </div>
 
   <div id="current-view" class="container">
-    <div id="container">טוען נתונים...</div>
+    <div id="container"></div>
+	<template id="card-template">
+	<div class="card blur-data">
+    <div class="date">📅 תאריך שיא: <span data-field="peakGrowthDate"></span></div>
+    <div class="item"><strong>💰 מזומן:</strong> <span class="blur-text" data-field="cash"></span></div>
+    <div class="item"><strong>🏦 עו"ש:</strong> <span class="blur-text" data-field="currentAcc"></span></div>
+    <div class="item"><strong>🏛️ פקדון (4%):</strong> <span class="blur-text" data-field="deposit"></span></div>
+    <div class="item"><strong>🎓 קרן השתלמות:</strong> <span class="blur-text" data-field="savingsFund"></span></div>
+    <div class="item"><strong>🛡️ קרן פנסיה:</strong> <span class="blur-text" data-field="pensionFund"></span></div>
+    <div class="item highlighted"><strong>📈 סה"כ נכסים:</strong> <span class="blur-text" data-field="totalAssets"></span></div>
+    <div class="item"><strong></strong><span class="blur-text"></span></div>
+    <div class="item"><strong>📈 צמיחה:</strong> <span class="blur-text" data-field="growth"></span></div>
+    <div class="item"><strong>📈 אחוז צמיחה:</strong> <span class="blur-text" style="font-weight: bold;" data-field="growthPercent"></span></div>
+    <div class="item avg-growth" style="display:none;"><strong>📈 צמיחה ממוצעת:</strong> <span class="blur-text" data-field="avgGrowth"></span></div>
+    <div class="item notes highlighted-yellow" style="display:none;"><span class="blur-text" data-field="notes"></span></div>
+  </div>
+</template>
+
   </div>
 
   <div id="history-view" class="container">

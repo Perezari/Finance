@@ -18,7 +18,10 @@ h1 {
 }
 
 .nav-buttons {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 24px;
 }
 
@@ -26,16 +29,24 @@ h1 {
   background: linear-gradient(135deg, #2a80b9, #1c5980);
   color: #fff;
   border: none;
-  padding: 10px 22px;
-  margin: 0 6px;
+  padding: 10px 16px;
   border-radius: 20px;
   font-family: 'Heebo', sans-serif;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s ease;
   box-shadow: 0 3px 10px rgba(42, 128, 185, 0.25);
-  min-width: 100px;
+  flex: 0 0 auto;
+}
+
+/* למסכים קטנים (כמו אייפון) — עד 480px */
+@media screen and (max-width: 480px) {
+  .nav-button {
+    flex: 1 0 40%; /* 2 או 3 בשורה */
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
 }
 
 .nav-button:hover {
@@ -87,6 +98,15 @@ h1 {
   color: #4a5a6a;
 }
 
+.item.highlighted {
+  border: 2px dashed #16a085;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #e0f2f1;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
 .item:last-child {
   border: none;
   margin-bottom: 0;
@@ -99,6 +119,17 @@ h1 {
   color: #27ae60;
   margin-top: 8px;
   font-size: 0.95rem;
+}
+
+.item.notes.highlighted-yellow {
+  border: 2px dashed #f1c40f; /* צהוב בוהק */
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff9db; /* רקע צהבהב בהיר */
+  margin-top: 12px;
+  font-weight: 700;
+  color: #7f6f00; /* צבע טקסט כהה לצהוב */
+  display: block; /* כדי לאפשר רוחב מלא */
 }
 
 .notes.negative {
@@ -161,4 +192,39 @@ select:focus {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.blur-data .blur-text {
+  filter: blur(6px);
+  transition: filter 0.3s ease;
+}
+
+.floating-toggle {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 40px;
+  height: 40px;
+  background: transparent;  /* רקע שקוף */
+  color: #16a085;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: color 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.floating-toggle:focus,
+.floating-toggle:hover,
+.floating-toggle:active {
+  background: transparent;
+  color: #0e6d5c;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }

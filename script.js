@@ -22,36 +22,48 @@ function showHistory() {
 }
 
 function renderCard(data, containerId = 'container') {
-  const container = document.getElementById(containerId);
-  container.innerHTML = '';
+  const template = document.getElementById('card-template');
+  const clone = template.content.cloneNode(true);
 
-  const growthPercentFormatted = typeof data.growthPercentRaw === 'number'
+  // הצגת שדה תאריך שיא או תאריך רגיל
+  clone.querySelector('[data-field="peakGrowthDate"]').textContent = data.peakGrowthDate || data.date;
+
+  // מילוי ערכים מספריים
+  const fields = ["cash", "currentAcc", "deposit", "savingsFund", "pensionFund", "totalAssets", "growth"];
+  fields.forEach(field => {
+    const el = clone.querySelector(`[data-field="${field}"]`);
+    if (el) el.textContent = formatCurrency(data[field]);
+  });
+
+  // אחוז צמיחה עם צבע
+  const growthPercent = typeof data.growthPercentRaw === 'number'
     ? (data.growthPercentRaw * 100).toFixed(2) + '%'
     : data.growthPercentRaw;
+  const growthColor = data.growthPercentRaw > 0 ? '#27ae60' :
+                      data.growthPercentRaw < 0 ? '#e74c3c' : '#000';
+  const percentEl = clone.querySelector('[data-field="growthPercent"]');
+  percentEl.textContent = growthPercent;
+  percentEl.style.color = growthColor;
 
-  let growthColor = '#000';
-  if (typeof data.growthPercentRaw === 'number') {
-    if (data.growthPercentRaw > 0) growthColor = '#27ae60';
-    else if (data.growthPercentRaw < 0) growthColor = '#e74c3c';
+  // צמיחה ממוצעת – אם יש
+  if (data.avgGrowth !== undefined) {
+    const avgEl = clone.querySelector('.avg-growth');
+    avgEl.style.display = '';
+    avgEl.querySelector('[data-field="avgGrowth"]').textContent = formatCurrency(data.avgGrowth);
   }
 
-  const notesClass = data.notesStatus === 'positive' ? '' : 'negative';
+  // הערות – אם יש
+  if (data.notes) {
+    const notesEl = clone.querySelector('.notes');
+    notesEl.style.display = '';
+    notesEl.classList.toggle('negative', !data.notes.includes('✔️'));
+    notesEl.querySelector('[data-field="notes"]').textContent = data.notes;
+  }
 
-  const innerHTML = `
-    <div class="date">📅 תאריך שיא: ${data.peakGrowthDate || data.date}</div>
-    <div class="item"><strong>💰 מזומן:</strong> ${formatCurrency(data.cash)}</div>
-    <div class="item"><strong>🏦 עו"ש:</strong> ${formatCurrency(data.currentAcc)}</div>
-    <div class="item"><strong>🏛️ פקדון (4%):</strong> ${formatCurrency(data.deposit)}</div>
-    <div class="item"><strong>🎓 קרן השתלמות:</strong> ${formatCurrency(data.savingsFund)}</div>
-    <div class="item"><strong>🛡️ קרן פנסיה:</strong> ${formatCurrency(data.pensionFund)}</div>
-    <div class="item"><strong>📈 סה"כ נכסים:</strong> ${formatCurrency(data.totalAssets)}</div>
-    <div class="item"><strong>📈 צמיחה:</strong> ${formatCurrency(data.growth)}</div>
-    <div class="item"><strong>📈 אחוז צמיחה:</strong> <span style="color:${growthColor}; font-weight: bold;">${growthPercentFormatted}</span></div>
-    ${data.avgGrowth !== undefined ? `<div class="item"><strong>📈 צמיחה ממוצעת:</strong> ${formatCurrency(data.avgGrowth)}</div>` : ''}
-    ${data.notes ? `<div class="item notes ${notesClass}">${data.notes}</div>` : ''}
-  `;
-
-  container.innerHTML = `<div class="card">${innerHTML}</div>`;
+  // הכנסת התוצאה לדף
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  container.appendChild(clone);
 }
 
 function formatCurrency(value) {
@@ -148,3 +160,20 @@ currentReportScript.onerror = () => {
 document.body.appendChild(currentReportScript);
 
 window.google = { visualization: { Query: { setResponse: parseGoogleSheetsData } } };
+
+let blurActive = true;
+
+function toggleBlur() {
+  blurActive = !blurActive;
+
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    if (blurActive) {
+      card.classList.add('blur-data');
+      document.getElementById('blur-toggle').innerText = '🔓';
+    } else {
+      card.classList.remove('blur-data');
+      document.getElementById('blur-toggle').innerText = '🔒';
+    }
+  });
+}

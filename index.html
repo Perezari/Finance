@@ -9,8 +9,6 @@
 
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 
@@ -22,7 +20,6 @@
   <div class="nav-buttons">
     <button class="nav-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
     <button class="nav-button" onclick="showHistory()">היסטוריית דוחות</button>
-	<button class="nav-button" onclick="showChart()">תצוגת גרף 📉</button>
   </div>
 
 <div id="loader" class="loader-wrapper">
@@ -57,22 +54,6 @@
     </select>
     <div id="history-card" class="card" style="display:none;"></div>
   </div>
-  
-<div id="chart-view" class="container" style="display: none;">
-  <div id="plotlyChart" style="width: 100%; height: 400px;"></div>
-</div>
-
-<nav class="bottom-nav">
-  <button class="bottom-nav-button active" onclick="showCurrentReport()" aria-label="דוח נוכחי 📊">
-    📊<span>דוח נוכחי</span>
-  </button>
-  <button class="bottom-nav-button" onclick="showHistory()" aria-label="היסטוריית דוחות 📜">
-    📜<span>היסטוריה</span>
-  </button>
-  <button class="bottom-nav-button" onclick="showChart()" aria-label="תצוגת גרף 📉">
-    📉<span>גרף</span>
-  </button>
-</nav>
 
   <script src="config.js"></script>
   <script src="script.js"></script>

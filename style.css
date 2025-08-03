@@ -228,3 +228,56 @@ select:focus {
   box-shadow: none !important;
   border: none !important;
 }
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #16a085;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.15);
+  direction: rtl;
+  z-index: 10000;
+}
+
+.bottom-nav-button {
+  background: none;
+  border: none;
+  color: #d1f2eb;
+  font-family: 'Heebo', sans-serif;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.3s ease;
+  flex-grow: 1;
+}
+
+.bottom-nav-button span {
+  font-size: 11px;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.bottom-nav-button:hover,
+.bottom-nav-button:focus {
+  color: #ffffff;
+  outline: none;
+}
+
+.bottom-nav-button.active {
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 0 #0e6d5c;
+}
+
+/* הרחקת התוכן מלמעלה מהמקום של התפריט התחתון */
+body {
+  padding-bottom: 70px; /* קצת יותר מהגובה של התפריט כדי לא לכסות תוכן */
+}

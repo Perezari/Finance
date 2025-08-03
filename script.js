@@ -5,20 +5,125 @@ function showCurrentReport() {
   currentView = 'current';
   document.getElementById('current-view').style.display = 'block';
   document.getElementById('history-view').style.display = 'none';
+  document.getElementById('chart-view').style.display = 'none';
   document.querySelectorAll('.nav-button')[0].classList.add('active');
   document.querySelectorAll('.nav-button')[1].classList.remove('active');
+    setActiveNavButton(0);
 }
 
 function showHistory() {
   currentView = 'history';
   document.getElementById('current-view').style.display = 'none';
   document.getElementById('history-view').style.display = 'block';
+  document.getElementById('chart-view').style.display = 'none'; // <-- שורה שנוספה
   document.querySelectorAll('.nav-button')[0].classList.remove('active');
   document.querySelectorAll('.nav-button')[1].classList.add('active');
+  setActiveNavButton(1);
 
   if (historyData.length === 0) {
     loadHistoryData();
   }
+}
+
+function showChart() {
+  currentView = 'chart';
+  document.getElementById('current-view').style.display = 'none';
+  document.getElementById('history-view').style.display = 'none';
+  document.getElementById('chart-view').style.display = 'block';
+
+  document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.nav-button')[2].classList.add('active');
+  setActiveNavButton(2);
+
+  if (historyData.length > 0) {
+    renderChart();
+  } else {
+    loadHistoryData();
+  }
+}
+
+function renderChart() {
+  // מקצר תאריכים לפורמט "חודש/שנה" בעברית
+  const labels = historyData.map(item =>
+    new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: '2-digit' })
+  ).reverse();
+
+  const growth = historyData.map(item => item.growth).reverse();
+
+  const trace = {
+    x: labels,
+    y: growth,
+    type: 'bar',
+    marker: {
+      color: '#16a085'
+    }
+  };
+
+  const layout = {
+    title: 'צמיחה חודשית',
+    xaxis: {
+      tickangle: -45,
+      automargin: true,
+      tickfont: { 
+        size: 10,
+        family: 'Heebo, sans-serif'
+      }
+    },
+    yaxis: {
+      tickformat: ',.0f'
+    },
+    margin: { t: 50, l: 40, r: 20, b: 80 },
+    paper_bgcolor: 'rgba(0,0,0,0)',   // רקע שקוף
+    plot_bgcolor: 'rgba(0,0,0,0)',    // רקע שקוף
+    font: {
+      family: 'Heebo, sans-serif'
+    }
+  };
+
+  const config = {
+    responsive: true,
+    displaylogo: false
+  };
+
+  Plotly.newPlot('plotlyChart', [trace], layout, config);
+}
+
+function downloadChart() {
+  const link = document.createElement('a');
+  link.href = document.getElementById('growthChart').toDataURL('image/png');
+  link.download = 'growth_chart.png';
+  link.click();
+}
+
+async function downloadChartAsPDF() {
+  const canvas = document.getElementById('growthChart');
+
+  // צור קנבס זמני ברזולוציה גבוהה
+  const tmpCanvas = document.createElement('canvas');
+  const scale = 3; // x3 רזולוציה
+  tmpCanvas.width = canvas.width * scale;
+  tmpCanvas.height = canvas.height * scale;
+
+  const tmpCtx = tmpCanvas.getContext('2d');
+  tmpCtx.scale(scale, scale);
+  tmpCtx.drawImage(canvas, 0, 0);
+
+  const imageData = tmpCanvas.toDataURL('image/png');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const imgWidth = pageWidth - 20;
+  const imgHeight = tmpCanvas.height * imgWidth / tmpCanvas.width;
+
+  pdf.text("📈 גרף צמיחה פיננסית", pageWidth / 2, 20, { align: "center" });
+  pdf.addImage(imageData, 'PNG', 10, 30, imgWidth, imgHeight);
+  pdf.save('growth_chart.pdf');
 }
 
 function renderCard(data, containerId = 'container') {
@@ -112,6 +217,9 @@ function parseHistoryData(response) {
       };
     });
     populateDateSelect();
+	if (currentView === 'chart') {
+  renderChart();
+}
   } catch (err) {
     document.getElementById('history-view').innerHTML = '<p class="error">שגיאה בטעינת היסטוריית הדוחות.</p>';
   }
@@ -175,5 +283,12 @@ function toggleBlur() {
       card.classList.remove('blur-data');
       document.getElementById('blur-toggle').innerText = '🔒';
     }
+  });
+}
+
+function setActiveNavButton(index) {
+  const buttons = document.querySelectorAll('.bottom-nav-button');
+  buttons.forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
   });
 }

@@ -182,3 +182,167 @@ function toggleBlur() {
     }
   });
 }
+
+function toggleForm() {
+  const form = document.getElementById('new-entry-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function submitNewEntry() {
+  // הצגת ה-loader
+  document.getElementById('loader').style.display = 'flex';
+
+  // השבתת כפתור השליחה למניעת לחיצות נוספות
+  const sendBtn = document.querySelector("#new-entry-form button[onclick='submitNewEntry()']");
+  sendBtn.disabled = true;
+  sendBtn.textContent = "טוען...";
+
+  // איסוף הערכים מהשדות
+  const date = document.getElementById('newDate').value;
+  const cash = document.getElementById('newCash').value;
+  const currentAcc = document.getElementById('newCurrentAcc').value;
+  const deposit = document.getElementById('newDeposit').value;
+  const savingsFund = document.getElementById('newSavingsFund').value;
+  const pensionFund = document.getElementById('newPensionFund').value;
+
+  const sheetName = "מעקב חסכונות";
+
+  const params = new URLSearchParams({
+    date,
+    cash,
+    currentAcc,
+    deposit,
+    savingsFund,
+    pensionFund,
+    sheetName,
+    callback: "handleResponse"
+  });
+
+  // יצירת תג script להצגת קריאה ל-GAS עם JSONP
+  const script = document.createElement("script");
+  script.src = "https://script.google.com/macros/s/AKfycbxUgXo-527OKTpQlq05TmgmF771MKh7T9IROe4Erl4LI-zDmUgZAzURnhanZcY3vVmm9g/exec?" + params.toString();
+
+  // טיפול בשגיאה
+  script.onerror = () => {
+    alert("שגיאה בשליחת הבקשה.");
+    // הסתרת ה-loader
+    document.getElementById('loader').style.display = 'none';
+    // אפשר שוב את הכפתור ושחזר את הטקסט
+    sendBtn.disabled = false;
+    sendBtn.textContent = "📤 שלח";
+  };
+
+  // הוספת התג ל-document, פעולה שמתחילה את הבקשה
+  document.body.appendChild(script);
+}
+
+function showSuccessMessage(msg) {
+  const messageDiv = document.getElementById('success-message');
+  messageDiv.querySelector('p').textContent = msg;
+  messageDiv.style.display = 'flex';
+  
+  // מחזירים אנימציה (מפעילים את הקלאס מחדש)
+  messageDiv.style.animation = 'none';
+  // טריגר רילואוד של אנימציה
+  void messageDiv.offsetWidth;
+  messageDiv.style.animation = null;
+
+  // אחרי 3 שניות מוסתר אוטומטית
+  setTimeout(() => {
+    messageDiv.style.display = 'none';
+  }, 3000);
+}
+
+function handleResponse(response) {
+  const loader = document.getElementById('loader');
+  const loaderAnim = loader.querySelector('.loader-animation');
+  const checkmark = loader.querySelector('.loader-checkmark');
+  const crossmark = loader.querySelector('.loader-cross');
+  const loaderText = document.getElementById('loader-text');
+  const sendBtn = document.querySelector("#new-entry-form button[onclick='submitNewEntry()']");
+
+  sendBtn.disabled = false;
+  sendBtn.textContent = "📤 שלח";
+
+  if (response.status === "success") {
+    loaderAnim.style.display = 'none';
+    checkmark.style.display = 'block';
+    crossmark.style.display = 'none';
+    loaderText.textContent = 'בוצע בהצלחה!';
+
+    setTimeout(() => {
+      loader.style.display = 'none';
+      loaderAnim.style.display = 'block';
+      checkmark.style.display = 'none';
+      loaderText.textContent = 'טוען נתונים...';
+    }, 1500);
+
+    toggleForm();
+    loadHistoryData();
+  } else {
+    loaderAnim.style.display = 'none';
+    checkmark.style.display = 'none';
+    crossmark.style.display = 'block';
+    loaderText.textContent = 'אירעה שגיאה!';
+
+    setTimeout(() => {
+      loader.style.display = 'none';
+      loaderAnim.style.display = 'block';
+      crossmark.style.display = 'none';
+      loaderText.textContent = 'טוען נתונים...';
+    }, 1500);
+  }
+}
+
+function deleteSelectedMonth() {
+  const select = document.getElementById('dateSelect');
+  const selectedIndex = select.value;
+
+  if (selectedIndex === '' || selectedIndex === null) {
+    alert('אנא בחר חודש למחיקה.');
+    return;
+  }
+
+  const confirmed = confirm('האם אתה בטוח שברצונך למחוק את החודש שנבחר? פעולה זו לא ניתנת לביטול.');
+  if (!confirmed) return;
+
+  const dateToDelete = historyData[selectedIndex].date;
+  const sheetName = "מעקב חסכונות";
+
+  // הצגת loader או השבתת כפתור אם רוצים
+  document.getElementById('loader').style.display = 'flex';
+
+  const params = new URLSearchParams({
+    date: dateToDelete,
+    sheetName,
+    callback: 'handleDeleteResponse'
+  });
+
+  const script = document.createElement('script');
+  script.src = 'https://script.google.com/macros/s/AKfycbxZmVixNQ5iNH9ChOCiWaio3CmO2bFUOV3_vusfgDuwPEbqlyrCEEpy9u0DDA9wZGJOdg/exec' + '?' + params.toString();
+
+  script.onerror = () => {
+    alert('אירעה שגיאה בשליחת בקשת המחיקה.');
+    document.getElementById('loader').style.display = 'none';
+  };
+
+  document.body.appendChild(script);
+}
+
+function handleDeleteResponse(response) {
+  document.getElementById('loader').style.display = 'none';
+
+  if (response.status === 'success') {
+    alert(response.message);
+
+    // מחיקת הפריט מ-historyData ועדכון התצוגה
+    const select = document.getElementById('dateSelect');
+    const selectedIndex = select.value;
+    historyData.splice(selectedIndex, 1);
+    populateDateSelect();
+    document.getElementById('history-card').style.display = 'none';
+    select.value = '';
+  } else {
+    alert('שגיאה: ' + response.message);
+  }
+}

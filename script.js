@@ -1,20 +1,25 @@
 let currentView = 'current';
 let historyData = [];
 
+function setActiveTab(selectedButton) {
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  selectedButton.classList.add('active');
+}
+
 function showCurrentReport() {
   currentView = 'current';
   document.getElementById('current-view').style.display = 'block';
   document.getElementById('history-view').style.display = 'none';
-  document.querySelectorAll('.nav-button')[0].classList.add('active');
-  document.querySelectorAll('.nav-button')[1].classList.remove('active');
+  setActiveTab(document.querySelector('.tab-button:nth-child(1)'));
 }
 
 function showHistory() {
   currentView = 'history';
   document.getElementById('current-view').style.display = 'none';
   document.getElementById('history-view').style.display = 'block';
-  document.querySelectorAll('.nav-button')[0].classList.remove('active');
-  document.querySelectorAll('.nav-button')[1].classList.add('active');
+  setActiveTab(document.querySelector('.tab-button:nth-child(2)'));
 
   if (historyData.length === 0) {
     loadHistoryData();

@@ -27,6 +27,11 @@
   <p>טוען נתונים...</p>
 </div>
 
+<div class="tabs">
+  <button class="tab-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
+  <button class="tab-button" onclick="showHistory()">היסטוריה</button>
+</div>
+
   <div id="current-view" class="container">
     <div id="container"></div>
 	<template id="card-template">
@@ -47,7 +52,7 @@
 </template>
 
   </div>
-
+  
   <div id="history-view" class="container">
     <select id="dateSelect" onchange="onDateChange()">
       <option value="" disabled selected>בחר תאריך</option>

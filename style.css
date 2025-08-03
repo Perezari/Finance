@@ -228,3 +228,67 @@ select:focus {
   box-shadow: none !important;
   border: none !important;
 }
+
+  /* רקע כללי של הטאב */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    background-color: #16a085;
+    border-radius: 8px;
+    max-width: 400px;
+    margin: 20px auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    user-select: none;
+  }
+
+  /* כל כפתור טאבים */
+  .tab-button {
+    flex: 1;
+    padding: 12px 0;
+    border: none;
+    background: transparent;
+    color: #d0f0ef;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: color 0.3s ease, background-color 0.3s ease;
+    position: relative;
+  }
+
+  /* מצב עכבר מעל (hover) */
+  .tab-button:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+  }
+
+  /* הכפתור הנבחר (Active) */
+  .tab-button.active {
+    color: white;
+    font-weight: 700;
+  }
+
+  /* קו תחתון נעה לכפתור הנבחר */
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 15%;
+    width: 70%;
+    height: 3px;
+    background-color: #ffffff;
+    border-radius: 2px;
+    transition: left 0.3s ease, width 0.3s ease;
+  }
+
+  /* התאמה לנייד */
+  @media (max-width: 480px) {
+    .tabs {
+      max-width: 100%;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .tab-button {
+      font-size: 14px;
+      padding: 10px 0;
+    }
+  }

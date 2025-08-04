@@ -136,11 +136,36 @@ function populateDateSelect() {
 function onDateChange() {
   const select = document.getElementById('dateSelect');
   const idx = select.value;
+
   if (idx !== '') {
     const data = historyData[idx];
     if (data) {
-      document.getElementById('history-card').style.display = 'block';
-      renderCard(data, 'history-card');
+      const historyCard = document.getElementById('history-card');
+      historyCard.style.display = 'block';
+      historyCard.innerHTML = ''; // נקה תוכן קודם
+
+      renderCard(data, 'history-card'); // צור כרטיס הדוח
+
+      // כפתור מחיקה
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '🗑️ מחק חודש';
+      deleteBtn.className = 'delete-button';
+      deleteBtn.style.marginTop = '12px';
+      deleteBtn.onclick = () => deleteSelectedMonth(idx);
+      historyCard.appendChild(deleteBtn);
+
+      // כפתור סגירה משופר
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✖';
+      closeBtn.className = 'close-button';
+      closeBtn.onclick = () => {
+        historyCard.style.display = 'none';
+        select.value = ''; // איפוס הבחירה
+      };
+
+      // הוספה וסידור
+      historyCard.style.position = 'relative';
+      historyCard.appendChild(closeBtn);
     }
   }
 }
@@ -294,12 +319,9 @@ function handleResponse(response) {
   }
 }
 
-function deleteSelectedMonth() {
-  const select = document.getElementById('dateSelect');
-  const selectedIndex = select.value;
-
-  if (selectedIndex === '' || selectedIndex === null) {
-    alert('אנא בחר חודש למחיקה.');
+function deleteSelectedMonth(selectedIndex) {
+  if (!selectedIndex || !historyData[selectedIndex]) {
+    // לא מציגים כלום – פשוט לא עושים כלום
     return;
   }
 
@@ -309,8 +331,9 @@ function deleteSelectedMonth() {
   const dateToDelete = historyData[selectedIndex].date;
   const sheetName = "מעקב חסכונות";
 
-  // הצגת loader או השבתת כפתור אם רוצים
-  document.getElementById('loader').style.display = 'flex';
+  // הצג loader
+  const loader = document.getElementById('loader');
+  loader.style.display = 'flex';
 
   const params = new URLSearchParams({
     date: dateToDelete,
@@ -322,27 +345,53 @@ function deleteSelectedMonth() {
   script.src = 'https://script.google.com/macros/s/AKfycbxZmVixNQ5iNH9ChOCiWaio3CmO2bFUOV3_vusfgDuwPEbqlyrCEEpy9u0DDA9wZGJOdg/exec' + '?' + params.toString();
 
   script.onerror = () => {
-    alert('אירעה שגיאה בשליחת בקשת המחיקה.');
-    document.getElementById('loader').style.display = 'none';
+    loader.style.display = 'none';
+    console.error('אירעה שגיאה בשליחת בקשת המחיקה.');
+    // אפשר גם להציג הודעה בתוך הכרטיס במקום alert
   };
 
   document.body.appendChild(script);
 }
 
 function handleDeleteResponse(response) {
-  document.getElementById('loader').style.display = 'none';
+  const loader = document.getElementById('loader');
+  const loaderAnim = loader.querySelector('.loader-animation');
+  const checkmark = loader.querySelector('.loader-checkmark');
+  const crossmark = loader.querySelector('.loader-cross');
+  const loaderText = document.getElementById('loader-text');
 
   if (response.status === 'success') {
-    alert(response.message);
+    loaderAnim.style.display = 'none';
+    checkmark.style.display = 'block';
+    crossmark.style.display = 'none';
+    loaderText.textContent = 'החודש נמחק בהצלחה!';
 
-    // מחיקת הפריט מ-historyData ועדכון התצוגה
-    const select = document.getElementById('dateSelect');
-    const selectedIndex = select.value;
-    historyData.splice(selectedIndex, 1);
-    populateDateSelect();
-    document.getElementById('history-card').style.display = 'none';
-    select.value = '';
+    setTimeout(() => {
+      loader.style.display = 'none';
+      loaderAnim.style.display = 'block';
+      checkmark.style.display = 'none';
+      loaderText.textContent = 'טוען נתונים...';
+
+      // מחיקת הפריט מ-historyData ועדכון התצוגה
+      const select = document.getElementById('dateSelect');
+      const selectedIndex = select.value;
+      historyData.splice(selectedIndex, 1);
+      populateDateSelect();
+      document.getElementById('history-card').style.display = 'none';
+      select.value = '';
+    }, 1500);
+
   } else {
-    alert('שגיאה: ' + response.message);
+    loaderAnim.style.display = 'none';
+    checkmark.style.display = 'none';
+    crossmark.style.display = 'block';
+    loaderText.textContent = 'אירעה שגיאה במחיקה!';
+
+    setTimeout(() => {
+      loader.style.display = 'none';
+      loaderAnim.style.display = 'block';
+      crossmark.style.display = 'none';
+      loaderText.textContent = 'טוען נתונים...';
+    }, 1500);
   }
 }

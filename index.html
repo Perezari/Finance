@@ -63,13 +63,15 @@
   </div>
 
   <div id="history-view" class="container">
+<div class="card controls-wrapper">
   <div class="controls-row">
     <select id="dateSelect" onchange="onDateChange()">
       <option value="" disabled selected>בחר תאריך</option>
     </select>
     <button onclick="toggleForm()" class="add-button">➕ הוסף חודש חדש</button>
-    <button onclick="deleteSelectedMonth()" class="delete-button">🗑️ מחק חודש</button>
   </div>
+</div>
+
 
   <div id="new-entry-form" class="card" style="display:none; margin-top: 16px;">
       <h3>הכנס נתונים לחודש חדש:</h3>

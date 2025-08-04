@@ -456,6 +456,12 @@ select:focus {
   cursor: pointer;
   z-index: 10;
   transition: background 0.2s ease;
+
+  display: flex;              /* חדש */
+  align-items: center;        /* מרכז אנכי */
+  justify-content: center;    /* מרכז אופקי */
+  padding: 0;                 /* מבטל ריווח פנימי שעלול לשבש */
+  line-height: 1;             /* גובה שורה צפוף יותר */
 }
 
 .close-button:hover {

@@ -1,5 +1,79 @@
 let currentView = 'current';
 let historyData = [];
+let dynamicCategories = [];
+let categoriesLoaded = false;
+
+function loadCategories() {
+  const script = document.createElement('script');
+  script.src = CONFIG.categoriesUrl;
+  script.onerror = () => {
+    console.error("שגיאה בטעינת קטגוריות.");
+  };
+  document.body.appendChild(script);
+
+  window.google = window.google || {};
+  window.google.visualization = window.google.visualization || {};
+  window.google.visualization.Query = {
+    setResponse: handleCategoriesResponse
+  };
+}
+
+function generateDynamicInputs() {
+  const container = document.getElementById('dynamic-fields');
+  container.innerHTML = ''; // נקה שדות קודמים
+
+  dynamicCategories.forEach(cat => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'form-group';
+    wrapper.innerHTML = `
+      <label>${cat.icon || ''} ${cat.label}: 
+        <input type="number" id="new_${cat.id}" />
+      </label>
+    `;
+    container.appendChild(wrapper);
+  });
+}
+
+function handleCategoriesResponse(response) {
+  console.log("תגובה מהגיליון התקבלה:", response);
+
+  try {
+    const rows = response.table?.rows || [];
+
+    // נדלג על השורה הראשונה שהיא שורת כותרות
+    const dataRows = rows.slice(1);
+
+    dynamicCategories = dataRows.map(row => {
+      const id = row.c[0]?.v;
+      const label = row.c[1]?.v;
+      const icon = row.c[2]?.v;
+
+      console.log("שורה:", { id, label, icon });
+
+      return { id, label, icon };
+    }).filter(item => item.id);
+
+    categoriesLoaded = true;
+	generateDynamicInputs();
+    console.log("✅ קטגוריות נטענו:", dynamicCategories);
+
+    // נטען את הדוח הנוכחי רק אחרי שקטגוריות נטענו
+    loadCurrentReport();
+  } catch (err) {
+    console.error("❌ שגיאה בעיבוד הקטגוריות:", err);
+  }
+}
+
+function loadCurrentReport() {
+  const currentReportScript = document.createElement('script');
+  currentReportScript.src = CONFIG.currentReportUrl;
+  currentReportScript.onerror = () => {
+    document.getElementById('container').innerHTML = '<p class="error">שגיאה בטעינת הדוח הנוכחי.</p>';
+  };
+  document.body.appendChild(currentReportScript);
+
+  window.google = { visualization: { Query: { setResponse: parseGoogleSheetsData } } };
+}
 
 function setActiveTab(selectedButton) {
   document.querySelectorAll('.tab-button').forEach(btn => {
@@ -27,48 +101,79 @@ function showHistory() {
 }
 
 function renderCard(data, containerId = 'container') {
-  const template = document.getElementById('card-template');
-  const clone = template.content.cloneNode(true);
+  console.log('dynamicCategories:', dynamicCategories);
 
-  // הצגת שדה תאריך שיא או תאריך רגיל
-  clone.querySelector('[data-field="peakGrowthDate"]').textContent = data.peakGrowthDate || data.date;
+  const card = document.createElement('div');
+  card.className = 'card blur-data';
 
-  // מילוי ערכים מספריים
-  const fields = ["cash", "currentAcc", "deposit", "savingsFund", "pensionFund", "totalAssets", "growth"];
-  fields.forEach(field => {
-    const el = clone.querySelector(`[data-field="${field}"]`);
-    if (el) el.textContent = formatCurrency(data[field]);
+  // שורה: תאריך
+  const dateDiv = document.createElement('div');
+  dateDiv.className = 'date';
+  dateDiv.innerHTML = `📅 תאריך שיא: <span>${data.peakGrowthDate || data.date || ''}</span>`;
+  card.appendChild(dateDiv);
+
+  // שורות דינמיות לפי הקטגוריות
+  dynamicCategories.forEach(cat => {
+    const div = document.createElement('div');
+    div.className = 'item';
+
+    const label = `<strong>${cat.icon || ''} ${cat.label}:</strong>`;
+    const value = `<span class="blur-text">${formatCurrency(data[cat.id] || 0)}</span>`;
+
+    div.innerHTML = `${label} ${value}`;
+    card.appendChild(div);
   });
 
-  // אחוז צמיחה עם צבע
+  // סה"כ נכסים
+  const totalDiv = document.createElement('div');
+  totalDiv.className = 'item highlighted';
+  totalDiv.innerHTML = `<strong>📈 סה"כ נכסים:</strong> <span class="blur-text">${formatCurrency(data.totalAssets)}</span>`;
+  card.appendChild(totalDiv);
+  
+  // ריק
+  const emptyDiv = document.createElement('div');
+  emptyDiv.className = 'item';
+  emptyDiv.innerHTML = `<strong></strong><span class="blur-text"></span>`;
+  card.appendChild(emptyDiv);
+
+  // צמיחה
+  const growthDiv = document.createElement('div');
+  growthDiv.className = 'item';
+  growthDiv.innerHTML = `<strong>📈 צמיחה:</strong> <span class="blur-text">${formatCurrency(data.growth)}</span>`;
+  card.appendChild(growthDiv);
+
+  // אחוז צמיחה בצבע
   const growthPercent = typeof data.growthPercentRaw === 'number'
     ? (data.growthPercentRaw * 100).toFixed(2) + '%'
     : data.growthPercentRaw;
   const growthColor = data.growthPercentRaw > 0 ? '#27ae60' :
                       data.growthPercentRaw < 0 ? '#e74c3c' : '#000';
-  const percentEl = clone.querySelector('[data-field="growthPercent"]');
-  percentEl.textContent = growthPercent;
-  percentEl.style.color = growthColor;
+  const percentDiv = document.createElement('div');
+  percentDiv.className = 'item';
+  percentDiv.innerHTML = `<strong>📈 אחוז צמיחה:</strong> <span class="blur-text" style="font-weight: bold; color: ${growthColor};">${growthPercent}</span>`;
+  card.appendChild(percentDiv);
 
-  // צמיחה ממוצעת – אם יש
+  // צמיחה ממוצעת אם קיימת
   if (data.avgGrowth !== undefined) {
-    const avgEl = clone.querySelector('.avg-growth');
-    avgEl.style.display = '';
-    avgEl.querySelector('[data-field="avgGrowth"]').textContent = formatCurrency(data.avgGrowth);
+    const avgDiv = document.createElement('div');
+    avgDiv.className = 'item avg-growth';
+    avgDiv.innerHTML = `<strong>📈 צמיחה ממוצעת:</strong> <span class="blur-text">${formatCurrency(data.avgGrowth)}</span>`;
+    card.appendChild(avgDiv);
   }
 
-  // הערות – אם יש
+  // הערות אם יש
   if (data.notes) {
-    const notesEl = clone.querySelector('.notes');
-    notesEl.style.display = '';
-    notesEl.classList.toggle('negative', !data.notes.includes('✔️'));
-    notesEl.querySelector('[data-field="notes"]').textContent = data.notes;
+    const notesDiv = document.createElement('div');
+    notesDiv.className = 'item notes highlighted-yellow';
+    notesDiv.innerHTML = `<span>${data.notes}</span>`;
+    if (!data.notes.includes('✔️')) notesDiv.classList.add('negative');
+    card.appendChild(notesDiv);
   }
 
-  // הכנסת התוצאה לדף
+  // הכנסת לתוך הקונטיינר
   const container = document.getElementById(containerId);
   container.innerHTML = '';
-  container.appendChild(clone);
+  container.appendChild(card);
 }
 
 function formatCurrency(value) {
@@ -93,7 +198,7 @@ function parseGoogleSheetsData(response) {
       notesStatus: (row[10]?.v || '').includes('✔️') ? 'positive' : 'negative'
     };
     renderCard(data, 'container');
-	document.getElementById('loader').style.display = 'none';
+    document.getElementById('loader').style.display = 'none';
   } catch (err) {
     document.getElementById('container').innerHTML = '<p class="error">שגיאה בטעינת נתוני הדוח הנוכחי.</p>';
   }
@@ -181,15 +286,10 @@ function loadHistoryData() {
   window.google = { visualization: { Query: { setResponse: parseHistoryData } } };
 }
 
-// טעינת הדוח הנוכחי ברגע שנטען הדף
-const currentReportScript = document.createElement('script');
-currentReportScript.src = CONFIG.currentReportUrl;
-currentReportScript.onerror = () => {
-  document.getElementById('container').innerHTML = '<p class="error">שגיאה בטעינת הדוח הנוכחי.</p>';
-};
-document.body.appendChild(currentReportScript);
+loadCategories(); // ⬅️ נטען את הקטגוריות קודם
 
-window.google = { visualization: { Query: { setResponse: parseGoogleSheetsData } } };
+// *** הסרתי את טעינת הדוח הנוכחי הישירה כאן ***
+// היא תטען רק ב-loadCurrentReport() אחרי טעינת הקטגוריות
 
 let blurActive = true;
 
@@ -214,50 +314,34 @@ function toggleForm() {
 }
 
 function submitNewEntry() {
-  // הצגת ה-loader
   document.getElementById('loader').style.display = 'flex';
 
-  // השבתת כפתור השליחה למניעת לחיצות נוספות
   const sendBtn = document.querySelector("#new-entry-form button[onclick='submitNewEntry()']");
   sendBtn.disabled = true;
   sendBtn.textContent = "טוען...";
 
-  // איסוף הערכים מהשדות
   const date = document.getElementById('newDate').value;
-  const cash = document.getElementById('newCash').value;
-  const currentAcc = document.getElementById('newCurrentAcc').value;
-  const deposit = document.getElementById('newDeposit').value;
-  const savingsFund = document.getElementById('newSavingsFund').value;
-  const pensionFund = document.getElementById('newPensionFund').value;
-
   const sheetName = "מעקב חסכונות";
 
-  const params = new URLSearchParams({
-    date,
-    cash,
-    currentAcc,
-    deposit,
-    savingsFund,
-    pensionFund,
-    sheetName,
-    callback: "handleResponse"
+  const params = new URLSearchParams({ date, sheetName, callback: "handleResponse" });
+
+  // לולאה על כל הקטגוריות כדי להוסיף את הערכים
+  dynamicCategories.forEach(cat => {
+    const input = document.getElementById(`new_${cat.id}`);
+    const value = input ? input.value : '';
+    params.append(cat.id, value || 0);
   });
 
-  // יצירת תג script להצגת קריאה ל-GAS עם JSONP
   const script = document.createElement("script");
-  script.src = "https://script.google.com/macros/s/AKfycbxUgXo-527OKTpQlq05TmgmF771MKh7T9IROe4Erl4LI-zDmUgZAzURnhanZcY3vVmm9g/exec?" + params.toString();
+  script.src = CONFIG.AddNewMonth + params.toString();
 
-  // טיפול בשגיאה
   script.onerror = () => {
     alert("שגיאה בשליחת הבקשה.");
-    // הסתרת ה-loader
     document.getElementById('loader').style.display = 'none';
-    // אפשר שוב את הכפתור ושחזר את הטקסט
     sendBtn.disabled = false;
     sendBtn.textContent = "📤 שלח";
   };
 
-  // הוספת התג ל-document, פעולה שמתחילה את הבקשה
   document.body.appendChild(script);
 }
 
@@ -342,7 +426,7 @@ function deleteSelectedMonth(selectedIndex) {
   });
 
   const script = document.createElement('script');
-  script.src = 'https://script.google.com/macros/s/AKfycbxZmVixNQ5iNH9ChOCiWaio3CmO2bFUOV3_vusfgDuwPEbqlyrCEEpy9u0DDA9wZGJOdg/exec' + '?' + params.toString();
+  script.src = CONFIG.DeleteMonth + '?' + params.toString();
 
   script.onerror = () => {
     loader.style.display = 'none';

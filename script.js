@@ -313,9 +313,11 @@ function toggleBlur() {
   cards.forEach(card => {
     if (blurActive) {
       card.classList.add('blur-data');
+      card.classList.remove('unblurred');
       document.getElementById('blur-toggle').innerText = '🔓';
     } else {
       card.classList.remove('blur-data');
+      card.classList.add('unblurred');
       document.getElementById('blur-toggle').innerText = '🔒';
     }
   });

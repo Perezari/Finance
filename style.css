@@ -1,6 +1,6 @@
 body {
   font-family: 'Heebo', sans-serif;
-  background: #fafafa;
+  background: transparent;
   margin: 0;
   padding: 16px 12px;
   color: #34495e;
@@ -155,6 +155,16 @@ select:focus {
   backface-visibility: hidden;
   transform: translateZ(0);
   outline: none;
+}
+
+.unblurred {
+  filter: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: none !important;
+  border: none !important;
+  backface-visibility: visible !important;
+  transform: none !important;
 }
 
 .floating-toggle {

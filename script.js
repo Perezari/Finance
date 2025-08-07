@@ -304,25 +304,6 @@ function loadHistoryData() {
 
 loadCategories(); // ⬅️ נטען את הקטגוריות קודם
 
-let blurActive = true;
-
-function toggleBlur() {
-  blurActive = !blurActive;
-
-  const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
-    if (blurActive) {
-      card.classList.add('blur-data');
-      card.classList.remove('unblurred');
-      document.getElementById('blur-toggle').innerText = '🔓';
-    } else {
-      card.classList.remove('blur-data');
-      card.classList.add('unblurred');
-      document.getElementById('blur-toggle').innerText = '🔒';
-    }
-  });
-}
-
 function toggleForm() {
   const form = document.getElementById('new-entry-form');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';

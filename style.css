@@ -149,24 +149,6 @@ select:focus {
   100% { transform: rotate(360deg); }
 }
 
-.blur-data .blur-text {
-  filter: blur(6px);
-  transition: filter 0.3s ease;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  outline: none;
-}
-
-.unblurred {
-  filter: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  background: none !important;
-  border: none !important;
-  backface-visibility: visible !important;
-  transform: none !important;
-}
-
 .floating-toggle {
   position: fixed;
   top: 16px;

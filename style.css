@@ -152,6 +152,9 @@ select:focus {
 .blur-data .blur-text {
   filter: blur(6px);
   transition: filter 0.3s ease;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  outline: none;
 }
 
 .floating-toggle {

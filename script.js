@@ -109,7 +109,7 @@ function renderCard(data, containerId = 'container') {
   // שורה: תאריך
   const dateDiv = document.createElement('div');
   dateDiv.className = 'date';
-  dateDiv.innerHTML = `📅 תאריך שיא: <span>${data.peakGrowthDate || data.date || ''}</span>`;
+  dateDiv.innerHTML = `📅 דוח אחרון: <span>${data.lastDate || data.date || ''}</span>`;
   card.appendChild(dateDiv);
 
   // שורות דינמיות לפי הקטגוריות
@@ -123,7 +123,14 @@ function renderCard(data, containerId = 'container') {
     div.innerHTML = `${label} ${value}`;
     card.appendChild(div);
   });
-
+  
+const liquidAssets = data.cash + data.currentAcc + data.savingsFund;
+const liquidPercent = data.totalAssets ? ((liquidAssets / data.totalAssets) * 100).toFixed(1) + '%' : '0%';
+const liquidDiv = document.createElement('div');
+liquidDiv.className = 'item';
+liquidDiv.innerHTML = `<strong>💧 נכסים נזילים:</strong> <span class="blur-text">${formatCurrency(liquidAssets)} (${liquidPercent})</span>`;
+card.appendChild(liquidDiv);
+  
   // סה"כ נכסים
   const totalDiv = document.createElement('div');
   totalDiv.className = 'item highlighted';
@@ -160,6 +167,14 @@ function renderCard(data, containerId = 'container') {
     avgDiv.innerHTML = `<strong>📈 צמיחה ממוצעת:</strong> <span class="blur-text">${formatCurrency(data.avgGrowth)}</span>`;
     card.appendChild(avgDiv);
   }
+  
+    // תאריך שיא
+  if (data.avgGrowth !== undefined) {
+    const avgDiv = document.createElement('div');
+    avgDiv.className = 'item avg-growth';
+    avgDiv.innerHTML = `<strong>📅 תאריך שיא:</strong> <span class="blur-text">${data.peakGrowthDate || data.date || ''}</span>`;
+    card.appendChild(avgDiv);
+  }
 
   // הערות אם יש
   if (data.notes) {
@@ -184,18 +199,19 @@ function parseGoogleSheetsData(response) {
   try {
     const row = response.table.rows[0].c;
     const data = {
-      cash: row[0]?.v || 0,
-      currentAcc: row[1]?.v || 0,
-      deposit: row[2]?.v || 0,
-      savingsFund: row[3]?.v || 0,
-      pensionFund: row[4]?.v || 0,
-      totalAssets: row[5]?.v || 0,
-      growth: row[6]?.v || 0,
-      growthPercentRaw: row[7]?.v || 0,
-      peakGrowthDate: row[8]?.f || '',
-      avgGrowth: row[9]?.v || 0,
-      notes: row[10]?.v || '',
-      notesStatus: (row[10]?.v || '').includes('✔️') ? 'positive' : 'negative'
+      lastDate: row[0]?.f || 0,
+      cash: row[1]?.v || 0,
+      currentAcc: row[2]?.v || 0,
+      deposit: row[3]?.v || 0,
+      savingsFund: row[4]?.v || 0,
+      pensionFund: row[5]?.v || 0,
+      totalAssets: row[6]?.v || 0,
+      growth: row[7]?.v || 0,
+      growthPercentRaw: row[8]?.v || 0,
+      peakGrowthDate: row[9]?.f || '',
+      avgGrowth: row[10]?.v || 0,
+      notes: row[11]?.v || '',
+      notesStatus: (row[11]?.v || '').includes('✔️') ? 'positive' : 'negative'
     };
     renderCard(data, 'container');
     document.getElementById('loader').style.display = 'none';
@@ -287,9 +303,6 @@ function loadHistoryData() {
 }
 
 loadCategories(); // ⬅️ נטען את הקטגוריות קודם
-
-// *** הסרתי את טעינת הדוח הנוכחי הישירה כאן ***
-// היא תטען רק ב-loadCurrentReport() אחרי טעינת הקטגוריות
 
 let blurActive = true;
 

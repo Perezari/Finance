@@ -100,6 +100,10 @@ h1 {
   text-align: center;
 }
 
+#history-card {
+  position: relative;
+}
+
 select {
   font-size: 1rem;
   padding: 8px 12px;
@@ -441,7 +445,7 @@ select:focus {
 .close-button {
   position: absolute;
   top: -14px;
-  left: -14px;
+  right: -14px; /* במקום left */
   background: #e74c3c;
   color: white;
   border: none;
@@ -454,11 +458,11 @@ select:focus {
   z-index: 10;
   transition: background 0.2s ease;
 
-  display: flex;              /* חדש */
-  align-items: center;        /* מרכז אנכי */
-  justify-content: center;    /* מרכז אופקי */
-  padding: 0;                 /* מבטל ריווח פנימי שעלול לשבש */
-  line-height: 1;             /* גובה שורה צפוף יותר */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
 }
 
 .close-button:hover {

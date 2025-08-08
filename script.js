@@ -384,6 +384,7 @@ function handleResponse(response) {
 
     toggleForm();
     loadHistoryData();
+    loadCurrentReport();
   } else {
     loaderAnim.style.display = 'none';
     checkmark.style.display = 'none';
@@ -459,6 +460,7 @@ function handleDeleteResponse(response) {
       populateDateSelect();
       document.getElementById('history-card').style.display = 'none';
       select.value = '';
+      loadCurrentReport();
     }, 1500);
 
   } else {

@@ -371,44 +371,49 @@ const FinanceApp = {
     document.body.appendChild(script);
   },
 
-  handleDeleteResponse(response) {
-    const loader = document.getElementById('loader');
-    const loaderAnim = loader.querySelector('.loader-animation');
-    const checkmark = loader.querySelector('.loader-checkmark');
-    const crossmark = loader.querySelector('.loader-cross');
-    const loaderText = document.getElementById('loader-text');
+handleDeleteResponse(response) {
+  const loader = document.getElementById('loader');
+  const loaderAnim = loader.querySelector('.loader-animation');
+  const checkmark = loader.querySelector('.loader-checkmark');
+  const crossmark = loader.querySelector('.loader-cross');
+  const loaderText = document.getElementById('loader-text');
 
-    if (response.status === 'success') {
-      loaderAnim.style.display = 'none';
-      checkmark.style.display = 'block';
-      crossmark.style.display = 'none';
-      loaderText.textContent = 'החודש נמחק בהצלחה!';
+  if (response.status === 'success') {
+    loaderAnim.style.display = 'none';
+    checkmark.style.display = 'block';
+    crossmark.style.display = 'none';
+    loaderText.textContent = 'החודש נמחק בהצלחה!';
 
-      setTimeout(() => {
-        loader.style.display = 'none';
-        loaderAnim.style.display = 'block';
-        checkmark.style.display = 'none';
-        loaderText.textContent = 'טוען נתונים...';
-        const select = document.getElementById('dateSelect');
-        const selectedIndex = select.value;
-        this.historyData.splice(selectedIndex, 1);
-        this.populateDateSelect();
-        document.getElementById('history-card').style.display = 'none';
-        select.value = '';
-      }, 1500);
-    } else {
-      loaderAnim.style.display = 'none';
+    setTimeout(() => {
+      loader.style.display = 'none';
+      loaderAnim.style.display = 'block';
       checkmark.style.display = 'none';
-      crossmark.style.display = 'block';
-      loaderText.textContent = 'אירעה שגיאה במחיקה!';
-      setTimeout(() => {
-        loader.style.display = 'none';
-        loaderAnim.style.display = 'block';
-        crossmark.style.display = 'none';
-        loaderText.textContent = 'טוען נתונים...';
-      }, 1500);
-    }
+      loaderText.textContent = 'טוען נתונים...';
+
+      const select = document.getElementById('dateSelect');
+      const selectedIndex = select.value;
+      this.historyData.splice(selectedIndex, 1);
+      this.populateDateSelect();
+      document.getElementById('history-card').style.display = 'none';
+      select.value = '';
+
+      // **כאן הוספת קריאות לרענון הדוחות**
+      this.loadHistoryData();
+      this.loadCurrentReport();
+
+    }, 1500);
+  } else {
+    loaderAnim.style.display = 'none';
+    checkmark.style.display = 'none';
+    crossmark.style.display = 'block';
+    loaderText.textContent = 'אירעה שגיאה במחיקה!';
+    setTimeout(() => {
+      loader.style.display = 'none';
+      loaderAnim.style.display = 'block';
+      crossmark.style.display = 'none';
+      loaderText.textContent = 'טוען נתונים...';
+    }, 1500);
   }
-};
+}
 
 FinanceApp.init();

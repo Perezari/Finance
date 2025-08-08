@@ -49,10 +49,10 @@
   <div id="history-view" class="container" style="display: none;">
     <div class="card controls-wrapper">
       <div class="controls-row">
-        <select id="dateSelect" onchange="onDateChange()">
+        <select id="dateSelect" onchange="FinanceApp.onDateChange()">
           <option value="" disabled selected>בחר תאריך</option>
         </select>
-        <button onclick="toggleForm()" class="add-button">➕ הוסף חודש חדש</button>
+        <button onclick="FinanceApp.toggleForm()" class="add-button">➕ הוסף חודש חדש</button>
       </div>
     </div>
 
@@ -63,7 +63,7 @@
   
   <div id="dynamic-fields"></div> <!-- 🧠 כאן ייכנסו השדות הדינמיים -->
   
-  <button onclick="submitNewEntry()">📤 שלח</button>
+  <button onclick="FinanceApp.submitNewEntry()">📤 שלח</button>
 </div>
 
     <!-- תצוגת דוח להיסטוריה -->

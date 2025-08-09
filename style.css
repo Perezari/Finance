@@ -469,3 +469,8 @@ select:focus {
 .close-button:hover {
   background: #c0392b;
 }
+
+.blur-data {
+  filter: blur(5px);
+  pointer-events: none; /* שלא יקליקו על הנתונים כשהם מטושטשים */
+}

@@ -492,7 +492,7 @@ document.getElementById("toggle-icon").addEventListener("click", function() {
   blurActive = !blurActive;
 
   // החלפת אייקון
-  this.textContent = blurActive ? "🪙" : "🏦";
+  this.textContent = blurActive ? "🔓" : "🔒";
 
   // הפעלת / כיבוי טשטוש עם אנימציה
   const cards = document.querySelectorAll('.card');

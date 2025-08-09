@@ -189,6 +189,16 @@ card.appendChild(liquidDiv);
   const container = document.getElementById(containerId);
   container.innerHTML = '';
   container.appendChild(card);
+  
+// עדכון טשטוש לפי blurActive אחרי הוספת הכרטיס ל-DOM
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(c => {
+    if (blurActive) {
+      c.classList.add('blur-data');
+    } else {
+      c.classList.remove('blur-data');
+    }
+  });
 }
 
 function formatCurrency(value) {

@@ -104,7 +104,7 @@ function renderCard(data, containerId = 'container') {
   console.log('dynamicCategories:', dynamicCategories);
 
   const card = document.createElement('div');
-  card.className = 'card';
+  card.className = 'card blur-data';
 
   // שורה: תאריך
   const dateDiv = document.createElement('div');
@@ -123,7 +123,6 @@ function renderCard(data, containerId = 'container') {
     div.innerHTML = `${label} ${value}`;
     card.appendChild(div);
   });
-}
   
 const liquidAssets = data.cash + data.currentAcc + data.savingsFund;
 const liquidPercent = data.totalAssets ? ((liquidAssets / data.totalAssets) * 100).toFixed(1) + '%' : '0%';

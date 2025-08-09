@@ -481,8 +481,20 @@ select:focus {
   display: inline-block;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.3s ease;
   font-size: 24px;
-  /* אפשר להוסיף גם */
-  backface-visibility: hidden; /* למנוע הבהוב בזמן סיבוב */
+  backface-visibility: hidden;
+  transition: transform 0.3s ease;
+}
+
+#toggle-icon.spin {
+  animation: spin-fast 0.4s linear;
+}
+
+@keyframes spin-fast {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

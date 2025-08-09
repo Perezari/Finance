@@ -490,36 +490,29 @@ let blurActive = false; // מצב ראשוני: ללא טשטוש
 
 const toggleIcon = document.getElementById("toggle-icon");
 
-// הגדרת האייקון ההתחלתי
-toggleIcon.textContent = "🔓"; // מנעול פתוח - טשטוש כבוי
+toggleIcon.addEventListener("click", function() {
+  blurActive = !blurActive;
 
-toggleIcon.style.cursor = 'pointer';
-toggleIcon.style.display = 'inline-block';
-toggleIcon.style.fontSize = '24px';
-toggleIcon.style.userSelect = 'none';
+  // הוספת אנימציית סיבוב מהירה
+  this.classList.add('spin');
 
-toggleIcon.addEventListener("click", () => {
-  // סיבוב האייקון
-  toggleIcon.style.transition = 'transform 0.3s ease';
-  toggleIcon.style.transform = 'rotateY(90deg)';
-
+  // החלפת אייקון אחרי תחילת הסיבוב (כדי שיראה חלק)
   setTimeout(() => {
-    blurActive = !blurActive;
+    this.textContent = blurActive ? "🔒" : "🔓";
+  }, 150); // מחכה קצת לפני שינוי הטקסט
 
-    // החלפת האייקון בהתאם למצב
-    toggleIcon.textContent = blurActive ? "🔒" : "🔓";
+  // הסרת הקלאס בסוף האנימציה כדי לאפשר הפעלה חוזרת
+  this.addEventListener('animationend', () => {
+    this.classList.remove('spin');
+  }, { once: true });
 
-    // חזרה לסיבוב 0 מעלות
-    toggleIcon.style.transform = 'rotateY(0deg)';
-
-    // עדכון הכרטיסים עם טשטוש / הסרת טשטוש
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-      if (blurActive) {
-        card.classList.add('blur-data');
-      } else {
-        card.classList.remove('blur-data');
-      }
-    });
-  }, 300);
+  // הפעלת/כיבוי טשטוש בכרטיסים
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    if (blurActive) {
+      card.classList.add('blur-data');
+    } else {
+      card.classList.remove('blur-data');
+    }
+  });
 });

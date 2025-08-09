@@ -104,7 +104,7 @@ function renderCard(data, containerId = 'container') {
   console.log('dynamicCategories:', dynamicCategories);
 
   const card = document.createElement('div');
-  card.className = 'card blur-data';
+  card.className = 'card' + (blurActive ? ' blur-data' : '');
 
   // שורה: תאריך
   const dateDiv = document.createElement('div');

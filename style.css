@@ -473,4 +473,16 @@ select:focus {
 .blur-data {
   filter: blur(5px);
   pointer-events: none;
+  transition: filter 0.3s ease; /* מעבר חלק לטשטוש */
+}
+
+/* לאייקון המנעול - אנימציית סיבוב */
+#toggle-icon {
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.3s ease;
+  font-size: 24px;
+  /* אפשר להוסיף גם */
+  backface-visibility: hidden; /* למנוע הבהוב בזמן סיבוב */
 }

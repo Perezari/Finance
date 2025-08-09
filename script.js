@@ -123,6 +123,22 @@ function renderCard(data, containerId = 'container') {
     div.innerHTML = `${label} ${value}`;
     card.appendChild(div);
   });
+
+  // הוסף את הכרטיס למיכל
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  container.appendChild(card);
+
+  // עכשיו, אחרי שהכרטיס נמצא ב-DOM, סנכרן את הטשטוש בהתאם למשתנה blurActive
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    if (blurActive) {
+      card.classList.add('blur-data');
+    } else {
+      card.classList.remove('blur-data');
+    }
+  });
+}
   
 const liquidAssets = data.cash + data.currentAcc + data.savingsFund;
 const liquidPercent = data.totalAssets ? ((liquidAssets / data.totalAssets) * 100).toFixed(1) + '%' : '0%';

@@ -486,15 +486,21 @@ document.getElementById("toggle-icon").addEventListener("click", function() {
     this.textContent = "🪙";
   }
   
-  // הפעלת/כיבוי טשטוש
+  // הפעלת/כיבוי טשטושlet blurActive = false; // ברירת מחדל: ללא טשטוש
+
+document.getElementById("toggle-icon").addEventListener("click", function() {
+  blurActive = !blurActive;
+
+  // החלפת אייקון
+  this.textContent = blurActive ? "🪙" : "🏦";
+
+  // הפעלת / כיבוי טשטוש עם אנימציה
   const cards = document.querySelectorAll('.card');
   cards.forEach(card => {
     if (blurActive) {
-      card.classList.remove('blur-data');
-    } else {
       card.classList.add('blur-data');
+    } else {
+      card.classList.remove('blur-data');
     }
   });
-
-  blurActive = !blurActive;
 });

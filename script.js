@@ -486,21 +486,40 @@ function handleDeleteResponse(response) {
   }
 }
 
-let blurActive = false; // ברירת מחדל: ללא טשטוש
+let blurActive = false; // מצב ראשוני: ללא טשטוש
 
-document.getElementById("toggle-icon").addEventListener("click", function() {
-  blurActive = !blurActive;
+const toggleIcon = document.getElementById("toggle-icon");
 
-  // החלפת אייקון
-  this.textContent = blurActive ? "🔓" : "🔒";
+// הגדרת האייקון ההתחלתי
+toggleIcon.textContent = "🔓"; // מנעול פתוח - טשטוש כבוי
 
-  // הפעלת / כיבוי טשטוש עם אנימציה
-  const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
-    if (blurActive) {
-      card.classList.add('blur-data');
-    } else {
-      card.classList.remove('blur-data');
-    }
-  });
+toggleIcon.style.cursor = 'pointer';
+toggleIcon.style.display = 'inline-block';
+toggleIcon.style.fontSize = '24px';
+toggleIcon.style.userSelect = 'none';
+
+toggleIcon.addEventListener("click", () => {
+  // סיבוב האייקון
+  toggleIcon.style.transition = 'transform 0.3s ease';
+  toggleIcon.style.transform = 'rotateY(90deg)';
+
+  setTimeout(() => {
+    blurActive = !blurActive;
+
+    // החלפת האייקון בהתאם למצב
+    toggleIcon.textContent = blurActive ? "🔒" : "🔓";
+
+    // חזרה לסיבוב 0 מעלות
+    toggleIcon.style.transform = 'rotateY(0deg)';
+
+    // עדכון הכרטיסים עם טשטוש / הסרת טשטוש
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+      if (blurActive) {
+        card.classList.add('blur-data');
+      } else {
+        card.classList.remove('blur-data');
+      }
+    });
+  }, 300);
 });

@@ -476,17 +476,7 @@ function handleDeleteResponse(response) {
   }
 }
 
-let blurActive = false;
-
-document.getElementById("toggle-icon").addEventListener("click", function() {
-  // החלפת אייקון
-  if (blurActive) {
-    this.textContent = "🏦";
-  } else {
-    this.textContent = "🪙";
-  }
-  
-  // הפעלת/כיבוי טשטושlet blurActive = false; // ברירת מחדל: ללא טשטוש
+let blurActive = false; // ברירת מחדל: ללא טשטוש
 
 document.getElementById("toggle-icon").addEventListener("click", function() {
   blurActive = !blurActive;

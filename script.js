@@ -475,3 +475,26 @@ function handleDeleteResponse(response) {
     }, 1500);
   }
 }
+
+let blurActive = false;
+
+document.getElementById("toggle-icon").addEventListener("click", function() {
+  // החלפת אייקון
+  if (blurActive) {
+    this.textContent = "🏦";
+  } else {
+    this.textContent = "🪙";
+  }
+  
+  // הפעלת/כיבוי טשטוש
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    if (blurActive) {
+      card.classList.remove('blur-data');
+    } else {
+      card.classList.add('blur-data');
+    }
+  });
+
+  blurActive = !blurActive;
+});

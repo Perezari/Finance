@@ -475,12 +475,9 @@ select:focus {
 }
 
 .blur-data {
-  background: rgba(255, 255, 255, 0.25); /* צבע לבן שקוף */
-  backdrop-filter: blur(10px) saturate(180%); /* טשטוש + רוויה מוגברת */
-  -webkit-backdrop-filter: blur(10px) saturate(180%); /* תמיכה ב-Safari/iOS */
-  border-radius: 12px;
+  filter: blur(5px);
   pointer-events: none;
-  transition: backdrop-filter 0.3s ease, background 0.3s ease;
+  transition: filter 0.3s ease; /* מעבר חלק לטשטוש */
 }
 
 /* לאייקון המנעול - אנימציית סיבוב */

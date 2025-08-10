@@ -1,6 +1,6 @@
 body {
   font-family: 'Heebo', sans-serif;
-  background: transparent;
+  background: linear-gradient(135deg, #d7e9f7, #f6f1f1); /* גרדיאנט עדין */
   margin: 0;
   padding: 16px 12px;
   color: #34495e;

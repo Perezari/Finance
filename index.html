@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#fafafa" />
+  
+  <meta name="theme-color" content="#F0F0F0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <style>
+    body {
+      margin: 0;
+      padding: env(safe-area-inset-top) 0 0 0; /* התאמה ל-notch */
+      background-color: #F0F0F0; /* אותו צבע כמו ב-theme-color */
+      height: 100vh;
+    }
+  </style>
+  
   <title>דוח פיננסי</title>
 
   <link rel="stylesheet" href="style.css" />

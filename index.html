@@ -6,16 +6,26 @@
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#fafafa" />
   
-  <meta name="theme-color" content="#F0F0F0">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <style>
     body {
       margin: 0;
-      padding: env(safe-area-inset-top) 0 0 0; /* התאמה ל-notch */
-      background-color: #F0F0F0; /* אותו צבע כמו ב-theme-color */
+      padding: env(safe-area-inset-top) 0 0 0; /* משאיר מקום לסטטוס בר */
       height: 100vh;
+      background: url('https://picsum.photos/600/800') no-repeat center/cover;
+    }
+
+    .statusbar-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: env(safe-area-inset-top);
+      backdrop-filter: blur(10px) brightness(1.05);
+      background: rgba(255, 255, 255, 0.4); /* שקיפות עדינה */
+      z-index: 999;
     }
   </style>
   

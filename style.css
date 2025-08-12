@@ -15,17 +15,6 @@ body {
   background-clip: padding-box;
 }
 
-.notch-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: env(safe-area-inset-top);
-  background: linear-gradient(135deg, #f5ecdc, #dd8e6c, #bec7b6, #999679);
-  z-index: 9999;
-  pointer-events: none;
-}
-
 h1 {
   text-align: center;
   font-size: 2rem;

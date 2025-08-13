@@ -35,23 +35,18 @@ h1 {
 }
 
 .card {
-  background: repeating-linear-gradient(
-    45deg,
-    #ffffff,
-    #ffffff 10px,
-    #f9f9f9 10px,
-    #f9f9f9 20px
-  );
-  border: 3px dashed #16a085;
+  border: 2px dashed rgba(0, 0, 0, 0.3);
   border-radius: 12px;
-  padding: 18px 20px;
-  margin-top: 12px;
-  font-size: 0.95rem;
+  padding: 16px;
+  background: linear-gradient(135deg, #ffffff, #f9f9f9);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
 }
 
 .card:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .date {

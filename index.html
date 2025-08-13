@@ -1,88 +1,88 @@
-‏<!DOCTYPE html>
-‏<html lang="he" dir="rtl">
-‏<head>
-‏  <meta charset="UTF-8" />
-‏  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-‏  <link rel="manifest" href="manifest.json" />
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link rel="manifest" href="manifest.json" />
 
-‏<meta name="theme-color" content="white" />
+<meta name="theme-color" content="white" />
   
-‏  <title>דוח פיננסי</title>
+  <title>דוח פיננסי</title>
 
-‏  <link rel="stylesheet" href="style.css" />
-‏  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
-‏</head>
-‏<body>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
-‏  <h1>דוח פיננסי <span id="toggle-icon" style="cursor: pointer;">🔒</span></h1>
+  <h1>דוח פיננסי <span id="toggle-icon" style="cursor: pointer;">🔒</span></h1>
 
   <!-- כפתורי ניווט -->
-‏  <div class="tabs">
-‏    <button class="tab-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
-‏    <button class="tab-button" onclick="showHistory()">היסטוריה 🕒</button>
-‏  </div>
+  <div class="tabs">
+    <button class="tab-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
+    <button class="tab-button" onclick="showHistory()">היסטוריה 🕒</button>
+  </div>
 
   <!-- אנימציית טעינה -->
-‏  <div id="loader" class="loader-wrapper" style="display: none;">
-‏    <div class="loader-animation"></div>
+  <div id="loader" class="loader-wrapper" style="display: none;">
+    <div class="loader-animation"></div>
     
-‏    <div class="loader-checkmark" style="display: none;">
-‏      <svg viewBox="0 0 52 52" class="checkmark">
-‏        <path class="checkmark-check" fill="none" d="M14 27l10 10 16-20"/>
-‏      </svg>
-‏    </div>
+    <div class="loader-checkmark" style="display: none;">
+      <svg viewBox="0 0 52 52" class="checkmark">
+        <path class="checkmark-check" fill="none" d="M14 27l10 10 16-20"/>
+      </svg>
+    </div>
     
-‏    <div class="loader-cross" style="display: none;">
-‏      <svg viewBox="0 0 52 52" class="crossmark">
-‏        <line x1="16" y1="16" x2="36" y2="36" stroke="#e74c3c" stroke-width="5" stroke-linecap="round"/>
-‏        <line x1="36" y1="16" x2="16" y2="36" stroke="#e74c3c" stroke-width="5" stroke-linecap="round"/>
-‏      </svg>
-‏    </div>
+    <div class="loader-cross" style="display: none;">
+      <svg viewBox="0 0 52 52" class="crossmark">
+        <line x1="16" y1="16" x2="36" y2="36" stroke="#e74c3c" stroke-width="5" stroke-linecap="round"/>
+        <line x1="36" y1="16" x2="16" y2="36" stroke="#e74c3c" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
     
-‏    <p id="loader-text">טוען נתונים...</p>
-‏  </div>
+    <p id="loader-text">טוען נתונים...</p>
+  </div>
 
   <!-- דוח נוכחי -->
-‏  <div id="current-view" class="container">
-‏    <div id="container"></div>
-‏  </div>
+  <div id="current-view" class="container">
+    <div id="container"></div>
+  </div>
 
   <!-- היסטוריית חודשים -->
-‏  <div id="history-view" class="container" style="display: none;">
-‏    <div class="card controls-wrapper">
-‏      <div class="controls-row">
-‏        <select id="dateSelect" onchange="onDateChange()">
-‏          <option value="" disabled selected>בחר תאריך</option>
-‏        </select>
-‏        <button onclick="toggleForm()" class="add-button">➕ הוסף חודש חדש</button>
-‏      </div>
-‏    </div>
+  <div id="history-view" class="container" style="display: none;">
+    <div class="card controls-wrapper">
+      <div class="controls-row">
+        <select id="dateSelect" onchange="onDateChange()">
+          <option value="" disabled selected>בחר תאריך</option>
+        </select>
+        <button onclick="toggleForm()" class="add-button">➕ הוסף חודש חדש</button>
+      </div>
+    </div>
 
 <!-- טופס הוספת חודש חדש -->
-‏<div id="new-entry-form" class="card" style="display:none; margin-top: 16px;">
-‏  <h3>הכנס נתונים לחודש חדש:</h3>
-‏  <label>📅 תאריך: <input type="date" id="newDate" /></label>
+<div id="new-entry-form" class="card" style="display:none; margin-top: 16px;">
+  <h3>הכנס נתונים לחודש חדש:</h3>
+  <label>📅 תאריך: <input type="date" id="newDate" /></label>
   
-‏  <div id="dynamic-fields"></div> <!-- 🧠 כאן ייכנסו השדות הדינמיים -->
+  <div id="dynamic-fields"></div> <!-- 🧠 כאן ייכנסו השדות הדינמיים -->
   
-‏  <button onclick="submitNewEntry()">📤 שלח</button>
-‏</div>
+  <button onclick="submitNewEntry()">📤 שלח</button>
+</div>
 
     <!-- תצוגת דוח להיסטוריה -->
-‏    <div id="history-card" class="card" style="display:none;"></div>
-‏  </div>
+    <div id="history-card" class="card" style="display:none;"></div>
+  </div>
 
   <!-- הודעת הצלחה -->
-‏  <div id="success-message" class="success-message" style="display: none;">
-‏    <p></p>
-‏  </div>
+  <div id="success-message" class="success-message" style="display: none;">
+    <p></p>
+  </div>
   
-‏  <footer style="text-align:center; margin-top:20px; font-size:0.9em; color:#888;">
+  <footer style="text-align:center; margin-top:20px; font-size:0.9em; color:#888;">
   גרסה 1.5.0
-‏</footer>
+</footer>
 
   <!-- סקריפטים -->
-‏  <script src="config.js"></script>
-‏  <script src="script.js"></script>
-‏</body>
-‏</html>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

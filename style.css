@@ -35,17 +35,19 @@ h1 {
 }
 
 .card {
-  background: #fff;
+  background: repeating-linear-gradient(
+    45deg,
+    #ffffff,
+    #ffffff 10px,
+    #f9f9f9 10px,
+    #f9f9f9 20px
+  );
+  border: 3px dashed #16a085;
   border-radius: 12px;
   padding: 18px 20px;
   margin-top: 12px;
   font-size: 0.95rem;
-
-  /* מסגרת מקווקוות בולטת */
-  border: 3px dashed #16a085;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-
-  transition: box-shadow 0.3s ease, filter 0.4s ease;
 }
 
 .card:hover {

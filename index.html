@@ -73,6 +73,23 @@
     <!-- תצוגת דוח להיסטוריה -->
     <div id="history-card" class="card" style="display:none;"></div>
   </div>
+  
+  
+  <!-- סיכום עם גרף -->
+  <div id="summary-view" class="container" style="display:none; margin-top: 12px;">
+    <div class="card controls-wrapper" style="padding:12px 16px;">
+      <div class="summary-controls" style="display:flex; justify-content:center; gap:8px; align-items:center;">
+        <button class="time-button active" data-months="3" onclick="setSummaryWindow(3)">3 חודשים</button>
+        <button class="time-button" data-months="6" onclick="setSummaryWindow(6)">6 חודשים</button>
+        <button class="time-button" data-months="12" onclick="setSummaryWindow(12)">שנה</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 12px;">
+      <div style="text-align: center; margin-bottom: 8px; font-weight:700;">סיכום נכסים</div>
+      <canvas id="summaryChart" width="800" height="420"></canvas>
+    </div>
+  </div>
 
   <!-- הודעת הצלחה -->
   <div id="success-message" class="success-message" style="display: none;">

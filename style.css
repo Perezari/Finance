@@ -35,18 +35,18 @@ h1 {
 }
 
 .card {
-  border: 2px dashed rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
+  background: #ffffff; /* נשאר לבן */
+  border: 1px solid #d0e6f5; /* גבול עדין כחלחל */
+  border-radius: 10px;
   padding: 16px;
-  background: linear-gradient(135deg, #ffffff, #f9f9f9);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  margin-bottom: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-  border-color: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
 .date {

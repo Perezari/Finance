@@ -201,7 +201,7 @@ select:focus {
   justify-content: space-between; /* מרווח שווה ביניהם */
   align-items: normal; /* הוספנו את זה ליישור אנכי */
   gap: 6px;
-  background-color: #e0f2f1;
+  background-color: #e6f0ff;
   border-radius: 16px;
   padding: 6px;
   max-width: 400px;
@@ -215,7 +215,7 @@ select:focus {
   padding: 10px 0;
   border: none;
   background: transparent;
-  color: #16a085;
+  color: #005eff;
   font-weight: 600;
   font-size: 16px;
   cursor: pointer;
@@ -225,11 +225,11 @@ select:focus {
 }
 
 .tab-button:hover {
-  background-color: rgba(22, 160, 133, 0.1);
+  background-color: rgba(0, 94, 255, 0.1);
 }
 
 .tab-button.active {
-  background: linear-gradient(135deg, #16a085, #1abc9c);
+  background: linear-gradient(135deg, #005eff, #4db8ff);
   color: white;
   font-weight: 700;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -254,7 +254,8 @@ select:focus {
   font-size: 1rem;
   border: none;
   border-radius: 10px;
-  background-color: #16a085;
+  background-color: #005eff;
+  box-shadow: 0 3px 6px rgba(0, 94, 255, 0.3);
   color: white;
   font-weight: bold;
   cursor: pointer;
@@ -262,8 +263,8 @@ select:focus {
 }
 
 .add-button:hover {
-  background: #138d75;
-  box-shadow: 0 5px 10px rgba(19, 141, 117, 0.4);
+  background: #0041b3;
+  box-shadow: 0 5px 10px rgba(0, 65, 179, 0.4);
 }
 
 #new-entry-form {

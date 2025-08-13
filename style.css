@@ -511,3 +511,22 @@ select:focus {
     transform: rotate(360deg);
   }
 }
+
+/* מצב כהה */
+body.dark-mode {
+  background-color: #121212 !important;
+  color: #f0f0f0 !important;
+}
+
+/* התאמות לדוגמה - כרטיסים */
+body.dark-mode .card {
+  background-color: #1e1e1e !important;
+  color: #f0f0f0 !important;
+  border-color: #555 !important;
+}
+
+/* כפתורים */
+body.dark-mode button {
+  background-color: #333 !important;
+  color: white !important;
+}

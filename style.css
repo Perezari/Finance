@@ -1,5 +1,5 @@
 html, body {
-  overflow-y: hidden; /* חוסם גלילה אנכית */
+  overflow: hidden; /* חוסם גלילה אנכית */
   height: 100%;
 }
 
@@ -16,7 +16,7 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
   position: relative;
-  min-height: 100vh;
+  min-height: 100%;
   background-clip: padding-box;
 }
 

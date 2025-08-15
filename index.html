@@ -27,16 +27,8 @@
 
 <body>
 
-  <h1>דוח פיננסי <span id="toggle-icon" style="cursor: pointer;">🔒</span></h1>
 
-  <!-- כפתורי ניווט -->
-  <div class="tabs">
-    <button class="tab-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
-    <button class="tab-button" onclick="showHistory()">היסטוריה 🕒</button>
-  </div>
-
-  <!-- אנימציית טעינה -->
-  <div id="loader" class="loader-wrapper" style="display: none;">
+  <div id="loader" class="loader-wrapper">
     <div class="loader-animation"></div>
     
     <div class="loader-checkmark" style="display: none;">
@@ -53,6 +45,14 @@
     </div>
     
     <p id="loader-text">טוען נתונים...</p>
+  </div>
+
+  <h1>דוח פיננסי <span id="toggle-icon" style="cursor: pointer;">🔒</span></h1>
+
+  <!-- כפתורי ניווט -->
+  <div class="tabs">
+    <button class="tab-button active" onclick="showCurrentReport()">דוח נוכחי 📊</button>
+    <button class="tab-button" onclick="showHistory()">היסטוריה 🕒</button>
   </div>
 
   <!-- דוח נוכחי -->

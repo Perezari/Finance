@@ -404,6 +404,10 @@ select:focus {
   animation: draw 0.6s ease forwards;
 }
 
+#loader {
+  display: flex; /* ברירת מחדל – נראה מייד */
+}
+
 #loader-text {
   font-size: 18px;
   color: #34495e;

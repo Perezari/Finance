@@ -3,6 +3,12 @@ let historyData = [];
 let dynamicCategories = [];
 let categoriesLoaded = false;
 
+
+window.addEventListener('load', function() {
+  document.getElementById('loader').style.display = 'none';
+});
+
+
 function loadCategories() {
   const script = document.createElement('script');
   script.src = CONFIG.categoriesUrl;

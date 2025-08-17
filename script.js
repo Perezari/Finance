@@ -3,11 +3,22 @@ let historyData = [];
 let dynamicCategories = [];
 let categoriesLoaded = false;
 
+// ביטול קליק ימני
+document.addEventListener("contextmenu", function (e) {
+  e.preventDefault();
+});
+
+// חסימת F12 וקיצורי מקשים נפוצים לפתיחת DevTools
+document.addEventListener("keydown", function (e) {
+  // F12
+  if (e.key === "F12") {
+    e.preventDefault();
+  }
+});
 
 window.addEventListener('load', function() {
   document.getElementById('loader').style.display = 'none';
 });
-
 
 function loadCategories() {
   const script = document.createElement('script');

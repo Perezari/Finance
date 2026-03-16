@@ -25,7 +25,7 @@
   <p id="loader-text">טוען...</p>
 </div>
 
-<!-- ══ AUTH ════════════════════════════════════════════ -->
+<!-- ══ AUTH ══════════════════════════════════════════════ -->
 <div id="auth-screen" class="screen" style="display:none;">
   <div class="auth-container">
     <div class="auth-brand">
@@ -55,7 +55,7 @@
   </div>
 </div>
 
-<!-- ══ APP ═════════════════════════════════════════════ -->
+<!-- ══ APP ════════════════════════════════════════════════ -->
 <div id="app-screen" class="screen" style="display:none;">
 
   <!-- SIDEBAR (desktop) -->
@@ -68,7 +68,7 @@
       <button class="nav-item active" data-tab="current"    onclick="switchTab('current',this)">
         <span class="nav-icon">📊</span> דוח נוכחי
       </button>
-      <button class="nav-item"        data-tab="history"   onclick="switchTab('history',this)">
+      <button class="nav-item"        data-tab="history"    onclick="switchTab('history',this)">
         <span class="nav-icon">📈</span> היסטוריה
       </button>
       <button class="nav-item"        data-tab="retirement" onclick="switchTab('retirement',this)">
@@ -102,16 +102,35 @@
 
       <!-- ── CURRENT TAB ── -->
       <div id="tab-current" class="tab-panel">
+        <!-- Health Score -->
+        <div id="health-score-card"></div>
+        <!-- Main report -->
         <div id="current-card"></div>
       </div>
 
       <!-- ── HISTORY TAB ── -->
       <div id="tab-history" class="tab-panel" style="display:none;">
+
+        <!-- Year vs Year -->
+        <div class="yvy-row">
+          <div class="section-header" style="margin-bottom:0;flex:1">השוואת שנה מול שנה</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="yvy-year-a" onchange="renderYearVsYear()" style="flex:none;width:90px;height:34px;font-size:.8rem"></select>
+            <span style="color:var(--ink-3);font-weight:700;font-size:.85rem">vs</span>
+            <select id="yvy-year-b" onchange="renderYearVsYear()" style="flex:none;width:90px;height:34px;font-size:.8rem"></select>
+          </div>
+        </div>
+        <div id="yvy-card" class="chart-card" style="display:none;">
+          <div class="chart-wrap" style="height:220px"><canvas id="yvy-chart"></canvas></div>
+        </div>
+
+        <!-- Main chart -->
         <div class="chart-card">
           <div class="section-header">מגמת נכסים לאורך זמן</div>
           <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
         </div>
 
+        <!-- Controls -->
         <div class="ctrl-bar">
           <select id="dateSelect" onchange="onDateChange()">
             <option value="" disabled selected>בחר חודש לפירוט</option>
@@ -146,8 +165,6 @@
 
       <!-- ── RETIREMENT TAB ── -->
       <div id="tab-retirement" class="tab-panel" style="display:none;">
-
-        <!-- Settings card -->
         <div class="ret-settings-card">
           <div class="section-header">הגדרות תחזית</div>
           <div class="ret-inputs">
@@ -160,7 +177,7 @@
               <input type="number" id="ret-age" class="form-input" min="40" max="90" placeholder="67" oninput="renderRetirement()"/>
             </div>
             <div class="ret-input-group">
-              <label>תשואה שנתית צפויה %</label>
+              <label>תשואה שנתית % <span style="color:var(--ink-4);font-weight:400">(ממוצע: 7-10%)</span></label>
               <input type="number" id="ret-return" class="form-input" min="0" max="30" step="0.1" placeholder="7" oninput="renderRetirement()"/>
             </div>
             <div class="ret-input-group">
@@ -169,19 +186,13 @@
             </div>
           </div>
         </div>
-
-        <!-- Summary tiles -->
+        <div id="ret-warning" class="notes-bar neg" style="display:none;margin-bottom:16px;"></div>
         <div id="ret-summary" class="ret-summary"></div>
-
-        <!-- Projection chart -->
         <div class="chart-card">
           <div class="section-header">מסלול לפרישה</div>
           <div class="chart-wrap" style="height:280px"><canvas id="ret-chart"></canvas></div>
         </div>
-
-        <!-- Breakdown -->
         <div id="ret-breakdown" class="ret-breakdown-card"></div>
-
       </div>
 
     </main>
@@ -189,13 +200,13 @@
 
   <!-- BOTTOM NAV (mobile) -->
   <nav class="bottom-nav" style="display:none;">
-    <button class="bottom-nav-item active" data-tab="current" onclick="switchTab('current',this)">
+    <button class="bottom-nav-item active" data-tab="current"    onclick="switchTab('current',this)">
       <span class="nav-icon">📊</span><span>נוכחי</span>
     </button>
-    <button class="bottom-nav-item" data-tab="history" onclick="switchTab('history',this)">
+    <button class="bottom-nav-item"        data-tab="history"    onclick="switchTab('history',this)">
       <span class="nav-icon">📈</span><span>היסטוריה</span>
     </button>
-    <button class="bottom-nav-item" data-tab="retirement" onclick="switchTab('retirement',this)">
+    <button class="bottom-nav-item"        data-tab="retirement" onclick="switchTab('retirement',this)">
       <span class="nav-icon">🎯</span><span>פרישה</span>
     </button>
     <button class="bottom-nav-item" onclick="toggleBlur()">
@@ -205,8 +216,8 @@
 
 </div>
 
-<!-- ══ SETTINGS MODAL ══════════════════════════════════ -->
-<div id="settings-modal" class="modal-overlay" style="display: flex;align-items: center;" onclick="closeSettingsOutside(event)">
+<!-- ══ SETTINGS MODAL ════════════════════════════════════ -->
+<div id="settings-modal" class="modal-overlay" style="display:none;" onclick="closeSettingsOutside(event)">
   <div class="modal-box">
     <div class="modal-header">
       <h2>⚙️ הגדרות</h2>
@@ -215,15 +226,18 @@
     <div class="modal-body">
       <div class="settings-section">
         <h3>קטגוריות נכסים</h3>
-        <p class="settings-hint">הקטגוריות שמופיעות בדוח ובטופס</p>
+        <p class="settings-hint">לחץ על קטגוריה כדי לערוך או לצרף גוף מנהל</p>
         <div id="categories-list" class="categories-list"></div>
       </div>
       <div class="settings-section">
         <h3>הוסף קטגוריה</h3>
         <div class="add-cat-form">
-          <input type="text" id="new-cat-key"   placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
-          <input type="text" id="new-cat-label" placeholder="שם בעברית"                 class="form-input"/>
-          <input type="text" id="new-cat-icon"  placeholder="אמוג'י 💰"                 class="form-input" maxlength="4"/>
+          <input type="text" id="new-cat-key"         placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
+          <input type="text" id="new-cat-label"       placeholder="שם בעברית"                 class="form-input"/>
+          <input type="text" id="new-cat-icon"        placeholder="אמוג'י 💰"                 class="form-input" maxlength="4"/>
+          <select id="new-cat-institution" class="form-input" style="direction:rtl;text-align:right;">
+            <option value="">גוף מנהל (אופציונלי)</option>
+          </select>
           <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;">הוסף</button>
         </div>
       </div>
@@ -232,6 +246,20 @@
         <p class="settings-hint">מחובר: <span id="user-email-display2"></span></p>
         <button onclick="handleLogout()" class="logout-btn">🚪 התנתק</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INSTITUTION PICKER MODAL ══════════════════════════ -->
+<div id="inst-modal" class="modal-overlay" style="display:none;" onclick="closeInstModalOutside(event)">
+  <div class="modal-box" style="max-height:70vh;">
+    <div class="modal-header">
+      <h2>🏦 בחר גוף מנהל</h2>
+      <button onclick="closeInstModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:12px 16px 32px;">
+      <input type="text" id="inst-search" placeholder="חפש גוף..." class="form-input" style="width:100%;margin-bottom:12px;direction:rtl;text-align:right;" oninput="filterInstitutions()"/>
+      <div id="inst-grid" class="inst-grid"></div>
     </div>
   </div>
 </div>

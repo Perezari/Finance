@@ -1012,3 +1012,42 @@ function showToast(msg) {
 }
 
 document.addEventListener('DOMContentLoaded',init);
+
+/* ── KEYBOARD SHORTCUTS ─────────────────────────────── */
+document.addEventListener('keydown', e => {
+  // Skip if typing in an input
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+
+  switch(e.key.toLowerCase()) {
+    case 'n':
+      if (document.getElementById('tab-history').style.display === 'none') {
+        switchTab('history', document.querySelector('[data-tab="history"]'));
+      }
+      openAddForm(null);
+      showToast('➕ הוספת חודש חדש');
+      break;
+    case 'h':
+      switchTab('history', document.querySelector('[data-tab="history"]'));
+      break;
+    case 'd':
+      switchTab('current', document.querySelector('[data-tab="current"]'));
+      break;
+    case 'r':
+      switchTab('retirement', document.querySelector('[data-tab="retirement"]'));
+      break;
+    case 'b':
+      toggleBlur();
+      break;
+    case 'escape':
+      const addForm = document.getElementById('add-form');
+      if (addForm && addForm.style.display !== 'none') {
+        addForm.style.display = 'none'; editMode = false;
+      }
+      if (document.getElementById('settings-modal').style.display !== 'none') closeSettings();
+      if (document.getElementById('inst-modal').style.display    !== 'none') closeInstModal();
+      break;
+    case '?':
+      showToast('N=הוסף  H=היסטוריה  D=דוח  R=פרישה  B=טשטוש  Esc=סגור');
+      break;
+  }
+});

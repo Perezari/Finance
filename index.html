@@ -6,164 +6,239 @@
   <title>מעקב פיננסי</title>
   <link rel="manifest" href="manifest.json"/>
   <meta name="theme-color" content="#ffffff"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
   <meta name="apple-mobile-web-app-title" content="פיננסים"/>
   <link rel="apple-touch-icon" href="https://perezari.github.io/Finance/icon.png"/>
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-  <!-- ===== LOADER ===== -->
-  <div id="loader" class="loader-overlay">
-    <div class="loader-ring"></div>
-    <p id="loader-text">טוען...</p>
-  </div>
+<!-- LOADER -->
+<div id="loader" class="loader-overlay">
+  <div class="loader-ring"></div>
+  <p id="loader-text">טוען...</p>
+</div>
 
-  <!-- ===== AUTH SCREEN ===== -->
-  <div id="auth-screen" class="screen" style="display:none;">
-    <div class="auth-container">
-      <div class="auth-brand">
-        <div class="auth-logo">₪</div>
-        <h1 class="auth-title">מעקב פיננסי</h1>
-        <p class="auth-subtitle">הבן איפה אתה עומד כלכלית</p>
+<!-- ══ AUTH ════════════════════════════════════════════ -->
+<div id="auth-screen" class="screen" style="display:none;">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="auth-logo">₪</div>
+      <h1 class="auth-title">מעקב פיננסי</h1>
+      <p class="auth-subtitle">הבן איפה אתה עומד כלכלית</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">כניסה</button>
+        <button class="auth-tab"        onclick="switchAuthTab('register')">הרשמה</button>
       </div>
-
-      <div class="auth-card">
-        <div class="auth-tabs">
-          <button class="auth-tab active" onclick="switchAuthTab('login')">כניסה</button>
-          <button class="auth-tab" onclick="switchAuthTab('register')">הרשמה</button>
-        </div>
-
-        <div id="login-form" class="auth-form">
-          <input type="email" id="login-email" placeholder="כתובת אימייל" class="auth-input" autocomplete="email"/>
-          <input type="password" id="login-password" placeholder="סיסמה" class="auth-input" autocomplete="current-password"/>
-          <button onclick="handleLogin()" class="auth-button primary">כניסה</button>
-          <button onclick="handleMagicLink()" class="auth-button secondary">✉️ שלח קישור כניסה לאימייל</button>
-        </div>
-
-        <div id="register-form" class="auth-form" style="display:none;">
-          <input type="text" id="reg-name" placeholder="שם מלא" class="auth-input" autocomplete="name"/>
-          <input type="email" id="reg-email" placeholder="כתובת אימייל" class="auth-input" autocomplete="email"/>
-          <input type="password" id="reg-password" placeholder="סיסמה (לפחות 6 תווים)" class="auth-input" autocomplete="new-password"/>
-          <button onclick="handleRegister()" class="auth-button primary">יצירת חשבון</button>
-        </div>
-
-        <div id="auth-message" class="auth-message" style="display:none;"></div>
+      <div id="login-form" class="auth-form">
+        <input type="email"    id="login-email"    placeholder="כתובת אימייל" class="auth-input" autocomplete="email"/>
+        <input type="password" id="login-password" placeholder="סיסמה"        class="auth-input" autocomplete="current-password"/>
+        <button onclick="handleLogin()"     class="auth-button primary">כניסה</button>
+        <button onclick="handleMagicLink()" class="auth-button secondary">✉️ שלח קישור כניסה לאימייל</button>
       </div>
+      <div id="register-form" class="auth-form" style="display:none;">
+        <input type="text"     id="reg-name"     placeholder="שם מלא"                 class="auth-input" autocomplete="name"/>
+        <input type="email"    id="reg-email"    placeholder="כתובת אימייל"             class="auth-input" autocomplete="email"/>
+        <input type="password" id="reg-password" placeholder="סיסמה (לפחות 6 תווים)" class="auth-input" autocomplete="new-password"/>
+        <button onclick="handleRegister()" class="auth-button primary">יצירת חשבון</button>
+      </div>
+      <div id="auth-message" class="auth-message" style="display:none;"></div>
     </div>
   </div>
+</div>
 
-  <!-- ===== MAIN APP ===== -->
-  <div id="app-screen" class="screen" style="display:none;">
+<!-- ══ APP ═════════════════════════════════════════════ -->
+<div id="app-screen" class="screen" style="display:none;">
 
-    <!-- Header -->
-    <header class="app-header">
-      <button class="icon-btn" id="blur-btn" onclick="toggleBlur()" title="הסתר/הצג נתונים">🔓</button>
-      <h1 class="header-title">מעקב פיננסי</h1>
-      <div class="header-actions">
-        <button class="icon-btn" onclick="showSettings()" title="הגדרות">⚙️</button>
-        <button class="icon-btn" onclick="handleLogout()" title="יציאה">🚪</button>
+  <!-- SIDEBAR (desktop) -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">₪</div>
+      <span class="sidebar-name">מעקב פיננסי</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="current"    onclick="switchTab('current',this)">
+        <span class="nav-icon">📊</span> דוח נוכחי
+      </button>
+      <button class="nav-item"        data-tab="history"   onclick="switchTab('history',this)">
+        <span class="nav-icon">📈</span> היסטוריה
+      </button>
+      <button class="nav-item"        data-tab="retirement" onclick="switchTab('retirement',this)">
+        <span class="nav-icon">🎯</span> תכנון פרישה
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-divider"></div>
+      <button class="nav-item" onclick="showSettings()"><span class="nav-icon">⚙️</span> הגדרות</button>
+      <button class="nav-item" onclick="handleLogout()"><span class="nav-icon">🚪</span> התנתק</button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-user">
+        <div class="user-avatar" id="user-avatar-char">א</div>
+        <span class="user-email" id="user-email-display"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="app-content">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">דוח נוכחי</span>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="blur-btn" onclick="toggleBlur()" title="הסתר/הצג">🔓</button>
+        <button class="icon-btn" onclick="exportPDF()" title="הפק דוח PDF">📄</button>
+        <button class="icon-btn" onclick="showSettings()">⚙️</button>
       </div>
     </header>
-
-    <!-- Tabs -->
-    <nav class="tab-bar">
-      <button class="tab-btn active" data-tab="current" onclick="switchTab('current', this)">📊 דוח נוכחי</button>
-      <button class="tab-btn" data-tab="history" onclick="switchTab('history', this)">📈 היסטוריה</button>
-    </nav>
 
     <main class="app-main">
 
       <!-- ── CURRENT TAB ── -->
       <div id="tab-current" class="tab-panel">
-        <div id="current-card" class="main-card card"></div>
+        <div id="current-card"></div>
       </div>
 
       <!-- ── HISTORY TAB ── -->
       <div id="tab-history" class="tab-panel" style="display:none;">
-
-        <!-- Chart -->
-        <div class="chart-card card">
-          <h3 class="card-title">מגמת נכסים</h3>
-          <div class="chart-wrap">
-            <canvas id="main-chart"></canvas>
-          </div>
+        <div class="chart-card">
+          <div class="section-header">מגמת נכסים לאורך זמן</div>
+          <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
         </div>
 
-        <!-- Controls -->
-        <div class="controls-card card">
+        <div class="ctrl-bar">
           <select id="dateSelect" onchange="onDateChange()">
             <option value="" disabled selected>בחר חודש לפירוט</option>
           </select>
-          <button onclick="toggleAddForm()" class="add-btn">➕ הוסף חודש</button>
+          <button onclick="openAddForm(null)" class="add-btn">➕ הוסף חודש</button>
         </div>
 
-        <!-- Add form -->
-        <div id="add-form" class="add-form card" style="display:none;">
-          <h3>📝 הוספת חודש חדש</h3>
-          <div class="form-row">
-            <label>📅 תאריך</label>
-            <input type="date" id="new-date" class="form-input"/>
+        <!-- Add / Edit form -->
+        <div id="add-form" class="add-form" style="display:none;">
+          <h3 id="form-title">📝 הוספת חודש חדש</h3>
+          <input type="hidden" id="edit-record-id"/>
+          <div class="form-grid">
+            <div class="form-field full">
+              <label>📅 תאריך</label>
+              <input type="date" id="new-date" class="form-input"/>
+            </div>
+            <div id="dynamic-fields"></div>
+            <div class="form-field">
+              <label>🏠 יתרת משכנתא</label>
+              <input type="number" id="new-mortgage" placeholder="0" class="form-input"/>
+            </div>
+            <div class="form-field full">
+              <label>📝 הערות</label>
+              <input type="text" id="new-notes" placeholder="הערה קצרה (אופציונלי)" class="form-input"/>
+            </div>
+            <button onclick="submitRecord()" class="submit-btn" id="submit-btn">💾 שמור</button>
           </div>
-          <div id="dynamic-fields"></div>
-          <div class="form-row">
-            <label>🏠 יתרת משכנתא</label>
-            <input type="number" id="new-mortgage" placeholder="0" class="form-input"/>
-          </div>
-          <div class="form-row">
-            <label>📝 הערות</label>
-            <input type="text" id="new-notes" placeholder="הערה קצרה (אופציונלי)" class="form-input"/>
-          </div>
-          <button onclick="submitNewRecord()" class="submit-btn">💾 שמור</button>
         </div>
 
-        <!-- Detail card -->
-        <div id="history-detail" class="card" style="display:none;"></div>
+        <div id="history-detail" style="display:none;"></div>
+      </div>
+
+      <!-- ── RETIREMENT TAB ── -->
+      <div id="tab-retirement" class="tab-panel" style="display:none;">
+
+        <!-- Settings card -->
+        <div class="ret-settings-card">
+          <div class="section-header">הגדרות תחזית</div>
+          <div class="ret-inputs">
+            <div class="ret-input-group">
+              <label>גיל נוכחי</label>
+              <input type="number" id="ret-current-age" class="form-input" min="18" max="80" placeholder="35" oninput="renderRetirement()"/>
+            </div>
+            <div class="ret-input-group">
+              <label>גיל פרישה</label>
+              <input type="number" id="ret-age" class="form-input" min="40" max="90" placeholder="67" oninput="renderRetirement()"/>
+            </div>
+            <div class="ret-input-group">
+              <label>תשואה שנתית צפויה %</label>
+              <input type="number" id="ret-return" class="form-input" min="0" max="30" step="0.1" placeholder="7" oninput="renderRetirement()"/>
+            </div>
+            <div class="ret-input-group">
+              <label>חיסכון חודשי נוסף ₪</label>
+              <input type="number" id="ret-monthly" class="form-input" min="0" placeholder="0" oninput="renderRetirement()"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary tiles -->
+        <div id="ret-summary" class="ret-summary"></div>
+
+        <!-- Projection chart -->
+        <div class="chart-card">
+          <div class="section-header">מסלול לפרישה</div>
+          <div class="chart-wrap" style="height:280px"><canvas id="ret-chart"></canvas></div>
+        </div>
+
+        <!-- Breakdown -->
+        <div id="ret-breakdown" class="ret-breakdown-card"></div>
 
       </div>
-    </main>
 
+    </main>
   </div>
 
-  <!-- ===== SETTINGS MODAL ===== -->
-  <div id="settings-modal" class="modal-overlay" style="display:none;" onclick="closeSettingsOutside(event)">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2>⚙️ הגדרות</h2>
-        <button onclick="closeSettings()" class="modal-close">✕</button>
+  <!-- BOTTOM NAV (mobile) -->
+  <nav class="bottom-nav" style="display:none;">
+    <button class="bottom-nav-item active" data-tab="current" onclick="switchTab('current',this)">
+      <span class="nav-icon">📊</span><span>נוכחי</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="history" onclick="switchTab('history',this)">
+      <span class="nav-icon">📈</span><span>היסטוריה</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="retirement" onclick="switchTab('retirement',this)">
+      <span class="nav-icon">🎯</span><span>פרישה</span>
+    </button>
+    <button class="bottom-nav-item" onclick="toggleBlur()">
+      <span class="nav-icon" id="blur-icon-mobile">🔓</span><span>פרטיות</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ══ SETTINGS MODAL ══════════════════════════════════ -->
+<div id="settings-modal" class="modal-overlay" style="display: flex;align-items: center;" onclick="closeSettingsOutside(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>⚙️ הגדרות</h2>
+      <button onclick="closeSettings()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <h3>קטגוריות נכסים</h3>
+        <p class="settings-hint">הקטגוריות שמופיעות בדוח ובטופס</p>
+        <div id="categories-list" class="categories-list"></div>
       </div>
-      <div class="modal-body">
-        <div class="settings-section">
-          <h3>קטגוריות נכסים</h3>
-          <p class="settings-hint">אלה הקטגוריות שיופיעו בטופס ובדוח שלך</p>
-          <div id="categories-list" class="categories-list"></div>
+      <div class="settings-section">
+        <h3>הוסף קטגוריה</h3>
+        <div class="add-cat-form">
+          <input type="text" id="new-cat-key"   placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
+          <input type="text" id="new-cat-label" placeholder="שם בעברית"                 class="form-input"/>
+          <input type="text" id="new-cat-icon"  placeholder="אמוג'י 💰"                 class="form-input" maxlength="4"/>
+          <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;">הוסף</button>
         </div>
-        <div class="settings-section">
-          <h3>הוסף קטגוריה חדשה</h3>
-          <div class="add-cat-form">
-            <input type="text" id="new-cat-key" placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
-            <input type="text" id="new-cat-label" placeholder="שם בעברית" class="form-input"/>
-            <input type="text" id="new-cat-icon" placeholder="אמוג'י 💰" class="form-input" maxlength="4"/>
-            <button onclick="addCategory()" class="submit-btn">הוסף</button>
-          </div>
-        </div>
-        <div class="settings-section danger-zone">
-          <h3>מידע</h3>
-          <p class="settings-hint">מחובר בתור: <span id="user-email-display"></span></p>
-          <button onclick="handleLogout()" class="logout-btn">🚪 התנתק</button>
-        </div>
+      </div>
+      <div class="settings-section">
+        <h3>חשבון</h3>
+        <p class="settings-hint">מחובר: <span id="user-email-display2"></span></p>
+        <button onclick="handleLogout()" class="logout-btn">🚪 התנתק</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ===== TOAST ===== -->
-  <div id="toast" class="toast"></div>
+<div id="toast" class="toast"></div>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

@@ -99,6 +99,16 @@ async function handleLogin() {
   if (error) showAuthMsg(translateError(error.message), false);
 }
 
+async function handleGoogleLogin() {
+  const { error } = await db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
+  if (error) showAuthMsg(translateError(error.message), false);
+}
+
+window.handleGoogleLogin = handleGoogleLogin;
+
 async function handleRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();

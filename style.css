@@ -52,7 +52,8 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
 .auth-message{margin-top:8px;padding:11px 14px;border-radius:var(--r-xs);font-size:.85rem;font-weight:500;text-align:center}
 .auth-message.error{background:var(--red-light);color:var(--red)}
 .auth-message.success{background:var(--green-light);color:var(--green)}
-
+.auth-button.google {background:var(--bg);color:var(--ink-2);border:1.5px solid var(--border);margin-top:-4px}
+.auth-button.google:hover {background:var(--border)}
 /* APP SHELL */
 #app-screen{flex-direction:row;background:var(--bg)}
 .sidebar{width:var(--sidebar);height:100%;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0 24px;flex-shrink:0;z-index:20}

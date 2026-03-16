@@ -1,7 +1,2 @@
-const CONFIG = {
-  currentReportUrl: "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&gid=425922794",
-  historyReportUrl: "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&gid=353171664",
-  categoriesUrl: "https://docs.google.com/spreadsheets/d/19dofQI-ay91ZAq40-fySZMdh_riryWmXGpqdbvqVb34/gviz/tq?tqx=out:jsonp&gid=1212053018",
-  AddNewMonth: "https://script.google.com/macros/s/AKfycbxUgXo-527OKTpQlq05TmgmF771MKh7T9IROe4Erl4LI-zDmUgZAzURnhanZcY3vVmm9g/exec?",
-  DeleteMonth: 'https://script.google.com/macros/s/AKfycbxZmVixNQ5iNH9ChOCiWaio3CmO2bFUOV3_vusfgDuwPEbqlyrCEEpy9u0DDA9wZGJOdg/exec'
-};
+const SUPABASE_URL = 'https://hnkqsxzzdhbmqnwvslpi.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhua3FzeHp6ZGhibXFud3ZzbHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2Mzc1NjgsImV4cCI6MjA4OTIxMzU2OH0.9ck9UdCnHD5tcK6VTbyHm_r7Z3yaKdnfGDYdcf5uFSc';

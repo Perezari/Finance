@@ -1,7 +1,7 @@
 /* ============================================================
    SUPABASE CLIENT
    ============================================================ */
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ============================================================
    STATE
@@ -18,7 +18,7 @@ let mainChart    = null;
 async function init() {
   showLoader('מאמת...');
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await db.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
       await loadApp();
@@ -30,7 +30,7 @@ async function init() {
     showScreen('auth');
   }
 
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  db.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       currentUser = session.user;
       await loadApp();
@@ -65,7 +65,7 @@ async function handleLogin() {
   if (!email || !password) return showAuthMsg('יש למלא אימייל וסיסמה', false);
 
   showLoader('מכנס...');
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await db.auth.signInWithPassword({ email, password });
   hideLoader();
   if (error) return showAuthMsg(translateError(error.message), false);
 }
@@ -78,7 +78,7 @@ async function handleRegister() {
   if (password.length < 6)  return showAuthMsg('הסיסמה חייבת לכלול לפחות 6 תווים', false);
 
   showLoader('יוצר חשבון...');
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await db.auth.signUp({
     email, password,
     options: { data: { full_name: name } }
   });
@@ -97,7 +97,7 @@ async function handleMagicLink() {
   if (!email) return showAuthMsg('הכנס כתובת אימייל קודם', false);
 
   showLoader('שולח...');
-  const { error } = await supabase.auth.signInWithOtp({ email });
+  const { error } = await db.auth.signInWithOtp({ email });
   hideLoader();
 
   if (error) return showAuthMsg(translateError(error.message), false);
@@ -106,7 +106,7 @@ async function handleMagicLink() {
 
 async function handleLogout() {
   closeSettings();
-  await supabase.auth.signOut();
+  await db.auth.signOut();
 }
 
 function translateError(msg) {
@@ -142,19 +142,19 @@ const DEFAULT_CATEGORIES = [
 
 async function createDefaultCategories(userId) {
   const cats = DEFAULT_CATEGORIES.map(c => ({ ...c, user_id: userId }));
-  const { error } = await supabase.from('categories').insert(cats);
+  const { error } = await db.from('categories').insert(cats);
   if (error) console.error('createDefaultCategories:', error);
 }
 
 async function loadCategories() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('categories').select('*').order('order_index');
   if (error) { console.error(error); return; }
   categories = data || [];
 
   if (categories.length === 0) {
     await createDefaultCategories(currentUser.id);
-    const { data: fresh } = await supabase
+    const { data: fresh } = await db
       .from('categories').select('*').order('order_index');
     categories = fresh || [];
   }
@@ -170,7 +170,7 @@ async function addCategory() {
   if (categories.find(c => c.key === key))  return alert('מזהה זה כבר קיים');
 
   showLoader('מוסיף...');
-  const { error } = await supabase.from('categories').insert({
+  const { error } = await db.from('categories').insert({
     user_id: currentUser.id, key, label, icon,
     order_index: categories.length
   });
@@ -191,7 +191,7 @@ async function addCategory() {
 async function deleteCategory(id) {
   if (!confirm('למחוק קטגוריה זו?')) return;
   showLoader('מוחק...');
-  await supabase.from('categories').delete().eq('id', id).eq('user_id', currentUser.id);
+  await db.from('categories').delete().eq('id', id).eq('user_id', currentUser.id);
   await loadCategories();
   hideLoader();
   renderCategoriesList();
@@ -203,7 +203,7 @@ async function deleteCategory(id) {
    RECORDS
    ============================================================ */
 async function loadRecords() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('monthly_records').select('*')
     .order('record_date', { ascending: true });
   if (error) { console.error(error); return; }
@@ -224,7 +224,7 @@ async function submitNewRecord() {
   const notes    = document.getElementById('new-notes').value.trim();
 
   showLoader('שומר...');
-  const { error } = await supabase.from('monthly_records').upsert({
+  const { error } = await db.from('monthly_records').upsert({
     user_id: currentUser.id,
     record_date: date,
     values,
@@ -255,7 +255,7 @@ async function submitNewRecord() {
 async function deleteRecord(id) {
   if (!confirm('למחוק את החודש הזה? פעולה זו לא ניתנת לביטול.')) return;
   showLoader('מוחק...');
-  const { error } = await supabase.from('monthly_records')
+  const { error } = await db.from('monthly_records')
     .delete().eq('id', id).eq('user_id', currentUser.id);
   hideLoader();
 

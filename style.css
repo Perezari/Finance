@@ -15,9 +15,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-/* שינינו כאן את ה-background לירוק כדי לצבוע את שולי המכשיר */
-html,body{height:100%;overflow:hidden;font-family:var(--font);background:#0e9e7e;color:var(--ink);direction:rtl;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;padding-top:env(safe-area-inset-top)}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--ink);direction:rtl;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;}
 
 /* LOADER */
 .loader-overlay{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
@@ -30,8 +28,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:#0e9e7e
 .screen{position:fixed;inset:0;display:flex;overflow:hidden}
 
 /* AUTH */
-/* הוספנו padding חכם לתחתית שמתחשב ב-safe-area-inset-bottom */
-#auth-screen{background:linear-gradient(160deg,#0a5c48 0%,#0e9e7e 52%,#16cba0 100%);flex-direction:column;align-items:center;justify-content:center;padding:24px 24px calc(24px + env(safe-area-inset-bottom)) 24px;overflow-y:auto}
+#auth-screen{background:linear-gradient(160deg,#0a5c48 0%,#0e9e7e 52%,#16cba0 100%);flex-direction:column;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)) 24px;overflow-y:auto}
 .auth-container{width:100%;max-width:400px;display:flex;flex-direction:column;gap:28px;animation:fadeUp .55s ease both}
 .auth-brand{text-align:center}
 .auth-logo{width:70px;height:70px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);border-radius:22px;font-size:2rem;font-weight:800;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;backdrop-filter:blur(10px);position:relative;z-index:1}
@@ -58,7 +55,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:#0e9e7e
 .auth-button.google:hover {background:var(--border)}
 /* APP SHELL */
 #app-screen{flex-direction:row;background:var(--bg)}
-.sidebar{width:var(--sidebar);height:100%;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0 24px;flex-shrink:0;z-index:20}
+.sidebar{width:var(--sidebar);height:100%;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:calc(20px + env(safe-area-inset-top)) 0 calc(24px + env(safe-area-inset-bottom));flex-shrink:0;z-index:20}
 .sidebar-brand{display:flex;align-items:center;gap:11px;padding:0 18px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
 .sidebar-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--green),var(--green-mid));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;color:#fff;flex-shrink:0;box-shadow:var(--shadow-green)}
 .sidebar-name{font-size:.95rem;font-weight:800;color:var(--ink);letter-spacing:-.02em}
@@ -74,7 +71,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:#0e9e7e
 .user-email{font-size:.75rem;color:var(--ink-3);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
 .app-content{flex:1;height:100%;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{height:var(--topbar-h);display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar{height:calc(var(--topbar-h) + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top) 28px 0 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
 .topbar-title{font-size:1.05rem;font-weight:700;color:var(--ink);letter-spacing:-.02em}
 .topbar-actions{display:flex;gap:8px;align-items:center}
 .icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-xs);font-size:1rem;cursor:pointer;transition:all .18s}

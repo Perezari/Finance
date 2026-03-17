@@ -174,7 +174,11 @@ async function handleMagicLink() {
   showAuthMsg('✅ קישור נשלח לאימייל!', true);
 }
 
-async function handleLogout() { closeSettings(); await db.auth.signOut(); }
+async function handleLogout() {
+  closeSettings();
+  localStorage.removeItem('display_name_v1');
+  await db.auth.signOut();
+}
 
 function translateError(msg) {
   return ({'Invalid login credentials':'אימייל או סיסמה שגויים',
@@ -488,7 +492,7 @@ function renderCurrentReport() {
       <div class="empty-state-v2">
         <div class="es-blob">
           <div class="es-icon-ring">
-            <span class="es-main-icon">📊</span>
+            <span class="es-main-icon">₪</span>
           </div>
         </div>
         <h2 class="es-title">עדיין אין נתונים</h2>

@@ -32,7 +32,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
 #auth-screen{background:linear-gradient(160deg,#0a5c48 0%,#0e9e7e 52%,#16cba0 100%);flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 .auth-container{width:100%;max-width:400px;display:flex;flex-direction:column;gap:28px;animation:fadeUp .55s ease both}
 .auth-brand{text-align:center}
-.auth-logo{width:70px;height:70px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);border-radius:22px;font-size:2rem;font-weight:800;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;backdrop-filter:blur(10px)}
+.auth-logo{width:70px;height:70px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);border-radius:22px;font-size:2rem;font-weight:800;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;backdrop-filter:blur(10px);position:relative;z-index:1}
 .auth-title{font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:6px}
 .auth-subtitle{font-size:.9rem;color:rgba(255,255,255,.75)}
 .auth-card{background:#fff;border-radius:var(--r-xl);padding:28px 24px;box-shadow:0 24px 64px rgba(0,0,0,.18)}
@@ -52,7 +52,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
 .auth-message{margin-top:8px;padding:11px 14px;border-radius:var(--r-xs);font-size:.85rem;font-weight:500;text-align:center}
 .auth-message.error{background:var(--red-light);color:var(--red)}
 .auth-message.success{background:var(--green-light);color:var(--green)}
-.auth-button.google {background:var(--bg);color:var(--ink-2);border:1.5px solid var(--border);margin-top:-4px}
+.auth-button.google {background:var(--bg);color:var(--ink-2);border:1.5px solid var(--border);margin-top:-4px;display:flex;align-items:center;justify-content:center;gap:8px}
 .auth-button.google:hover {background:var(--border)}
 /* APP SHELL */
 #app-screen{flex-direction:row;background:var(--bg)}

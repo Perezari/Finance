@@ -93,7 +93,7 @@ html, body {
 .user-email{font-size:.75rem;color:var(--ink-3);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
 .app-content{flex:1;height:100%;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{height:calc(var(--topbar-h) + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top) 28px 0 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar{height:calc(var(--topbar-h) + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top) 28px 0 28px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
 .topbar-title{font-size:1.05rem;font-weight:700;color:var(--ink);letter-spacing:-.02em}
 .topbar-actions{display:flex;gap:8px;align-items:center}
 .icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-xs);font-size:1rem;cursor:pointer;transition:all .18s}

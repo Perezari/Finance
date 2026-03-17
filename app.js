@@ -102,9 +102,11 @@ async function handleLogin() {
 async function handleGoogleLogin() {
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin }
+    options: {
+      redirectTo: 'https://perezari.github.io/Finance'
+    }
   });
-  if (error) showAuthMsg(translateError(error.message), false);
+  if (error) showAuthMessage(error.message, 'error');
 }
 
 window.handleGoogleLogin = handleGoogleLogin;

@@ -216,6 +216,9 @@
     <button class="bottom-nav-item" onclick="toggleBlur()">
       <span class="nav-icon" id="blur-icon-mobile">🔓</span><span>פרטיות</span>
     </button>
+    <button class="bottom-nav-item" onclick="showSettings()">
+      <span class="nav-icon">⚙️</span><span>הגדרות</span>
+    </button>
   </nav>
 
 </div>
@@ -227,56 +230,54 @@
       <h2>⚙️ הגדרות</h2>
       <button onclick="closeSettings()" class="modal-close">✕</button>
     </div>
-    <div class="modal-body">
+    <!-- Settings Tabs -->
+    <div class="settings-tabs">
+      <button class="settings-tab active" id="stab-categories" onclick="switchSettingsTab('categories')">📁 קטגוריות</button>
+      <button class="settings-tab"        id="stab-account"    onclick="switchSettingsTab('account')">👤 חשבון</button>
+    </div>
+
+    <!-- Tab: Categories -->
+    <div class="modal-body" id="settings-panel-categories">
       <div class="settings-section">
         <h3>קטגוריות נכסים</h3>
-        <p class="settings-hint">לחץ על קטגוריה כדי לערוך או לצרף גוף מנהל</p>
+        <p class="settings-hint">גרור לשינוי סדר • לחץ ✏️ לעריכה • 🏦 לשינוי גוף מנהל</p>
         <div id="categories-list" class="categories-list"></div>
       </div>
       <div class="settings-section">
-        <h3>הוסף קטגוריה</h3>
+        <h3>הוסף קטגוריה חדשה</h3>
         <div class="add-cat-form">
-          <input type="text" id="new-cat-key"         placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
-          <input type="text" id="new-cat-label"       placeholder="שם בעברית"                 class="form-input"/>
-          <input type="text" id="new-cat-icon"        placeholder="אמוג'י 💰"                 class="form-input" maxlength="4"/>
+          <input type="text" id="new-cat-key"   placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
+          <input type="text" id="new-cat-label" placeholder="שם בעברית"                 class="form-input"/>
+          <input type="text" id="new-cat-icon"  placeholder="אמוג'י 💰"                 class="form-input" maxlength="4"/>
           <select id="new-cat-institution" class="form-input" style="direction:rtl;text-align:right;">
             <option value="">גוף מנהל (אופציונלי)</option>
           </select>
-          <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;">הוסף</button>
+          <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;">➕ הוסף</button>
         </div>
       </div>
-<div class="settings-section">
-  <h3>חשבון</h3>
-  <p class="settings-hint">מחובר: <span id="user-email-display2"></span></p>
- 
-  <p class="settings-hint" style="margin-top:12px;">שם תצוגה</p>
-  <div class="display-name-row">
-    <input
-      type="text"
-      id="settings-display-name"
-      placeholder="השם שיוצג בממשק"
-      class="form-input"
-      style="direction:rtl;text-align:right;"
-      maxlength="40"
-    />
-    <button class="display-name-save-btn" onclick="saveDisplayName()">שמור</button>
-  </div>
- 
-  <button onclick="handleLogout()" class="logout-btn" style="margin-top:12px;">🚪 התנתק</button>
-</div>
-<div class="settings-section">
-  <h3>⚠️ מחיקת חשבון</h3>
-  <p class="settings-hint">
-    לפי תקנות ה-GDPR יש לך את הזכות למחוק את כל הנתונים שלך.
-  </p>
-  <button class="delete-account-btn" onclick="deleteAccount()">
-    🗑️ מחק את כל הנתונים שלי
-  </button>
-  <p class="delete-account-note">
-    הפעולה תמחק לצמיתות את כל ההיסטוריה, הקטגוריות והנתונים שלך.<br/>
-    לא ניתן לשחזר לאחר המחיקה.
-  </p>
-</div>
+    </div>
+
+    <!-- Tab: Account -->
+    <div class="modal-body" id="settings-panel-account" style="display:none;">
+      <div class="settings-section">
+        <h3>פרטי חשבון</h3>
+        <p class="settings-hint">מחובר: <span id="user-email-display2"></span></p>
+        <p class="settings-hint" style="margin-top:12px;">שם תצוגה</p>
+        <div class="display-name-row">
+          <input type="text" id="settings-display-name" placeholder="השם שיוצג בממשק"
+                 class="form-input" style="direction:rtl;text-align:right;" maxlength="40"/>
+          <button class="display-name-save-btn" onclick="saveDisplayName()">שמור</button>
+        </div>
+        <button onclick="handleLogout()" class="logout-btn" style="margin-top:16px;">🚪 התנתק</button>
+      </div>
+      <div class="settings-section">
+        <h3>⚠️ מחיקת חשבון</h3>
+        <p class="settings-hint">לפי תקנות ה-GDPR יש לך את הזכות למחוק את כל הנתונים שלך.</p>
+        <button class="delete-account-btn" onclick="deleteAccount()">🗑️ מחק את כל הנתונים שלי</button>
+        <p class="delete-account-note">
+          הפעולה תמחק לצמיתות את כל ההיסטוריה, הקטגוריות והנתונים שלך.<br/>לא ניתן לשחזר לאחר המחיקה.
+        </p>
+      </div>
     </div>
   </div>
 </div>

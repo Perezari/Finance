@@ -1091,29 +1091,123 @@ async function deleteAccount() {
 }
 
 /* ── SETTINGS ───────────────────────────────────────── */
-function showSettings() { renderCategoriesList(); document.getElementById('settings-modal').style.display='flex'; }
+function showSettings(tab) {
+  renderCategoriesList();
+  document.getElementById('settings-modal').style.display='flex';
+  switchSettingsTab(tab || 'categories');
+}
 function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
 function closeSettingsOutside(e) { if(e.target.id==='settings-modal') closeSettings(); }
 
+function switchSettingsTab(tab) {
+  ['categories','account'].forEach(t => {
+    document.getElementById(`settings-panel-${t}`).style.display = t===tab ? 'flex' : 'none';
+    const btn = document.getElementById(`stab-${t}`);
+    if (btn) btn.classList.toggle('active', t===tab);
+  });
+}
+
+/* ── CATEGORIES LIST with drag & edit ───────────────── */
+let dragSrcIndex = null;
+
 function renderCategoriesList() {
-  document.getElementById('categories-list').innerHTML = categories.map(cat=>{
+  const list = document.getElementById('categories-list');
+  list.innerHTML = categories.map((cat, idx) => {
     const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
     const logo = inst ? `<img src="${logoUrl(inst.domain)}" alt="" class="cat-list-logo" onerror="this.style.display='none'"/>` : '';
     return `
-    <div class="cat-item">
-      <div style="display:flex;align-items:center;gap:8px">
+    <div class="cat-item" draggable="true" data-idx="${idx}" data-id="${cat.id}"
+         ondragstart="catDragStart(event,${idx})"
+         ondragover="catDragOver(event)"
+         ondrop="catDrop(event,${idx})"
+         ondragend="catDragEnd(event)">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <span class="drag-handle" title="גרור לשינוי סדר">⠿</span>
         ${logo}
-        <div>
-          <div>${cat.icon} ${cat.label} <span style="color:var(--ink-4);font-size:.75rem">(${cat.key})</span></div>
-          ${inst?`<div style="font-size:.72rem;color:var(--green);margin-top:2px">${inst.name}</div>`:''}
+        <div style="min-width:0;flex:1">
+          <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${cat.icon} ${cat.label}</div>
+          <div style="font-size:.72rem;color:var(--ink-4)">${cat.key}${inst ? ` · <span style="color:var(--green)">${inst.name}</span>` : ''}</div>
         </div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="edit-btn" style="font-size:.75rem;padding:4px 8px" onclick="openInstModal('${cat.id}')">🏦 גוף מנהל</button>
-        <button class="cat-delete" onclick="deleteCategory('${cat.id}')">✕</button>
+      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+        <button class="cat-action-btn" onclick="openCatEdit('${cat.id}')" title="עריכה">✏️</button>
+        <button class="cat-action-btn" onclick="openInstModal('${cat.id}')" title="גוף מנהל">🏦</button>
+        <button class="cat-delete" onclick="deleteCategory('${cat.id}')" title="מחק">✕</button>
+      </div>
+    </div>
+    <div class="cat-edit-panel" id="cat-edit-${cat.id}" style="display:none;">
+      <div class="cat-edit-grid">
+        <input type="text" id="cat-edit-label-${cat.id}" value="${cat.label}" placeholder="שם בעברית" class="form-input" style="direction:rtl;text-align:right"/>
+        <input type="text" id="cat-edit-icon-${cat.id}"  value="${cat.icon}"  placeholder="אמוג'י" class="form-input" maxlength="4" style="text-align:center;max-width:72px"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="cat-edit-save-btn" onclick="saveCatEdit('${cat.id}')">✅ שמור</button>
+        <button class="cat-edit-cancel-btn" onclick="closeCatEdit('${cat.id}')">ביטול</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function openCatEdit(id) {
+  document.querySelectorAll('.cat-edit-panel').forEach(p => p.style.display='none');
+  const panel = document.getElementById(`cat-edit-${id}`);
+  if (panel) { panel.style.display='block'; panel.querySelector('input').focus(); }
+}
+
+function closeCatEdit(id) {
+  const panel = document.getElementById(`cat-edit-${id}`);
+  if (panel) panel.style.display='none';
+}
+
+async function saveCatEdit(id) {
+  const label = document.getElementById(`cat-edit-label-${id}`)?.value.trim();
+  const icon  = document.getElementById(`cat-edit-icon-${id}`)?.value.trim();
+  if (!label) return showToast('⚠️ שם לא יכול להיות ריק');
+  showLoader('שומר...');
+  await db.from('categories').update({ label, icon: icon||'💰' }).eq('id',id).eq('user_id',currentUser.id);
+  await loadCategories();
+  hideLoader();
+  renderCategoriesList();
+  renderCurrentReport();
+  showToast('✅ קטגוריה עודכנה');
+}
+
+/* ── DRAG & DROP reorder ─────────────────────────────── */
+function catDragStart(e, idx) {
+  dragSrcIndex = idx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function catDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+
+function catDrop(e, idx) {
+  e.preventDefault();
+  if (dragSrcIndex === null || dragSrcIndex === idx) return;
+  const moved = categories.splice(dragSrcIndex, 1)[0];
+  categories.splice(idx, 0, moved);
+  saveCategoryOrder();
+  renderCategoriesList();
+}
+
+function catDragEnd(e) {
+  dragSrcIndex = null;
+  document.querySelectorAll('.cat-item').forEach(el => {
+    el.classList.remove('dragging','drag-over');
+  });
+}
+
+async function saveCategoryOrder() {
+  const updates = categories.map((cat, i) =>
+    db.from('categories').update({ order_index: i }).eq('id', cat.id).eq('user_id', currentUser.id)
+  );
+  await Promise.all(updates);
+  showToast('✅ סדר נשמר');
 }
 
 /* ── TAB SWITCH ─────────────────────────────────────── */

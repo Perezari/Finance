@@ -249,13 +249,17 @@ select option{background:var(--surface)}
 .rbd-pct{font-size:.75rem;font-weight:600;color:var(--ink-3);min-width:36px;text-align:left}
 
 /* ══ SETTINGS MODAL ════════════════════════════════════ */
-.modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.35);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-end;justify-content:center}
-.modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl) var(--r-xl) 0 0;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:slideUp .28s ease}
+.modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.35);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
 .modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
 .modal-header h2{font-size:1rem;font-weight:700;color:var(--ink)}
 .modal-close{width:32px;height:32px;background:var(--bg);border:1.5px solid var(--border);border-radius:50%;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-3);transition:all .15s}
 .modal-close:hover{background:var(--border);color:var(--ink)}
 .modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 22px 40px;flex:1}
+@media (max-width:768px){
+  .modal-overlay{align-items:flex-end;padding:0}
+  .modal-box{border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:90vh;animation:slideUp .28s ease}
+}
 .settings-section{margin-bottom:26px}
 .settings-section h3{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .settings-hint{font-size:.82rem;color:var(--ink-3);margin-bottom:10px}
@@ -567,3 +571,165 @@ select option{background:var(--surface)}
   margin-top: 7px;
   line-height: 1.5;
 }
+/* ══ SETTINGS TABS ════════════════════════════════════ */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.settings-tab {
+  flex: 1;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font);
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  transition: all .18s;
+}
+.settings-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  background: var(--green-light);
+}
+.settings-tab:hover:not(.active) {
+  color: var(--ink-2);
+  background: var(--bg);
+}
+
+/* The modal panels need flex-direction column so they scroll properly */
+#settings-panel-categories,
+#settings-panel-account {
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 22px 40px;
+  flex: 1;
+}
+
+/* ══ CATEGORY ITEM — drag & edit ═════════════════════ */
+.cat-item {
+  cursor: default;
+  transition: background .15s, box-shadow .15s, transform .15s;
+  user-select: none;
+}
+.cat-item.dragging {
+  opacity: .5;
+  transform: scale(.98);
+  box-shadow: var(--shadow-md);
+}
+.cat-item.drag-over {
+  border-color: var(--green);
+  background: var(--green-light);
+}
+.drag-handle {
+  font-size: 1.1rem;
+  color: var(--ink-4);
+  cursor: grab;
+  padding: 0 2px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.drag-handle:active { cursor: grabbing; }
+
+.cat-action-btn {
+  width: 28px;
+  height: 28px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  font-size: .8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.cat-action-btn:hover {
+  border-color: var(--green);
+  background: var(--green-light);
+}
+
+/* ══ INLINE EDIT PANEL ═══════════════════════════════ */
+.cat-edit-panel {
+  background: var(--surface2);
+  border: 1.5px solid var(--green);
+  border-top: none;
+  border-radius: 0 0 var(--r-xs) var(--r-xs);
+  padding: 12px 14px;
+  margin-top: -2px;
+  animation: fadeUp .18s ease both;
+}
+.cat-edit-grid {
+  display: flex;
+  gap: 8px;
+}
+.cat-edit-save-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.cat-edit-save-btn:hover { background: var(--green-mid); }
+.cat-edit-cancel-btn {
+  padding: 8px 14px;
+  background: var(--bg);
+  color: var(--ink-3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.cat-edit-cancel-btn:hover { background: var(--border); }
+
+/* Bottom nav — 5 items on mobile */
+@media (max-width:768px) {
+  .bottom-nav-item { font-size: .6rem; }
+}
+
+/* ══ CUSTOM SCROLLBAR — modal panels ════════════════ */
+#settings-panel-categories::-webkit-scrollbar,
+#settings-panel-account::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+  width: 4px;
+}
+#settings-panel-categories::-webkit-scrollbar-track,
+#settings-panel-account::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+#settings-panel-categories::-webkit-scrollbar-thumb,
+#settings-panel-account::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+#settings-panel-categories::-webkit-scrollbar-thumb:hover,
+#settings-panel-account::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-4);
+}
+
+/* ══ CUSTOM SCROLLBAR — main app content ════════════ */
+.app-main::-webkit-scrollbar { width: 4px; }
+.app-main::-webkit-scrollbar-track { background: transparent; }
+.app-main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+.app-main::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }

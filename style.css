@@ -15,7 +15,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--ink);direction:rtl;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--ink);direction:rtl;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;padding-top:env(safe-area-inset-top)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
 /* LOADER */

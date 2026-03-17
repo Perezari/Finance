@@ -75,17 +75,56 @@ async function loadApp() {
   updateUserUI();
   showScreen('app');
   hideLoader();
+  checkOnboarding(); // ← new
 }
 
+/* ══════════════════════════════════════════════════════
+   DISPLAY NAME — additions_app.js
+   See INTEGRATION_GUIDE.md for placement
+══════════════════════════════════════════════════════ */
+
+/* ── 1. REPLACE updateUserUI() ───────────────────────── */
 function updateUserUI() {
   if (!currentUser) return;
-  const email = currentUser.email || '';
-  const name  = currentUser.user_metadata?.full_name || email;
+  const email       = currentUser.email || '';
+  const metaName    = currentUser.user_metadata?.full_name || '';
+  const savedName   = localStorage.getItem('display_name_v1') || '';
+  const displayName = metaName || savedName || email;
+
   ['user-email-display','user-email-display2'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = email;
   });
+
+  // Show display name in sidebar
+  const nameEl = document.getElementById('user-display-name');
+  if (nameEl) nameEl.textContent = displayName;
+
   const av = document.getElementById('user-avatar-char');
-  if (av) av.textContent = (name[0] || '?').toUpperCase();
+  if (av) av.textContent = (displayName[0] || '?').toUpperCase();
+
+  // Prefill settings input
+  const input = document.getElementById('settings-display-name');
+  if (input && !input.value) input.value = savedName || metaName;
+}
+
+/* ── 2. NEW FUNCTION — save display name ─────────────── */
+async function saveDisplayName() {
+  const input = document.getElementById('settings-display-name');
+  const name  = input?.value.trim();
+  if (!name) return showToast('⚠️ יש להזין שם');
+
+  showLoader('שומר שם...');
+  const { error } = await db.auth.updateUser({
+    data: { full_name: name }
+  });
+  hideLoader();
+
+  if (error) return showToast('❌ שגיאה: ' + error.message);
+
+  // גם localStorage לסנכרון מיידי
+  localStorage.setItem('display_name_v1', name);
+  updateUserUI();
+  showToast('✅ שם עודכן');
 }
 
 /* ── AUTH ──────────────────────────────────────────── */
@@ -93,7 +132,7 @@ async function handleLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw    = document.getElementById('login-password').value;
   if (!email || !pw) return showAuthMsg('יש למלא אימייל וסיסמה', false);
-  showLoader('מכנס...');
+  showLoader('נכנס...');
   const { error } = await db.auth.signInWithPassword({ email, password: pw });
   hideLoader();
   if (error) showAuthMsg(translateError(error.message), false);
@@ -443,18 +482,46 @@ function renderHealthScore() {
 function renderCurrentReport() {
   renderHealthScore();
   const el = document.getElementById('current-card');
+ 
   if (!records.length) {
     el.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📊</div>
-        <p>אין נתונים עדיין</p>
-        <p>עבור ל"היסטוריה" והוסף את החודש הראשון שלך</p>
-      </div>`; return;
+      <div class="empty-state-v2">
+        <div class="es-blob">
+          <div class="es-icon-ring">
+            <span class="es-main-icon">📊</span>
+          </div>
+        </div>
+        <h2 class="es-title">עדיין אין נתונים</h2>
+        <p class="es-desc">הוסף את החודש הראשון שלך ותראה<br/>את התמונה הכלכלית שלך מתבהרת</p>
+        <button class="es-cta-btn"
+          onclick="switchTab('history', document.querySelector('[data-tab=\\'history\\']'));
+                   setTimeout(() => openAddForm(null), 150);">
+          ➕ הוסף את החודש הראשון
+        </button>
+        <div class="es-steps">
+          <div class="es-step-item">
+            <div class="es-step-num">1</div>
+            <span>הזן יתרות נכסים</span>
+          </div>
+          <div class="es-step-arrow">←</div>
+          <div class="es-step-item">
+            <div class="es-step-num">2</div>
+            <span>חזור כל חודש</span>
+          </div>
+          <div class="es-step-arrow">←</div>
+          <div class="es-step-item">
+            <div class="es-step-num">3</div>
+            <span>צפה בצמיחה</span>
+          </div>
+        </div>
+      </div>`;
+    return;
   }
+ 
   const latest    = records[records.length-1];
   const calc      = calcRecord(latest);
   const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
-
+ 
   let growthSub='', growthHtml='';
   if (records.length>=2) {
     const prev  = calcRecord(records[records.length-2]);
@@ -476,11 +543,11 @@ function renderCurrentReport() {
           <span class="gc-row-val blur-text">${fmt(avg)}</span></div>
       </div>`;
   }
-
+ 
   const liquidKeys = ['cash','currentAcc','savingsFund'];
   const liquid     = categories.filter(c=>liquidKeys.includes(c.key)).reduce((s,c)=>s+(calc[c.key]||0),0);
   const liquidPct  = calc.totalAssets ? ((liquid/calc.totalAssets)*100).toFixed(1) : '0';
-
+ 
   const mortgageHero = calc.mortgage>0 ? `
     <div class="hero-tile danger" style="animation-delay:.1s">
       <div class="ht-label">🏠 יתרת משכנתא</div>
@@ -490,7 +557,7 @@ function renderCurrentReport() {
       <div class="ht-label">💎 שווי נקי</div>
       <div class="ht-value blur-text">${fmt(calc.netWorth)}</div>
     </div>` : '';
-
+ 
   const catTiles = categories.map((cat,i) => {
     const inst     = cat.institution_id ? getInstitution(cat.institution_id) : null;
     const logoHtml = inst
@@ -505,10 +572,10 @@ function renderCurrentReport() {
       <div class="ct-value blur-text">${fmt(calc[cat.key]||0)}</div>
     </div>`;
   }).join('');
-
+ 
   const notesHtml = latest.notes
     ? `<div class="notes-bar ${latest.notes.includes('✔️')?'pos':'neg'}">${latest.notes}</div>` : '';
-
+ 
   el.innerHTML = `
     <div class="hero-strip">
       <div class="hero-tile accent">
@@ -942,6 +1009,81 @@ ${growthRows?`<h2>נתוני צמיחה</h2><table><tbody>${growthRows}</tbody><
 <div class="footer">מעקב פיננסי • ${new Date().toLocaleDateString('he-IL')}</div>
 <script>window.onload=()=>window.print();<\/script></body></html>`);
   win.document.close();
+}
+ 
+const ONBOARDING_STEPS = [
+  {
+    emoji: '👋',
+    title: 'ברוך הבא למעקב פיננסי!',
+    desc:  'האפליקציה עוזרת לך לעקוב אחרי הנכסים שלך, לראות צמיחה לאורך זמן ולתכנן את הפרישה שלך.'
+  },
+  {
+    emoji: '📅',
+    title: 'הוסף חודש אחד בחודש',
+    desc:  'כל חודש עדכן את יתרות הנכסים שלך — עו"ש, חסכונות, פנסיה ועוד. לוקח פחות מ-2 דקות.'
+  },
+  {
+    emoji: '🚀',
+    title: 'צפה בצמיחה שלך!',
+    desc:  'אחרי מספר חודשים תראה גרפים, ניתוח בריאות פיננסית ותחזית לפרישה. בוא נתחיל!'
+  }
+];
+ 
+function checkOnboarding() {
+  if (!records.length && !localStorage.getItem('onboarding_done_v1')) {
+    setTimeout(showOnboarding, 400);
+  }
+}
+ 
+function showOnboarding() {
+  document.getElementById('onboarding-overlay').style.display = 'flex';
+  setOnboardingStep(0);
+}
+ 
+function setOnboardingStep(step) {
+  onboardingStep = step;
+  const s = ONBOARDING_STEPS[step];
+  document.getElementById('ob-emoji').textContent = s.emoji;
+  document.getElementById('ob-title').textContent = s.title;
+  document.getElementById('ob-desc').textContent  = s.desc;
+  document.getElementById('ob-dots').innerHTML    = ONBOARDING_STEPS.map((_,i) =>
+    `<div class="ob-dot${i===step?' active':''}"></div>`).join('');
+  document.getElementById('ob-next-btn').textContent =
+    step < ONBOARDING_STEPS.length - 1 ? 'הבא ←' : '🚀 בואו נתחיל!';
+}
+ 
+function nextOnboardingStep() {
+  if (onboardingStep < ONBOARDING_STEPS.length - 1) {
+    setOnboardingStep(onboardingStep + 1);
+  } else {
+    closeOnboarding();
+  }
+}
+ 
+function closeOnboarding() {
+  document.getElementById('onboarding-overlay').style.display = 'none';
+  localStorage.setItem('onboarding_done_v1', '1');
+}
+ 
+ 
+/* ────────────────────────────────────────────────────
+   FEATURE 3 — DELETE ACCOUNT
+──────────────────────────────────────────────────────*/
+async function deleteAccount() {
+  if (!confirm('⚠️ האם אתה בטוח?\n\nפעולה זו תמחק את כל ההיסטוריה הפיננסית שלך לצמיתות.')) return;
+  if (!confirm('אישור סופי — כל הנתונים יימחקו ולא ניתן לשחזרם. להמשיך?')) return;
+  showLoader('מוחק נתונים...');
+  try {
+    await db.from('monthly_records').delete().eq('user_id', currentUser.id);
+    await db.from('categories').delete().eq('user_id', currentUser.id);
+    localStorage.removeItem('onboarding_done_v1');
+    localStorage.removeItem('ret_settings_v1');
+    localStorage.removeItem('display_name_v1');
+  } catch(e) { console.error(e); }
+  hideLoader();
+  closeSettings();
+  showToast('✅ כל הנתונים נמחקו');
+  await db.auth.signOut();
 }
 
 /* ── SETTINGS ───────────────────────────────────────── */

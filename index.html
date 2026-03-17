@@ -81,10 +81,13 @@
       <button class="nav-item" onclick="showSettings()"><span class="nav-icon">⚙️</span> הגדרות</button>
       <button class="nav-item" onclick="handleLogout()"><span class="nav-icon">🚪</span> התנתק</button>
       <div class="sidebar-divider"></div>
-      <div class="sidebar-user">
-        <div class="user-avatar" id="user-avatar-char">א</div>
-        <span class="user-email" id="user-email-display"></span>
-      </div>
+		<div class="sidebar-user">
+			<div class="user-avatar" id="user-avatar-char">א</div>
+			<div style="display:flex;flex-direction:column;overflow:hidden;flex:1;">
+				<span class="user-display-name" id="user-display-name"></span>
+				<span class="user-email"        id="user-email-display"></span>
+		</div>
+	</div>
     </div>
   </aside>
 
@@ -242,11 +245,38 @@
           <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;">הוסף</button>
         </div>
       </div>
-      <div class="settings-section">
-        <h3>חשבון</h3>
-        <p class="settings-hint">מחובר: <span id="user-email-display2"></span></p>
-        <button onclick="handleLogout()" class="logout-btn">🚪 התנתק</button>
-      </div>
+<div class="settings-section">
+  <h3>חשבון</h3>
+  <p class="settings-hint">מחובר: <span id="user-email-display2"></span></p>
+ 
+  <p class="settings-hint" style="margin-top:12px;">שם תצוגה</p>
+  <div class="display-name-row">
+    <input
+      type="text"
+      id="settings-display-name"
+      placeholder="השם שיוצג בממשק"
+      class="form-input"
+      style="direction:rtl;text-align:right;"
+      maxlength="40"
+    />
+    <button class="display-name-save-btn" onclick="saveDisplayName()">שמור</button>
+  </div>
+ 
+  <button onclick="handleLogout()" class="logout-btn" style="margin-top:12px;">🚪 התנתק</button>
+</div>
+<div class="settings-section">
+  <h3>⚠️ מחיקת חשבון</h3>
+  <p class="settings-hint">
+    לפי תקנות ה-GDPR יש לך את הזכות למחוק את כל הנתונים שלך.
+  </p>
+  <button class="delete-account-btn" onclick="deleteAccount()">
+    🗑️ מחק את כל הנתונים שלי
+  </button>
+  <p class="delete-account-note">
+    הפעולה תמחק לצמיתות את כל ההיסטוריה, הקטגוריות והנתונים שלך.<br/>
+    לא ניתן לשחזר לאחר המחיקה.
+  </p>
+</div>
     </div>
   </div>
 </div>
@@ -266,6 +296,24 @@
 </div>
 
 <div id="toast" class="toast"></div>
+
+<!-- ── 1. ONBOARDING OVERLAY ── -->
+<div id="onboarding-overlay" style="display:none;">
+  <div class="ob-card">
+    <div class="ob-header">
+      <div class="ob-emoji-wrap">
+        <span id="ob-emoji">👋</span>
+      </div>
+      <div class="ob-title-text" id="ob-title"></div>
+      <div class="ob-desc-text"  id="ob-desc"></div>
+      <div class="ob-dots"       id="ob-dots"></div>
+    </div>
+    <div class="ob-actions">
+      <button class="ob-skip-btn" onclick="closeOnboarding()">דלג</button>
+      <button class="ob-next-btn" id="ob-next-btn" onclick="nextOnboardingStep()">הבא ←</button>
+    </div>
+  </div>
+</div>
 
 <script src="config.js"></script>
 <script src="app.js"></script>

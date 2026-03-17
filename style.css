@@ -15,7 +15,19 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--ink);direction:rtl;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;}
+html, body {
+  height: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available; /* פקודה קריטית ל-iOS */
+  overflow: hidden;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
 /* LOADER */
 .loader-overlay{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
@@ -25,13 +37,23 @@ html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--b
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:translateY(0)}}
 
-.screen{position:fixed;inset:0;display:flex;overflow:hidden}
+.screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  height: 100dvh; /* פותר את בעיית הגובה באייפון ומכסה את האזור התחתון */
+  display: flex;
+  overflow: hidden;
+}
 
 /* AUTH */
 #auth-screen{background:linear-gradient(160deg,#0a5c48 0%,#0e9e7e 52%,#16cba0 100%);flex-direction:column;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)) 24px;overflow-y:auto}
 .auth-container{width:100%;max-width:400px;display:flex;flex-direction:column;gap:28px;animation:fadeUp .55s ease both}
 .auth-brand{text-align:center}
-.auth-logo{width:70px;height:70px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);border-radius:22px;font-size:2rem;font-weight:800;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;backdrop-filter:blur(10px);position:relative;z-index:1}
+.auth-logo{width:70px;height:70px;background:#0e9e7e;border:2px solid rgba(255,255,255,.35);border-radius:22px;font-size:2rem;font-weight:800;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;backdrop-filter:blur(10px);position:relative;z-index:1}
 .auth-title{font-size:1.9rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:6px}
 .auth-subtitle{font-size:.9rem;color:rgba(255,255,255,.75)}
 .auth-card{background:#fff;border-radius:var(--r-xl);padding:28px 24px;box-shadow:0 24px 64px rgba(0,0,0,.18)}

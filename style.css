@@ -16,12 +16,12 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html, body {
-  height: 100%;
-  min-height: 100vh;
-  min-height: -webkit-fill-available; /* פקודה קריטית ל-iOS */
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
   overflow: hidden;
   font-family: var(--font);
-  background: var(--bg);
+  background-color: #16cba0; /* זה הצבע המדויק של תחתית הגרדיאנט! */
   color: var(--ink);
   direction: rtl;
   -webkit-font-smoothing: antialiased;
@@ -44,7 +44,7 @@ html, body {
   right: 0;
   bottom: 0;
   height: 100vh;
-  height: 100dvh; /* פותר את בעיית הגובה באייפון ומכסה את האזור התחתון */
+  height: 100dvh;
   display: flex;
   overflow: hidden;
 }

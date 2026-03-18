@@ -90,29 +90,7 @@ let instTargetCatId = null; // which category we're picking institution for
 async function init() {
   initDarkMode();
 
-  // ── RECOVERY: parse tokens directly from URL hash ──────
-  const rawHash = window.location.hash.slice(1);
-  const hashParams = new URLSearchParams(rawHash);
-  if (hashParams.get('type') === 'recovery') {
-    const accessToken  = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    if (accessToken && refreshToken) {
-      history.replaceState(null, '', window.location.pathname);
-      hideLoader();
-      document.getElementById('loader').style.display      = 'none';
-      document.getElementById('auth-screen').style.display = 'flex';
-      const { data, error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      if (!error && data?.session) {
-        currentUser = data.session.user;
-        showPasswordResetModal();
-      } else {
-        showScreen('auth');
-      }
-      return;
-    }
-  }
-  // ── END RECOVERY ───────────────────────────────────────
-
+  // Recovery is handled in handleRecoveryIfNeeded() called at DOMContentLoaded
   showLoader('מאמת...');
   populateInstitutionSelect();
   let appLoaded = false;
@@ -1482,7 +1460,42 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-document.addEventListener('DOMContentLoaded',init);
+
+/* ── RECOVERY HANDLER (runs before init) ────────────── */
+async function handleRecoveryIfNeeded() {
+  const rawHash   = window.location.hash.slice(1);
+  const params    = new URLSearchParams(rawHash);
+  const type      = params.get('type');
+  const accessTok = params.get('access_token');
+  const refreshTok= params.get('refresh_token');
+
+  if (type !== 'recovery' || !accessTok || !refreshTok) return false;
+
+  // Immediately clear hash so other tabs don't process it
+  history.replaceState(null, '', window.location.pathname);
+
+  // Show auth screen as background
+  document.getElementById('loader').style.display      = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+
+  // Set the session directly with the tokens
+  const { data, error } = await db.auth.setSession({
+    access_token:  accessTok,
+    refresh_token: refreshTok
+  });
+
+  if (!error && data?.session) {
+    currentUser = data.session.user;
+    showPasswordResetModal();
+    return true;
+  }
+  return false;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const wasRecovery = await handleRecoveryIfNeeded();
+  if (!wasRecovery) init();
+});
 
 /* ── KEYBOARD SHORTCUTS ─────────────────────────────── */
 document.addEventListener('keydown', e => {

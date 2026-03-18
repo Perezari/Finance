@@ -126,6 +126,7 @@ async function loadApp() {
   loadRetirementSettings();
   renderCurrentReport();
   updateUserUI();
+  syncDarkModeFromCloud(); // pull dark mode pref from Supabase
   showScreen('app');
   hideLoader();
   checkOnboarding(); // ← new
@@ -1541,18 +1542,38 @@ function applyDarkMode(on) {
   document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = on;
+  const themeColor = on ? '#0d0f14' : '#ffffff';
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+  meta.content = themeColor;
 }
 
-function toggleDarkMode(on) {
+async function toggleDarkMode(on) {
   localStorage.setItem('dark_mode_v1', on ? '1' : '0');
   applyDarkMode(on);
+  // Save to Supabase user_metadata so it syncs across devices
+  if (currentUser) {
+    await db.auth.updateUser({ data: { dark_mode: on ? '1' : '0' } });
+  }
 }
 
 function initDarkMode() {
+  // On login screen we only have localStorage — best effort
   const saved = localStorage.getItem('dark_mode_v1');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const on = saved !== null ? saved === '1' : prefersDark;
   applyDarkMode(on);
+}
+
+function syncDarkModeFromCloud() {
+  // Called after login — pull preference from Supabase and override localStorage
+  if (!currentUser) return;
+  const cloudPref = currentUser.user_metadata?.dark_mode;
+  if (cloudPref !== undefined) {
+    const on = cloudPref === '1';
+    localStorage.setItem('dark_mode_v1', cloudPref);
+    applyDarkMode(on);
+  }
 }
 
 /* ══ COUNT-UP ANIMATION ══════════════════════════════ */

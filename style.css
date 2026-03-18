@@ -1358,3 +1358,9 @@ select option{background:var(--surface)}
   transition: all .18s;
 }
 .restore-btn:hover { border-color: var(--green); color: var(--green); }
+
+/* ══ DARK MODE — toast ═══════════════════════════════ */
+[data-theme="dark"] .toast {
+  background: #e8eaf0;
+  color: #111827;
+}

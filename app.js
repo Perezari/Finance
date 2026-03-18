@@ -89,6 +89,17 @@ let instTargetCatId = null; // which category we're picking institution for
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
   initDarkMode();
+
+  // Detect password recovery link BEFORE anything else
+  const hash = window.location.hash;
+  if (hash.includes('type=recovery') || hash.includes('type=signup')) {
+    // Let Supabase parse the token from hash — it fires PASSWORD_RECOVERY event
+    hideLoader();
+    document.getElementById('loader').style.display = 'none';
+    // Wait for onAuthStateChange to fire with PASSWORD_RECOVERY
+    return;
+  }
+
   showLoader('מאמת...');
   populateInstitutionSelect();
   let appLoaded = false;
@@ -101,9 +112,7 @@ async function init() {
   db.auth.onAuthStateChange(async (event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
       currentUser = session.user;
-      // Make sure loader is gone and auth screen is hidden
-      hideLoader();
-      document.getElementById('loader').style.display = 'none';
+      document.getElementById('loader').style.display      = 'none';
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app-screen').style.display  = 'none';
       showPasswordResetModal();
@@ -183,7 +192,9 @@ async function saveDisplayName() {
 
 /* ── PASSWORD RESET MODAL ────────────────────────────── */
 function showPasswordResetModal() {
-  document.getElementById('pwd-reset-modal').style.display = 'flex';
+  const m = document.getElementById('pwd-reset-modal');
+  m.style.display = 'flex';
+  m.classList.add('pwd-reset-overlay');
 }
 
 function closePasswordResetModal() {

@@ -30,6 +30,46 @@ const INSTITUTIONS = [
   { id:'worker',     name:'קרן הגמל לעובד',     domain:'hishtalmut.co.il',    type:'savings'},
 ];
 
+
+/* ── SVG ICON LIBRARY ───────────────────────────────── */
+const ICONS_JS = {
+  edit:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+  save:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+  plus:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  bank:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
+  home:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  calendar:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  note:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
+  alert:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  target:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  x:       `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  eye:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  eyeOff:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
+  noInst:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+  clock:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  trending:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  piggy:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8.4-3.9 1.1C14.1 5.4 13 5 12 5c-3.9 0-7 3.1-7 7s3.1 7 7 7c1 0 2-.2 2.8-.6l.2.1c.9.4 3 1.5 3 1.5v-3c1.2-1.2 2-2.9 2-4.7 0-.7-.1-1.4-.3-2.1.8-.7 1.3-1.8 1.3-3.3z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>`,
+  breakdown: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+  diamond:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="2"/><polyline points="2 8.5 12 15 22 8.5"/></svg>`,
+  barChart:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>`,
+  check:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><polyline points="20 6 9 17 4 12"/></svg>`,
+};
+
+
+/* ── CATEGORY SVG ICONS (keyed by category key) ────── */
+const CAT_SVG = {
+  cash:        `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>`,
+  currentAcc:  `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
+  deposit:     `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17"/></svg>`,
+  savingsFund: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  pensionFund: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  _default:    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+};
+function getCatSvg(cat) {
+  return CAT_SVG[cat.key] || CAT_SVG._default;
+}
+
 function logoUrl(domain) {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 }
@@ -47,6 +87,7 @@ let instTargetCatId = null; // which category we're picking institution for
 
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
+  initDarkMode();
   showLoader('מאמת...');
   populateInstitutionSelect();
   let appLoaded = false;
@@ -235,17 +276,16 @@ function populateInstitutionSelect() {
 async function addCategory() {
   const key         = document.getElementById('new-cat-key').value.trim();
   const label       = document.getElementById('new-cat-label').value.trim();
-  const icon        = document.getElementById('new-cat-icon').value.trim() || '💰';
   const instId      = document.getElementById('new-cat-institution').value || null;
   if (!key || !label)                      return alert('נא למלא מזהה ושם');
   if (!/^[a-zA-Z0-9_]+$/.test(key))       return alert('מזהה – אנגלית בלבד');
   if (categories.find(c => c.key === key)) return alert('מזהה זה כבר קיים');
   showLoader('מוסיף...');
-  await db.from('categories').insert({ user_id:currentUser.id, key, label, icon, order_index:categories.length, institution_id:instId });
+  await db.from('categories').insert({ user_id:currentUser.id, key, label, icon:'_svg', order_index:categories.length, institution_id:instId });
   await loadCategories(); hideLoader();
   renderCategoriesList(); renderDynamicFields();
   showToast('✅ קטגוריה נוספה');
-  ['new-cat-key','new-cat-label','new-cat-icon'].forEach(id => document.getElementById(id).value='');
+  ['new-cat-key','new-cat-label'].forEach(id => document.getElementById(id).value='');
   document.getElementById('new-cat-institution').value = '';
 }
 
@@ -289,7 +329,7 @@ function filterInstitutions() {
 function renderInstGrid(list) {
   document.getElementById('inst-grid').innerHTML = `
     <div class="inst-none-btn" onclick="pickInstitution(null)">
-      <span style="font-size:1.4rem">❌</span>
+      ${ICONS_JS.noInst}
       <span>ללא גוף מנהל</span>
     </div>
     ${list.map(i => `
@@ -323,8 +363,8 @@ function openAddForm(record) {
   renderDynamicFields();
   form.style.display = 'block';
   if (record) {
-    title.textContent     = '✏️ עריכת חודש';
-    submitBtn.textContent = '💾 עדכן';
+    title.innerHTML       = `${ICONS_JS.edit} עריכת חודש`;
+    submitBtn.innerHTML   = `${ICONS_JS.save} עדכן`;
     editId.value          = record.id;
     document.getElementById('new-date').value     = record.record_date;
     document.getElementById('new-mortgage').value = record.mortgage_balance || '';
@@ -332,8 +372,8 @@ function openAddForm(record) {
     const vals = record.values || {};
     categories.forEach(cat => { const el=document.getElementById(`field_${cat.key}`); if(el) el.value=vals[cat.key]||''; });
   } else {
-    title.textContent     = '📝 הוספת חודש חדש';
-    submitBtn.textContent = '💾 שמור';
+    title.innerHTML       = `${ICONS_JS.plus} הוספת חודש חדש`;
+    submitBtn.innerHTML   = `${ICONS_JS.save} שמור`;
     editId.value          = '';
     ['new-date','new-mortgage','new-notes'].forEach(id=>document.getElementById(id).value='');
     categories.forEach(cat=>{ const el=document.getElementById(`field_${cat.key}`); if(el) el.value=''; });
@@ -442,42 +482,61 @@ function renderHealthScore() {
   const { score, details } = hs;
   const color = score>=75 ? 'var(--green)' : score>=50 ? 'var(--amber)' : 'var(--red)';
   const label = score>=75 ? 'מצוין' : score>=50 ? 'טוב' : 'יש מה לשפר';
-  const emoji = score>=75 ? '🏆' : score>=50 ? '👍' : '⚠️';
 
-  // SVG arc
-  const r=36, cx=52, cy=52, circ=2*Math.PI*r;
+  // mini arc SVG (52px)
+  const r=20, cx=26, cy=26, circ=2*Math.PI*r;
   const fill = (score/100)*circ;
 
+  const dotsHtml = details.map(d => {
+    const c = d.ok===true ? 'var(--green)' : d.ok===false ? 'var(--red)' : 'var(--amber)';
+    return `<span class="hs-dot" style="background:${c}" title="${d.label}: ${d.note}"></span>`;
+  }).join('');
+
   container.innerHTML = `
-    <div class="health-card">
-      <div class="health-main">
-        <div class="health-gauge-wrap">
-          <svg width="104" height="104" viewBox="0 0 104 104">
-            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="8"/>
-            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="8"
-              stroke-dasharray="${fill} ${circ}" stroke-dashoffset="0"
-              stroke-linecap="round" transform="rotate(-90 52 52)"
-              style="transition:stroke-dasharray 1s ease"/>
-            <text x="52" y="47" text-anchor="middle" font-family="JetBrains Mono,monospace"
-              font-size="18" font-weight="800" fill="${color}">${score}</text>
-            <text x="52" y="63" text-anchor="middle" font-family="Heebo,sans-serif"
-              font-size="10" font-weight="600" fill="var(--ink-3)">${label}</text>
+    <div class="health-card-wrap" id="health-card-wrap">
+      <div class="health-bar" onclick="toggleHealthDetails()" role="button" aria-expanded="false" id="health-bar-el">
+        <div class="hb-right">
+          <svg width="52" height="52" viewBox="0 0 52 52" class="hb-ring">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="5"/>
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+              stroke-dasharray="${fill} ${circ}" stroke-linecap="round"
+              transform="rotate(-90 26 26)" style="transition:stroke-dasharray 1s ease"/>
+            <text x="26" y="30" text-anchor="middle" font-family="JetBrains Mono,monospace"
+              font-size="10" font-weight="800" fill="${color}">${score}</text>
           </svg>
-        </div>
-        <div class="health-info">
-          <div class="health-title">${emoji} בריאות פיננסית</div>
-          <div class="health-score-label">ציון <strong style="color:${color}">${score}/100</strong></div>
-          <div class="health-details">
-            ${details.map(d=>`
-            <div class="health-detail-row">
-              <span class="hdr-dot" style="background:${d.ok===true?'var(--green)':d.ok===false?'var(--red)':'var(--amber)'}"></span>
-              <span class="hdr-label">${d.label}:</span>
-              <span class="hdr-note">${d.note}</span>
-            </div>`).join('')}
+          <div class="hb-meta">
+            <span class="hb-title">בריאות פיננסית</span>
+            <span class="hb-label" style="color:${color}">${label} · ${score}/100</span>
           </div>
         </div>
+        <div class="hb-left">
+          <div class="hb-dots">${dotsHtml}</div>
+          <svg class="hb-chevron" id="health-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 6l4 4 4-4" stroke="var(--ink-4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="health-details-panel" id="health-details-panel" style="display:none;">
+        ${details.map(d=>{
+          const c = d.ok===true ? 'var(--green)' : d.ok===false ? 'var(--red)' : 'var(--amber)';
+          return `<div class="hdp-row">
+            <span class="hdp-dot" style="background:${c}"></span>
+            <span class="hdp-label">${d.label}</span>
+            <span class="hdp-note">${d.note}</span>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
+}
+
+function toggleHealthDetails() {
+  const panel   = document.getElementById('health-details-panel');
+  const chevron = document.getElementById('health-chevron');
+  const bar     = document.getElementById('health-bar-el');
+  const open    = panel.style.display === 'none';
+  panel.style.display     = open ? 'block' : 'none';
+  chevron.style.transform = open ? 'rotate(180deg)' : '';
+  bar.setAttribute('aria-expanded', open);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -500,7 +559,7 @@ function renderCurrentReport() {
         <button class="es-cta-btn"
           onclick="switchTab('history', document.querySelector('[data-tab=\\'history\\']'));
                    setTimeout(() => openAddForm(null), 150);">
-          ➕ הוסף את החודש הראשון
+          ${ICONS_JS.plus} הוסף את החודש הראשון
         </button>
         <div class="es-steps">
           <div class="es-step-item">
@@ -526,6 +585,11 @@ function renderCurrentReport() {
   const calc      = calcRecord(latest);
   const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
  
+  const SVG_TOTAL    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>`;
+  const SVG_LIQUID   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 8 2 13a10 10 0 0 0 20 0c0-5-4.48-11-10-11z"/></svg>`;
+  const SVG_MORTGAGE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
+  const SVG_NETWORTH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  const SVG_GROWTH   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
   let growthSub='', growthHtml='';
   if (records.length>=2) {
     const prev  = calcRecord(records[records.length-2]);
@@ -538,7 +602,7 @@ function renderCurrentReport() {
     growthHtml  = `
       <div class="growth-card">
         <div class="gc-header">
-          <span class="gc-title">📊 נתוני צמיחה</span>
+          <span class="gc-title">${SVG_GROWTH} נתוני צמיחה</span>
           <span class="gc-badge ${cls}">${sign}${pct}% החודש</span>
         </div>
         <div class="gc-row"><span class="gc-row-label">צמיחה מחודש קודם</span>
@@ -554,26 +618,47 @@ function renderCurrentReport() {
  
   const mortgageHero = calc.mortgage>0 ? `
     <div class="hero-tile danger" style="animation-delay:.1s">
-      <div class="ht-label">🏠 יתרת משכנתא</div>
-      <div class="ht-value blur-text">${fmt(calc.mortgage)}</div>
+      <div class="ht-label">${SVG_MORTGAGE} יתרת משכנתא</div>
+      <div class="ht-value blur-text" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
     </div>
     <div class="hero-tile warning" style="animation-delay:.15s">
-      <div class="ht-label">💎 שווי נקי</div>
-      <div class="ht-value blur-text">${fmt(calc.netWorth)}</div>
+      <div class="ht-label">${SVG_NETWORTH} שווי נקי</div>
+      <div class="ht-value blur-text" data-countup="${calc.netWorth}">${fmt(calc.netWorth)}</div>
     </div>` : '';
  
+  // Previous month for per-category delta
+  const prevCalc = records.length >= 2 ? calcRecord(records[records.length-2]) : null;
+
   const catTiles = categories.map((cat,i) => {
     const inst     = cat.institution_id ? getInstitution(cat.institution_id) : null;
     const logoHtml = inst
       ? `<img src="${logoUrl(inst.domain)}" alt="${inst.name}" class="cat-tile-logo"
              onerror="this.style.display='none'"/>`
       : '';
+
+    // Per-category growth badge
+    let growthBadge = '';
+    if (prevCalc) {
+      const cur  = calc[cat.key] || 0;
+      const prev = prevCalc[cat.key] || 0;
+      if (prev > 0) {
+        const delta = cur - prev;
+        const pct   = (delta / prev * 100).toFixed(1);
+        const pos   = delta >= 0;
+        const sign  = pos ? '+' : '';
+        growthBadge = `<div class="ct-growth ${pos?'pos':'neg'}">${sign}${pct}%</div>`;
+      } else if (cur > 0 && prev === 0) {
+        growthBadge = `<div class="ct-growth pos" style="font-family:var(--font)">חדש</div>`;
+      }
+    }
+
     return `
     <div class="cat-tile" style="animation-delay:${.05*(i+1)}s">
       ${logoHtml}
-      <span class="ct-icon" ${inst?'style="display:none"':''}>${cat.icon}</span>
+      <span class="ct-icon" ${inst?'style="display:none"':''}>${getCatSvg(cat)}</span>
       <div class="ct-label">${cat.label}${inst?`<span class="ct-inst">${inst.name}</span>`:''}</div>
-      <div class="ct-value blur-text">${fmt(calc[cat.key]||0)}</div>
+      <div class="ct-value blur-text" data-countup="${calc[cat.key]||0}">${fmt(calc[cat.key]||0)}</div>
+      ${growthBadge}
     </div>`;
   }).join('');
  
@@ -583,13 +668,13 @@ function renderCurrentReport() {
   el.innerHTML = `
     <div class="hero-strip">
       <div class="hero-tile accent">
-        <div class="ht-label">📈 סה"כ נכסים</div>
-        <div class="ht-value blur-text">${fmt(calc.totalAssets)}</div>
+        <div class="ht-label">${SVG_TOTAL} סה"כ נכסים</div>
+        <div class="ht-value blur-text" data-countup="${calc.totalAssets}">${fmt(calc.totalAssets)}</div>
         ${growthSub}
       </div>
       <div class="hero-tile" style="animation-delay:.05s">
-        <div class="ht-label">💧 נכסים נזילים</div>
-        <div class="ht-value blur-text">${fmt(liquid)}</div>
+        <div class="ht-label">${SVG_LIQUID} נכסים נזילים</div>
+        <div class="ht-value blur-text" data-countup="${liquid}">${fmt(liquid)}</div>
         <span class="ht-sub">${liquidPct}% מהתיק</span>
       </div>
       ${mortgageHero}
@@ -599,6 +684,7 @@ function renderCurrentReport() {
     ${growthHtml}
     ${notesHtml}`;
   applyBlur();
+  animateCountUps();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -754,9 +840,9 @@ function renderDetailCard(record) {
   const calc      = calcRecord(record);
   const dateLabel = new Date(record.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
   const mortRows  = calc.mortgage>0 ? `
-    <div class="hd-row"><span class="hd-row-label">🏠 יתרת משכנתא</span>
+    <div class="hd-row"><span class="hd-row-label">${ICONS_JS.home} יתרת משכנתא</span>
       <span class="hd-row-val neg blur-text">${fmt(calc.mortgage)}</span></div>
-    <div class="hd-row total-row"><span class="hd-row-label">💎 שווי נקי</span>
+    <div class="hd-row total-row"><span class="hd-row-label">${ICONS_JS.diamond} שווי נקי</span>
       <span class="hd-row-val blur-text">${fmt(calc.netWorth)}</span></div>` : '';
   const notesHtml = record.notes
     ? `<div class="notes-bar ${record.notes.includes('✔️')?'pos':'neg'}" style="margin:14px 18px">${record.notes}</div>` : '';
@@ -764,17 +850,17 @@ function renderDetailCard(record) {
   container.innerHTML = `
     <div class="hd-card">
       <div class="hd-header">
-        <span class="hd-date">📅 ${dateLabel}</span>
+        <span class="hd-date">${ICONS_JS.calendar} ${dateLabel}</span>
         <div style="display:flex;gap:8px">
-          <button class="edit-btn" onclick="openAddForm(${JSON.stringify(record).replace(/"/g,'&quot;')})">✏️ ערוך</button>
-          <button class="delete-btn" onclick="deleteRecord('${record.id}')">🗑️ מחק</button>
+          <button class="edit-btn" onclick="openAddForm(${JSON.stringify(record).replace(/"/g,'&quot;')})">${ICONS_JS.edit} ערוך</button>
+          <button class="delete-btn" onclick="deleteRecord('${record.id}')">${ICONS_JS.trash} מחק</button>
         </div>
       </div>
       ${categories.map(cat=>`
-      <div class="hd-row"><span class="hd-row-label">${cat.icon} ${cat.label}</span>
+      <div class="hd-row"><span class="hd-row-label">${cat.label}</span>
         <span class="hd-row-val blur-text">${fmt(calc[cat.key]||0)}</span></div>`).join('')}
       <div class="hd-row total-row">
-        <span class="hd-row-label" style="font-weight:700">📈 סה"כ נכסים</span>
+        <span class="hd-row-label" style="font-weight:700">${ICONS_JS.barChart} סה"כ נכסים</span>
         <span class="hd-row-val blur-text">${fmt(calc.totalAssets)}</span></div>
       ${mortRows}
     </div>${notesHtml}`;
@@ -787,7 +873,7 @@ function renderDynamicFields() {
   const container=document.getElementById('dynamic-fields'); if(!container) return;
   container.innerHTML=categories.map(cat=>`
     <div class="form-field">
-      <label>${cat.icon} ${cat.label}</label>
+      <label>${cat.label}</label>
       <input type="number" id="field_${cat.key}" placeholder="0" class="form-input"/>
     </div>`).join('');
 }
@@ -823,7 +909,7 @@ function renderRetirement() {
 
   const warnEl = document.getElementById('ret-warning');
   if (annualReturn>15) {
-    warnEl.textContent=`⚠️ תשואה של ${annualReturn}% היא גבוהה מאוד ולא ריאלית לטווח ארוך. ממוצע S&P 500 היסטורי הוא ~10% שנתי.`;
+    warnEl.innerHTML=`${ICONS_JS.alert} תשואה של ${annualReturn}% היא גבוהה מאוד ולא ריאלית לטווח ארוך. ממוצע S&P 500 היסטורי הוא ~10% שנתי.`;
     warnEl.style.display='block';
   } else { warnEl.style.display='none'; }
 
@@ -874,22 +960,22 @@ function renderRetirementSummary(projected,yearsLeft,monthlySave,annualReturn,st
   document.getElementById('ret-summary').innerHTML=`
     <div class="ret-tiles">
       <div class="ret-tile accent">
-        <div class="rt-label">🎯 צבירה צפויה בפרישה</div>
+        <div class="rt-label">${ICONS_JS.target} צבירה צפויה בפרישה</div>
         <div class="rt-value blur-text">${fmt(projected)}</div>
         <div class="rt-sub">פי ${mult} מהיום</div>
       </div>
       <div class="ret-tile">
-        <div class="rt-label">⏳ שנים עד פרישה</div>
+        <div class="rt-label">${ICONS_JS.clock} שנים עד פרישה</div>
         <div class="rt-value">${yearsLeft}</div>
         <div class="rt-sub">${yearsLeft*12} חודשים</div>
       </div>
       <div class="ret-tile">
-        <div class="rt-label">📈 צמיחה כוללת</div>
+        <div class="rt-label">${ICONS_JS.trending} צמיחה כוללת</div>
         <div class="rt-value blur-text">${fmt(growth)}</div>
         <div class="rt-sub">בריבית ${annualReturn}% שנתי</div>
       </div>
       <div class="ret-tile">
-        <div class="rt-label">💸 חיסכון חודשי</div>
+        <div class="rt-label">${ICONS_JS.piggy} חיסכון חודשי</div>
         <div class="rt-value blur-text">${fmt(monthlySave)}</div>
         <div class="rt-sub">${fmt(monthlySave*yearsLeft*12)} סה"כ</div>
       </div>
@@ -925,7 +1011,7 @@ function renderRetirementBreakdown(start,projected,years,monthly) {
     {label:'תשואה',         value:organic,color:'#f59e0b',pct:(organic/projected*100).toFixed(1)},
   ].filter(b=>b.value>0);
   document.getElementById('ret-breakdown').innerHTML=`
-    <div class="rbd-header"><span class="gc-title">🔍 פירוק צבירה</span></div>
+    <div class="rbd-header"><span class="gc-title">${ICONS_JS.breakdown} פירוק צבירה</span></div>
     ${bars.map(b=>`
     <div class="rbd-row">
       <div class="rbd-info"><span class="rbd-dot" style="background:${b.color}"></span><span class="rbd-label">${b.label}</span></div>
@@ -958,7 +1044,7 @@ function chartOptions() {
 
 /* ── PDF EXPORT ─────────────────────────────────────── */
 function exportPDF() {
-  if (!records.length) { showToast('⚠️ אין נתונים להדפסה'); return; }
+  if (!records.length) { showToast('אין נתונים להדפסה'); return; }
   const latest    = records[records.length-1];
   const calc      = calcRecord(latest);
   const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
@@ -973,7 +1059,7 @@ function exportPDF() {
       <tr><td>צמיחה ממוצעת</td><td>${fmt(avg)}</td></tr>`;
   }
   const mortRows=calc.mortgage>0?`<tr><td>יתרת משכנתא</td><td style="color:#ef4444">${fmt(calc.mortgage)}</td></tr>
-    <tr class="total"><td>💎 שווי נקי</td><td>${fmt(calc.netWorth)}</td></tr>`:'';
+    <tr class="total"><td>שווי נקי</td><td>${fmt(calc.netWorth)}</td></tr>`:'';
   const histRows=[...records].reverse().slice(0,12).map(r=>{
     const c=calcRecord(r);
     const d=new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
@@ -998,15 +1084,15 @@ td{padding:11px 14px;border-bottom:1px solid #f3f4f6;color:#374151}tr.total td{f
 <div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₪</div><div><h1>דוח פיננסי</h1><div style="font-size:.9rem;color:#6b7280">הופק ב-${new Date().toLocaleDateString('he-IL')}</div></div></div>
 <div style="font-size:.9rem;color:#6b7280">דוח אחרון: ${dateLabel}</div></div>
 <div class="hero-row">
-  <div class="hero-box main"><div class="label">📈 סה"כ נכסים</div><div class="val">${fmt(calc.totalAssets)}</div></div>
-  ${calc.mortgage>0?`<div class="hero-box"><div class="label">🏠 משכנתא</div><div class="val" style="color:#ef4444">${fmt(calc.mortgage)}</div></div>
-  <div class="hero-box"><div class="label">💎 שווי נקי</div><div class="val" style="color:#f59e0b">${fmt(calc.netWorth)}</div></div>`:
-  `<div class="hero-box"><div class="label">📅 תאריך</div><div class="val" style="font-size:1rem">${dateLabel}</div></div><div class="hero-box"></div>`}
+  <div class="hero-box main"><div class="label">סה"כ נכסים</div><div class="val">${fmt(calc.totalAssets)}</div></div>
+  ${calc.mortgage>0?`<div class="hero-box"><div class="label">משכנתא</div><div class="val" style="color:#ef4444">${fmt(calc.mortgage)}</div></div>
+  <div class="hero-box"><div class="label">שווי נקי</div><div class="val" style="color:#f59e0b">${fmt(calc.netWorth)}</div></div>`:
+  `<div class="hero-box"><div class="label">תאריך</div><div class="val" style="font-size:1rem">${dateLabel}</div></div><div class="hero-box"></div>`}
 </div>
 <h2>פירוט נכסים</h2>
 <table><thead><tr><th>קטגוריה</th><th>סכום</th></tr></thead><tbody>
-${categories.map(cat=>`<tr><td>${cat.icon} ${cat.label}</td><td>${fmt(calc[cat.key]||0)}</td></tr>`).join('')}
-<tr class="total"><td>📈 סה"כ נכסים</td><td>${fmt(calc.totalAssets)}</td></tr>${mortRows}</tbody></table>
+${categories.map(cat=>`<tr><td>${cat.label}</td><td>${fmt(calc[cat.key]||0)}</td></tr>`).join('')}
+<tr class="total"><td>סה"כ נכסים</td><td>${fmt(calc.totalAssets)}</td></tr>${mortRows}</tbody></table>
 ${growthRows?`<h2>נתוני צמיחה</h2><table><tbody>${growthRows}</tbody></table>`:''}
 <h2>היסטוריה</h2>
 <table><thead><tr><th>חודש</th><th>סה"כ נכסים</th><th>משכנתא</th><th>שווי נקי</th></tr></thead><tbody>${histRows}</tbody></table>
@@ -1095,6 +1181,10 @@ function showSettings(tab) {
   renderCategoriesList();
   document.getElementById('settings-modal').style.display='flex';
   switchSettingsTab(tab || 'categories');
+  // sync dark mode toggle
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const toggle = document.getElementById('dark-mode-toggle');
+  if (toggle) toggle.checked = isDark;
 }
 function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
 function closeSettingsOutside(e) { if(e.target.id==='settings-modal') closeSettings(); }
@@ -1125,23 +1215,22 @@ function renderCategoriesList() {
         <span class="drag-handle" title="גרור לשינוי סדר">⠿</span>
         ${logo}
         <div style="min-width:0;flex:1">
-          <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${cat.icon} ${cat.label}</div>
+          <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${cat.label}</div>
           <div style="font-size:.72rem;color:var(--ink-4)">${cat.key}${inst ? ` · <span style="color:var(--green)">${inst.name}</span>` : ''}</div>
         </div>
       </div>
       <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
-        <button class="cat-action-btn" onclick="openCatEdit('${cat.id}')" title="עריכה">✏️</button>
-        <button class="cat-action-btn" onclick="openInstModal('${cat.id}')" title="גוף מנהל">🏦</button>
-        <button class="cat-delete" onclick="deleteCategory('${cat.id}')" title="מחק">✕</button>
+        <button class="cat-action-btn" onclick="openCatEdit('${cat.id}')" title="עריכה">${ICONS_JS.edit}</button>
+        <button class="cat-action-btn" onclick="openInstModal('${cat.id}')" title="גוף מנהל">${ICONS_JS.bank}</button>
+        <button class="cat-delete" onclick="deleteCategory('${cat.id}')" title="מחק">${ICONS_JS.x}</button>
       </div>
     </div>
     <div class="cat-edit-panel" id="cat-edit-${cat.id}" style="display:none;">
       <div class="cat-edit-grid">
         <input type="text" id="cat-edit-label-${cat.id}" value="${cat.label}" placeholder="שם בעברית" class="form-input" style="direction:rtl;text-align:right"/>
-        <input type="text" id="cat-edit-icon-${cat.id}"  value="${cat.icon}"  placeholder="אמוג'י" class="form-input" maxlength="4" style="text-align:center;max-width:72px"/>
       </div>
       <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="cat-edit-save-btn" onclick="saveCatEdit('${cat.id}')">✅ שמור</button>
+        <button class="cat-edit-save-btn" onclick="saveCatEdit('${cat.id}')">${ICONS_JS.check} שמור</button>
         <button class="cat-edit-cancel-btn" onclick="closeCatEdit('${cat.id}')">ביטול</button>
       </div>
     </div>`;
@@ -1161,10 +1250,9 @@ function closeCatEdit(id) {
 
 async function saveCatEdit(id) {
   const label = document.getElementById(`cat-edit-label-${id}`)?.value.trim();
-  const icon  = document.getElementById(`cat-edit-icon-${id}`)?.value.trim();
   if (!label) return showToast('⚠️ שם לא יכול להיות ריק');
   showLoader('שומר...');
-  await db.from('categories').update({ label, icon: icon||'💰' }).eq('id',id).eq('user_id',currentUser.id);
+  await db.from('categories').update({ label }).eq('id',id).eq('user_id',currentUser.id);
   await loadCategories();
   hideLoader();
   renderCategoriesList();
@@ -1230,10 +1318,16 @@ function toggleAddForm() {
 }
 
 /* ── BLUR ───────────────────────────────────────────── */
+const BLUR_SVG_OPEN   = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const BLUR_SVG_CLOSED = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
 function toggleBlur() {
   blurActive=!blurActive;
-  const icon=blurActive?'🔒':'🔓';
-  ['blur-btn','blur-icon-mobile'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=icon; });
+  const svg = blurActive ? BLUR_SVG_CLOSED : BLUR_SVG_OPEN;
+  const blurBtn = document.getElementById('blur-btn');
+  if (blurBtn) blurBtn.innerHTML = blurActive ? ICONS_JS.eyeOff : ICONS_JS.eye;
+  const mobileIcon = document.getElementById('blur-icon-mobile');
+  if (mobileIcon) mobileIcon.innerHTML = svg;
   applyBlur();
 }
 
@@ -1303,3 +1397,56 @@ document.addEventListener('keydown', e => {
       break;
   }
 });
+
+/* ══ DARK MODE ═══════════════════════════════════════ */
+function applyDarkMode(on) {
+  document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+  const toggle = document.getElementById('dark-mode-toggle');
+  if (toggle) toggle.checked = on;
+}
+
+function toggleDarkMode(on) {
+  localStorage.setItem('dark_mode_v1', on ? '1' : '0');
+  applyDarkMode(on);
+}
+
+function initDarkMode() {
+  const saved = localStorage.getItem('dark_mode_v1');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const on = saved !== null ? saved === '1' : prefersDark;
+  applyDarkMode(on);
+}
+
+/* ══ COUNT-UP ANIMATION ══════════════════════════════ */
+function countUp(el, target, duration = 900) {
+  const start     = performance.now();
+  const isNeg     = target < 0;
+  const absTarget = Math.abs(target);
+
+  // easeOutExpo
+  function ease(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
+
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const current  = Math.round(ease(progress) * absTarget);
+    const formatted = (isNeg ? -current : current)
+      .toLocaleString('he-IL', { style:'currency', currency:'ILS', maximumFractionDigits:0 });
+    el.textContent = formatted;
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toLocaleString('he-IL',
+      { style:'currency', currency:'ILS', maximumFractionDigits:0 });
+  }
+
+  requestAnimationFrame(tick);
+}
+
+function animateCountUps() {
+  // Wait a frame so elements are in the DOM
+  requestAnimationFrame(() => {
+    document.querySelectorAll('[data-countup]').forEach(el => {
+      const target = parseFloat(el.dataset.countup);
+      if (!isNaN(target)) countUp(el, target);
+    });
+  });
+}

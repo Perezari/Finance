@@ -42,7 +42,7 @@
         <input type="email"    id="login-email"    placeholder="כתובת אימייל" class="auth-input" autocomplete="email"/>
         <input type="password" id="login-password" placeholder="סיסמה"        class="auth-input" autocomplete="current-password"/>
         <button onclick="handleLogin()"     class="auth-button primary">כניסה</button>
-        <button onclick="handleMagicLink()" class="auth-button secondary">✉️ שלח קישור כניסה לאימייל</button>
+        <button onclick="handleMagicLink()" class="auth-button secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> שלח קישור כניסה לאימייל</button>
 		<button onclick="handleGoogleLogin()" class="auth-button google"><img src="https://www.google.com/favicon.ico" width="16" height="16"/>המשך עם Google</button>
       </div>
       <div id="register-form" class="auth-form" style="display:none;">
@@ -67,19 +67,19 @@
     </div>
     <nav class="sidebar-nav">
       <button class="nav-item active" data-tab="current"    onclick="switchTab('current',this)">
-        <span class="nav-icon">📊</span> דוח נוכחי
+        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span> דוח נוכחי
       </button>
       <button class="nav-item"        data-tab="history"    onclick="switchTab('history',this)">
-        <span class="nav-icon">📈</span> היסטוריה
+        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span> היסטוריה
       </button>
       <button class="nav-item"        data-tab="retirement" onclick="switchTab('retirement',this)">
-        <span class="nav-icon">🎯</span> תכנון פרישה
+        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg></span> תכנון פרישה
       </button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-divider"></div>
-      <button class="nav-item" onclick="showSettings()"><span class="nav-icon">⚙️</span> הגדרות</button>
-      <button class="nav-item" onclick="handleLogout()"><span class="nav-icon">🚪</span> התנתק</button>
+      <button class="nav-item" onclick="showSettings()"><span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> הגדרות</button>
+      <button class="nav-item" onclick="handleLogout()"><span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> התנתק</button>
       <div class="sidebar-divider"></div>
 		<div class="sidebar-user">
 			<div class="user-avatar" id="user-avatar-char">א</div>
@@ -96,9 +96,9 @@
     <header class="topbar">
       <span class="topbar-title" id="topbar-title">דוח נוכחי</span>
       <div class="topbar-actions">
-        <button class="icon-btn" id="blur-btn" onclick="toggleBlur()" title="הסתר/הצג">🔓</button>
-        <button class="icon-btn" onclick="exportPDF()" title="הפק דוח PDF">📄</button>
-        <button class="icon-btn" onclick="showSettings()">⚙️</button>
+        <button class="icon-btn" id="blur-btn" onclick="toggleBlur()" title="הסתר/הצג"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button class="icon-btn" onclick="exportPDF()" title="הפק דוח PDF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
+        <button class="icon-btn" onclick="showSettings()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
       </div>
     </header>
 
@@ -139,7 +139,7 @@
           <select id="dateSelect" onchange="onDateChange()">
             <option value="" disabled selected>בחר חודש לפירוט</option>
           </select>
-          <button onclick="openAddForm(null)" class="add-btn">➕ הוסף חודש</button>
+          <button onclick="openAddForm(null)" class="add-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> הוסף חודש</button>
         </div>
 
         <!-- Add / Edit form -->
@@ -148,19 +148,19 @@
           <input type="hidden" id="edit-record-id"/>
           <div class="form-grid">
             <div class="form-field full">
-              <label>📅 תאריך</label>
+              <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> תאריך</label>
               <input type="date" id="new-date" class="form-input"/>
             </div>
             <div id="dynamic-fields"></div>
             <div class="form-field">
-              <label>🏠 יתרת משכנתא</label>
+              <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> יתרת משכנתא</label>
               <input type="number" id="new-mortgage" placeholder="0" class="form-input"/>
             </div>
             <div class="form-field full">
-              <label>📝 הערות</label>
+              <label><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> הערות</label>
               <input type="text" id="new-notes" placeholder="הערה קצרה (אופציונלי)" class="form-input"/>
             </div>
-            <button onclick="submitRecord()" class="submit-btn" id="submit-btn">💾 שמור</button>
+            <button onclick="submitRecord()" class="submit-btn" id="submit-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> שמור</button>
           </div>
         </div>
 
@@ -205,19 +205,19 @@
   <!-- BOTTOM NAV (mobile) -->
   <nav class="bottom-nav" style="display:none;">
     <button class="bottom-nav-item active" data-tab="current"    onclick="switchTab('current',this)">
-      <span class="nav-icon">📊</span><span>נוכחי</span>
+      <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span><span>נוכחי</span>
     </button>
     <button class="bottom-nav-item"        data-tab="history"    onclick="switchTab('history',this)">
-      <span class="nav-icon">📈</span><span>היסטוריה</span>
+      <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span><span>היסטוריה</span>
     </button>
     <button class="bottom-nav-item"        data-tab="retirement" onclick="switchTab('retirement',this)">
-      <span class="nav-icon">🎯</span><span>פרישה</span>
+      <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg></span><span>פרישה</span>
     </button>
     <button class="bottom-nav-item" onclick="toggleBlur()">
-      <span class="nav-icon" id="blur-icon-mobile">🔓</span><span>פרטיות</span>
+      <span class="nav-icon" id="blur-icon-mobile"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span><span>פרטיות</span>
     </button>
     <button class="bottom-nav-item" onclick="showSettings()">
-      <span class="nav-icon">⚙️</span><span>הגדרות</span>
+      <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>הגדרות</span>
     </button>
   </nav>
 
@@ -227,20 +227,20 @@
 <div id="settings-modal" class="modal-overlay" style="display:none;" onclick="closeSettingsOutside(event)">
   <div class="modal-box">
     <div class="modal-header">
-      <h2>⚙️ הגדרות</h2>
-      <button onclick="closeSettings()" class="modal-close">✕</button>
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> הגדרות</h2>
+      <button onclick="closeSettings()" class="modal-close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <!-- Settings Tabs -->
     <div class="settings-tabs">
-      <button class="settings-tab active" id="stab-categories" onclick="switchSettingsTab('categories')">📁 קטגוריות</button>
-      <button class="settings-tab"        id="stab-account"    onclick="switchSettingsTab('account')">👤 חשבון</button>
+      <button class="settings-tab active" id="stab-categories" onclick="switchSettingsTab('categories')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> קטגוריות</button>
+      <button class="settings-tab"        id="stab-account"    onclick="switchSettingsTab('account')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> חשבון</button>
     </div>
 
     <!-- Tab: Categories -->
     <div class="modal-body" id="settings-panel-categories">
       <div class="settings-section">
         <h3>קטגוריות נכסים</h3>
-        <p class="settings-hint">גרור לשינוי סדר • לחץ ✏️ לעריכה • 🏦 לשינוי גוף מנהל</p>
+        <p class="settings-hint">גרור לשינוי סדר • לחץ <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> לעריכה • <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> לשינוי גוף מנהל</p>
         <div id="categories-list" class="categories-list"></div>
       </div>
       <div class="settings-section">
@@ -248,11 +248,10 @@
         <div class="add-cat-form">
           <input type="text" id="new-cat-key"   placeholder="מזהה (אנגלית, ללא רווחים)" class="form-input"/>
           <input type="text" id="new-cat-label" placeholder="שם בעברית"                 class="form-input"/>
-          <input type="text" id="new-cat-icon"  placeholder="אמוג'י 💰"                 class="form-input" maxlength="4"/>
           <select id="new-cat-institution" class="form-input" style="direction:rtl;text-align:right;">
             <option value="">גוף מנהל (אופציונלי)</option>
           </select>
-          <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;">➕ הוסף</button>
+          <button onclick="addCategory()" class="submit-btn" style="margin-top:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> הוסף</button>
         </div>
       </div>
     </div>
@@ -268,12 +267,19 @@
                  class="form-input" style="direction:rtl;text-align:right;" maxlength="40"/>
           <button class="display-name-save-btn" onclick="saveDisplayName()">שמור</button>
         </div>
-        <button onclick="handleLogout()" class="logout-btn" style="margin-top:16px;">🚪 התנתק</button>
+        <div class="dark-toggle-row">
+          <span class="dark-toggle-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> מצב לילה</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="dark-mode-toggle" onchange="toggleDarkMode(this.checked)"/>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <button onclick="handleLogout()" class="logout-btn" style="margin-top:16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> התנתק</button>
       </div>
       <div class="settings-section">
-        <h3>⚠️ מחיקת חשבון</h3>
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> מחיקת חשבון</h3>
         <p class="settings-hint">לפי תקנות ה-GDPR יש לך את הזכות למחוק את כל הנתונים שלך.</p>
-        <button class="delete-account-btn" onclick="deleteAccount()">🗑️ מחק את כל הנתונים שלי</button>
+        <button class="delete-account-btn" onclick="deleteAccount()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> מחק את כל הנתונים שלי</button>
         <p class="delete-account-note">
           הפעולה תמחק לצמיתות את כל ההיסטוריה, הקטגוריות והנתונים שלך.<br/>לא ניתן לשחזר לאחר המחיקה.
         </p>
@@ -286,8 +292,8 @@
 <div id="inst-modal" class="modal-overlay" style="display:none;" onclick="closeInstModalOutside(event)">
   <div class="modal-box" style="max-height:70vh;">
     <div class="modal-header">
-      <h2>🏦 בחר גוף מנהל</h2>
-      <button onclick="closeInstModal()" class="modal-close">✕</button>
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> בחר גוף מנהל</h2>
+      <button onclick="closeInstModal()" class="modal-close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-body" style="padding:12px 16px 32px;">
       <input type="text" id="inst-search" placeholder="חפש גוף..." class="form-input" style="width:100%;margin-bottom:12px;direction:rtl;text-align:right;" oninput="filterInstitutions()"/>

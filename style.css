@@ -733,3 +733,266 @@ select option{background:var(--surface)}
 .app-main::-webkit-scrollbar-track { background: transparent; }
 .app-main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 .app-main::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+/* ══ DARK MODE ═══════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:       #0f1117;
+  --surface:  #1a1d27;
+  --surface2: #22263a;
+  --border:   #2e3347;
+  --ink:      #f0f2f8;
+  --ink-2:    #c8cde0;
+  --ink-3:    #7b82a0;
+  --ink-4:    #4e5470;
+  --green-light: rgba(14,158,126,.15);
+  --blue-light:  rgba(79,142,247,.12);
+  --red-light:   rgba(239,68,68,.12);
+  --shadow-xs:0 1px 3px rgba(0,0,0,.25);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.30);
+  --shadow-md:0 6px 20px rgba(0,0,0,.35);
+  --shadow-lg:0 16px 48px rgba(0,0,0,.45);
+}
+[data-theme="dark"] body                    { background-color: #090b11; }
+[data-theme="dark"] .loader-overlay         { background: var(--surface); }
+[data-theme="dark"] .auth-card              { background: var(--surface); }
+[data-theme="dark"] .sidebar               { background: var(--surface); border-color: var(--border); }
+[data-theme="dark"] .topbar                { background: var(--bg); border-color: var(--border); }
+[data-theme="dark"] .hero-tile.accent       { background: linear-gradient(135deg,#0b7a62,#0e9e7e); }
+[data-theme="dark"] .ob-card               { background: var(--surface); }
+[data-theme="dark"] select option          { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] input, [data-theme="dark"] select { color-scheme: dark; }
+
+/* Dark mode toggle switch */
+.dark-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+.dark-toggle-label {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .22s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--green); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(-20px); }
+
+/* ══ HEALTH BAR (compact) ════════════════════════════ */
+.health-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: border-color .18s, box-shadow .18s;
+  animation: fadeUp .3s ease both;
+  gap: 12px;
+}
+.health-bar:hover { border-color: var(--green); box-shadow: var(--shadow-xs); }
+.hb-right { display: flex; align-items: center; gap: 10px; }
+.hb-left  { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.hb-ring  { flex-shrink: 0; }
+.hb-meta  { display: flex; flex-direction: column; gap: 2px; }
+.hb-title { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.hb-label { font-size: .82rem; font-weight: 700; }
+.hb-dots  { display: flex; gap: 5px; align-items: center; }
+.hs-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; cursor: help; }
+.hb-chevron { transition: transform .22s; flex-shrink: 0; }
+
+.health-details-panel {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  padding: 10px 16px 14px;
+  margin-top: -18px;
+  margin-bottom: 16px;
+  animation: fadeUp .18s ease both;
+}
+.hdp-row  { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: .8rem; }
+.hdp-row:last-child { border: none; }
+.hdp-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.hdp-label{ font-weight: 700; color: var(--ink-2); min-width: 80px; }
+.hdp-note { color: var(--ink-3); }
+
+/* ══ NAV — SVG icon sizing & active state ════════════ */
+.nav-icon svg, .nav-icon svg * { transition: stroke .18s; }
+.nav-item .nav-icon { display: flex; align-items: center; justify-content: center; width: 18px; }
+.nav-item.active .nav-icon svg { stroke: var(--green); }
+.nav-item:hover .nav-icon svg  { stroke: var(--ink-2); }
+.nav-item.active .nav-icon svg,
+.nav-item:hover  .nav-icon svg { stroke-width: 2.2; }
+
+/* Bottom nav SVG */
+.bottom-nav-item .nav-icon { display: flex; align-items: center; justify-content: center; }
+.bottom-nav-item .nav-icon svg { width: 22px; height: 22px; stroke: var(--ink-3); transition: stroke .18s; }
+.bottom-nav-item.active .nav-icon svg { stroke: var(--green); stroke-width: 2.2; }
+.bottom-nav-item:hover  .nav-icon svg { stroke: var(--ink-2); }
+
+/* Sidebar bottom icons (settings/logout) — slightly smaller */
+.sidebar-footer .nav-item .nav-icon svg { width: 16px; height: 16px; }
+
+/* ══ HEALTH PANEL — connected to bar when open ═══════ */
+.health-details-panel {
+  margin-top: -4px !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+/* ══ HEALTH CARD WRAP — single unified border ════════ */
+.health-card-wrap {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 16px;
+  overflow: hidden;
+  animation: fadeUp .3s ease both;
+  transition: border-color .18s;
+}
+.health-card-wrap:hover { border-color: var(--green); }
+
+/* bar itself — no own border/radius, sits inside wrap */
+.health-bar {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  margin-bottom: 0 !important;
+  animation: none !important;
+}
+
+/* panel — just a top divider */
+.health-details-panel {
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  animation: fadeUp .18s ease both;
+}
+
+/* ══ HERO TILE — SVG icon in label ══════════════════ */
+.ht-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ht-label svg {
+  flex-shrink: 0;
+  opacity: .7;
+}
+.hero-tile.accent .ht-label svg { stroke: rgba(255,255,255,.85); }
+.hero-tile.danger  .ht-label svg { stroke: var(--red); }
+.hero-tile.warning .ht-label svg { stroke: var(--amber); }
+.gc-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ══ SVG ICONS — global helpers ══════════════════════ */
+/* Buttons that now contain SVG */
+.icon-btn svg            { display:block; }
+.modal-close svg         { display:block; }
+.auth-button svg         { flex-shrink:0; }
+.submit-btn              { display:flex; align-items:center; justify-content:center; gap:7px; }
+.add-btn                 { display:flex; align-items:center; gap:6px; }
+.add-btn svg             { flex-shrink:0; }
+.logout-btn              { display:flex; align-items:center; justify-content:center; gap:7px; }
+.delete-account-btn      { display:flex; align-items:center; justify-content:center; gap:7px; }
+.display-name-save-btn   { display:flex; align-items:center; justify-content:center; gap:6px; }
+.settings-tab            { display:flex; align-items:center; justify-content:center; gap:6px; }
+.settings-tab svg        { flex-shrink:0; opacity:.8; }
+.dark-toggle-label       { display:flex; align-items:center; gap:8px; }
+.dark-toggle-label svg   { flex-shrink:0; }
+.add-cat-form .submit-btn{ display:flex; align-items:center; justify-content:center; gap:7px; }
+.form-field label        { display:flex; align-items:center; gap:6px; }
+.form-field label svg    { flex-shrink:0; opacity:.7; }
+.cat-action-btn svg      { display:block; }
+.cat-delete svg          { display:block; }
+.cat-edit-save-btn       { display:flex; align-items:center; justify-content:center; gap:6px; }
+.cat-edit-save-btn svg   { flex-shrink:0; }
+.edit-btn                { display:inline-flex; align-items:center; gap:5px; }
+.delete-btn              { display:inline-flex; align-items:center; gap:5px; }
+.hd-date                 { display:flex; align-items:center; gap:6px; }
+.hd-date svg             { flex-shrink:0; }
+.hd-row-label svg        { flex-shrink:0; opacity:.7; }
+.inst-none-btn svg       { opacity:.6; }
+.es-cta-btn              { display:inline-flex; align-items:center; gap:7px; }
+.es-cta-btn svg          { flex-shrink:0; }
+.modal-header h2         { display:flex; align-items:center; gap:8px; }
+.modal-header h2 svg     { flex-shrink:0; opacity:.8; }
+.settings-section h3     { display:flex; align-items:center; gap:7px; }
+.settings-section h3 svg { flex-shrink:0; }
+.gc-title svg            { flex-shrink:0; opacity:.8; }
+.rt-label                { display:flex; align-items:center; gap:5px; }
+.rt-label svg            { flex-shrink:0; opacity:.7; }
+
+/* ── Cat edit — single column now (no icon field) ─── */
+.cat-edit-grid { flex-direction: column; }
+.cat-edit-grid .form-input { width: 100%; }
+
+/* ── Retirement tile label SVG ───────────────────── */
+.rt-label svg { opacity: .7; flex-shrink: 0; }
+
+/* ══ CATEGORY TILE — growth badge ════════════════════ */
+.ct-growth {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: -.01em;
+}
+.ct-growth.pos {
+  background: var(--green-light);
+  color: var(--green);
+}
+.ct-growth.neg {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+/* ── Category tile — SVG icon styling ──────────────── */
+.ct-icon svg {
+  display: block;
+  stroke: var(--green);
+  opacity: .85;
+}
+.cat-tile:hover .ct-icon svg { opacity: 1; }

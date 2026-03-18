@@ -100,9 +100,12 @@ async function init() {
 
   db.auth.onAuthStateChange(async (event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
-      // User clicked the reset link — show password reset modal
       currentUser = session.user;
+      // Make sure loader is gone and auth screen is hidden
       hideLoader();
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display  = 'none';
       showPasswordResetModal();
       return;
     }

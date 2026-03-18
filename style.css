@@ -1269,3 +1269,58 @@ select option{background:var(--surface)}
   padding: 24px;
   /* display toggled by JS between none / flex */
 }
+
+/* ══ DARK MODE — auth screen ═════════════════════════ */
+[data-theme="dark"] #auth-screen          { background: var(--bg); }
+[data-theme="dark"] .auth-wrap            { color: var(--ink); }
+[data-theme="dark"] .auth-brand-name      { color: var(--ink); }
+[data-theme="dark"] .auth-greeting-title  { color: var(--ink); }
+[data-theme="dark"] .auth-greeting-sub    { color: var(--ink-3); }
+[data-theme="dark"] .auth-tabs-ul         { border-color: var(--border); }
+[data-theme="dark"] .auth-tab-ul          { color: var(--ink-3); }
+[data-theme="dark"] .auth-tab-ul.active   { color: var(--green); border-bottom-color: var(--green); }
+[data-theme="dark"] .auth-field-label     { color: var(--ink-3); }
+[data-theme="dark"] .auth-input-ul        { color: var(--ink); border-bottom-color: var(--border); background: transparent; }
+[data-theme="dark"] .auth-input-ul:focus  { border-bottom-color: var(--green); }
+[data-theme="dark"] .auth-divider         { color: var(--ink-4); }
+[data-theme="dark"] .auth-divider::before,
+[data-theme="dark"] .auth-divider::after  { background: var(--border); }
+[data-theme="dark"] .auth-btn-google      { background: var(--surface2); border-color: var(--border); color: var(--ink-2); }
+[data-theme="dark"] .auth-btn-google:hover{ background: var(--surface); }
+[data-theme="dark"] .auth-btn-link        { color: var(--green); }
+
+/* ══ FIX: browser autofill background ═══════════════ */
+/* Light mode — transparent (white bg) */
+.auth-input-ul:-webkit-autofill,
+.auth-input-ul:-webkit-autofill:hover,
+.auth-input-ul:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  caret-color: var(--ink);
+  transition: background-color 5000s ease-in-out 0s;
+}
+/* Dark mode — match dark bg exactly */
+[data-theme="dark"] .auth-input-ul:-webkit-autofill,
+[data-theme="dark"] .auth-input-ul:-webkit-autofill:hover,
+[data-theme="dark"] .auth-input-ul:-webkit-autofill:focus {
+  -webkit-text-fill-color: #eef0f8;
+  -webkit-box-shadow: 0 0 0 1000px var(--bg) inset;
+  caret-color: #eef0f8;
+}
+
+/* ══ DARK MODE — topbar icon buttons ════════════════ */
+[data-theme="dark"] .icon-btn {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--ink-2);
+}
+[data-theme="dark"] .icon-btn svg {
+  stroke: var(--ink-2);
+}
+[data-theme="dark"] .icon-btn:hover {
+  background: var(--green-light);
+  border-color: var(--green);
+}
+[data-theme="dark"] .icon-btn:hover svg {
+  stroke: var(--green);
+}

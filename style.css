@@ -996,3 +996,41 @@ select option{background:var(--surface)}
   opacity: .85;
 }
 .cat-tile:hover .ct-icon svg { opacity: 1; }
+
+/* ══ DARK MODE — cat action buttons ═════════════════ */
+.cat-action-btn {
+  color: var(--ink-3);
+}
+.cat-action-btn svg {
+  stroke: var(--ink-3);
+  transition: stroke .15s;
+}
+.cat-action-btn:hover svg {
+  stroke: var(--green);
+}
+
+[data-theme="dark"] .cat-action-btn {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--ink-2);
+}
+[data-theme="dark"] .cat-action-btn svg {
+  stroke: var(--ink-2);
+}
+[data-theme="dark"] .cat-action-btn:hover {
+  background: var(--green-light);
+  border-color: var(--green);
+}
+[data-theme="dark"] .cat-action-btn:hover svg {
+  stroke: var(--green);
+}
+[data-theme="dark"] .cat-item {
+  background: var(--surface);
+  border-color: var(--border);
+}
+[data-theme="dark"] .cat-item.drag-over {
+  background: var(--green-light);
+}
+[data-theme="dark"] .drag-handle {
+  color: var(--ink-3);
+}

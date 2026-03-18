@@ -1364,3 +1364,20 @@ select option{background:var(--surface)}
   background: #e8eaf0;
   color: #111827;
 }
+
+/* ══ FIX: date input overflow ═══════════════════════ */
+.add-form { overflow: hidden; }
+
+input[type="date"].form-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  direction: rtl;
+  text-align: right;
+}
+/* iOS/Safari — date picker button stays inside */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: right;
+}

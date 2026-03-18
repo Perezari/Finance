@@ -59,7 +59,7 @@ html, body {
 .auth-card{background:#fff;border-radius:var(--r-xl);padding:28px 24px;box-shadow:0 24px 64px rgba(0,0,0,.18)}
 .auth-tabs{display:flex;gap:4px;background:var(--bg);border-radius:var(--r-sm);padding:4px;margin-bottom:22px}
 .auth-tab{flex:1;padding:9px;border:none;background:transparent;color:var(--ink-3);font-family:var(--font);font-size:.875rem;font-weight:600;cursor:pointer;border-radius:7px;transition:all .2s}
-.auth-tab.active{background:#fff;color:var(--green);box-shadow:var(--shadow-xs)}
+.auth-tab.active{background:rgb(14 158 126 / 15%);color:var(--green);box-shadow:var(--shadow-xs)}
 .auth-form{display:flex;flex-direction:column;gap:12px}
 .auth-input{width:100%;padding:13px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:.9rem;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s;direction:ltr;text-align:right}
 .auth-input::placeholder{color:var(--ink-4)}
@@ -1034,3 +1034,35 @@ select option{background:var(--surface)}
 [data-theme="dark"] .drag-handle {
   color: var(--ink-3);
 }
+
+/* ══ QUICK LOGOUT — topbar ═══════════════════════════ */
+.icon-btn-logout svg { stroke: var(--ink-3); transition: stroke .15s; }
+.icon-btn-logout:hover { border-color: var(--red) !important; background: var(--red-light) !important; }
+.icon-btn-logout:hover svg { stroke: var(--red); }
+
+/* ══ PASSWORD CHANGE FORM ════════════════════════════ */
+.pwd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pwd-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: .875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .18s;
+  margin-top: 4px;
+}
+.pwd-save-btn:hover { background: var(--green-mid); }

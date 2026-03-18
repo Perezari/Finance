@@ -53,6 +53,7 @@ const ICONS_JS = {
   breakdown: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
   diamond:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="2"/><polyline points="2 8.5 12 15 22 8.5"/></svg>`,
   barChart:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>`,
+  mail:    `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
   check:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><polyline points="20 6 9 17 4 12"/></svg>`,
 };
 
@@ -166,6 +167,66 @@ async function saveDisplayName() {
   localStorage.setItem('display_name_v1', name);
   updateUserUI();
   showToast('✅ שם עודכן');
+}
+
+
+/* ── CHANGE PASSWORD ─────────────────────────────────── */
+function getAuthProvider() {
+  // Check how the current user authenticated
+  const identities = currentUser?.identities || [];
+  if (identities.some(i => i.provider === 'google')) return 'google';
+  if (identities.length === 0) return 'magic_link';
+  // email provider = has password
+  if (identities.some(i => i.provider === 'email')) return 'email';
+  return 'magic_link';
+}
+
+function renderPasswordSection() {
+  const section = document.getElementById('pwd-section');
+  if (!section || !currentUser) return; // guard: modal not yet in DOM
+  const provider = getAuthProvider();
+
+  if (provider === 'email') {
+    // Has password — show change form
+    section.innerHTML = `
+      <div class="pwd-form">
+        <input type="password" id="pwd-new"     placeholder="סיסמה חדשה (לפחות 6 תווים)" class="form-input" style="direction:ltr;text-align:right"/>
+        <input type="password" id="pwd-confirm" placeholder="אישור סיסמה" class="form-input" style="direction:ltr;text-align:right"/>
+        <button class="pwd-save-btn" onclick="changePassword()">${ICONS_JS.save} עדכן סיסמה</button>
+      </div>`;
+  } else {
+    // OAuth / Magic link — offer reset email
+    const providerLabel = provider === 'google' ? 'Google' : 'קישור אימייל';
+    section.innerHTML = `
+      <p class="settings-hint" style="margin-bottom:10px">החשבון שלך מחובר עם ${providerLabel}. לשינוי סיסמה שלח קישור איפוס לאימייל.</p>
+      <button class="pwd-save-btn" onclick="sendPasswordReset()">${ICONS_JS.mail} שלח קישור איפוס סיסמה</button>`;
+  }
+}
+
+async function sendPasswordReset() {
+  const email = currentUser?.email;
+  if (!email) return showToast('לא נמצאה כתובת אימייל');
+  showLoader('שולח...');
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  hideLoader();
+  if (error) return showToast('שגיאה: ' + error.message);
+  showToast('קישור איפוס נשלח לאימייל');
+}
+
+async function changePassword() {
+  const newPwd     = document.getElementById('pwd-new')?.value;
+  const confirmPwd = document.getElementById('pwd-confirm')?.value;
+  if (!newPwd || newPwd.length < 6) return showToast('סיסמה חייבת להכיל לפחות 6 תווים');
+  if (newPwd !== confirmPwd)        return showToast('הסיסמאות אינן תואמות');
+  showLoader('מעדכן סיסמה...');
+  const { error } = await db.auth.updateUser({ password: newPwd });
+  hideLoader();
+  if (error) return showToast('שגיאה: ' + error.message);
+  document.getElementById('pwd-new').value     = '';
+  document.getElementById('pwd-confirm').value = '';
+  showToast('הסיסמה עודכנה בהצלחה');
 }
 
 /* ── AUTH ──────────────────────────────────────────── */
@@ -1181,10 +1242,10 @@ function showSettings(tab) {
   renderCategoriesList();
   document.getElementById('settings-modal').style.display='flex';
   switchSettingsTab(tab || 'categories');
-  // sync dark mode toggle
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = isDark;
+  setTimeout(renderPasswordSection, 0);
 }
 function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
 function closeSettingsOutside(e) { if(e.target.id==='settings-modal') closeSettings(); }
@@ -1202,6 +1263,7 @@ let dragSrcIndex = null;
 
 function renderCategoriesList() {
   const list = document.getElementById('categories-list');
+  if (!list) return;
   list.innerHTML = categories.map((cat, idx) => {
     const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
     const logo = inst ? `<img src="${logoUrl(inst.domain)}" alt="" class="cat-list-logo" onerror="this.style.display='none'"/>` : '';

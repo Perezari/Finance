@@ -99,6 +99,13 @@ async function init() {
   } catch(e) { console.error(e); showScreen('auth'); }
 
   db.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      // User clicked the reset link — show password reset modal
+      currentUser = session.user;
+      hideLoader();
+      showPasswordResetModal();
+      return;
+    }
     if (event === 'SIGNED_IN' && session && !appLoaded) {
       currentUser = session.user; appLoaded = true; await loadApp();
     } else if (event === 'SIGNED_OUT') {
@@ -169,6 +176,35 @@ async function saveDisplayName() {
   showToast('✅ שם עודכן');
 }
 
+
+
+/* ── PASSWORD RESET MODAL ────────────────────────────── */
+function showPasswordResetModal() {
+  document.getElementById('pwd-reset-modal').style.display = 'flex';
+}
+
+function closePasswordResetModal() {
+  document.getElementById('pwd-reset-modal').style.display = 'none';
+}
+
+async function confirmPasswordReset() {
+  const newPwd     = document.getElementById('reset-pwd-new').value;
+  const confirmPwd = document.getElementById('reset-pwd-confirm').value;
+
+  if (!newPwd || newPwd.length < 6) return showToast('סיסמה חייבת להכיל לפחות 6 תווים');
+  if (newPwd !== confirmPwd)        return showToast('הסיסמאות אינן תואמות');
+
+  showLoader('מעדכן סיסמה...');
+  const { error } = await db.auth.updateUser({ password: newPwd });
+  hideLoader();
+
+  if (error) return showToast('שגיאה: ' + error.message);
+
+  closePasswordResetModal();
+  showToast('הסיסמה עודכנה בהצלחה');
+  // Now load the app normally
+  if (currentUser) { await loadApp(); }
+}
 
 /* ── CHANGE PASSWORD ─────────────────────────────────── */
 function getAuthProvider() {

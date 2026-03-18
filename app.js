@@ -332,7 +332,7 @@ function translateError(msg) {
 function switchAuthTab(tab) {
   document.getElementById('login-form').style.display    = tab==='login'    ? 'flex':'none';
   document.getElementById('register-form').style.display = tab==='register' ? 'flex':'none';
-  document.querySelectorAll('.auth-tab').forEach((b,i) =>
+  document.querySelectorAll('.auth-tab-ul').forEach((b,i) =>
     b.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register')));
   hideAuthMsg();
 }

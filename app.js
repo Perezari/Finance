@@ -77,6 +77,7 @@ function logoUrl(domain) {
 
 /* ── STATE ─────────────────────────────────────────── */
 let currentUser   = null;
+let isRecoveryFlow = window.location.hash.includes('type=recovery');
 let categories    = [];
 let records       = [];
 let blurActive    = false;
@@ -90,10 +91,7 @@ let instTargetCatId = null; // which category we're picking institution for
 async function init() {
   initDarkMode();
 
-  // If recovery link — show auth screen as background while we wait for the event
-  if (window.location.hash.includes('type=recovery')) {
-    document.getElementById('auth-screen').style.display = 'flex';
-  }
+
 
   showLoader('מאמת...');
   populateInstitutionSelect();
@@ -105,9 +103,11 @@ async function init() {
   } catch(e) { console.error(e); showScreen('auth'); }
 
   db.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
+    // Handle recovery flow — catch both PASSWORD_RECOVERY and SIGNED_IN
+    if ((event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryFlow)) && session) {
+      isRecoveryFlow = false; // reset flag so next SIGNED_IN works normally
       currentUser = session.user;
-      appLoaded = false; // prevent normal SIGNED_IN flow from taking over
+      appLoaded   = false;
       hideLoader();
       document.getElementById('loader').style.display      = 'none';
       document.getElementById('app-screen').style.display  = 'none';

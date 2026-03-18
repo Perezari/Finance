@@ -77,7 +77,6 @@ function logoUrl(domain) {
 
 /* ── STATE ─────────────────────────────────────────── */
 let currentUser   = null;
-let isRecoveryFlow = window.location.hash.includes('type=recovery');
 let categories    = [];
 let records       = [];
 let blurActive    = false;
@@ -91,7 +90,28 @@ let instTargetCatId = null; // which category we're picking institution for
 async function init() {
   initDarkMode();
 
-
+  // ── RECOVERY: parse tokens directly from URL hash ──────
+  const rawHash = window.location.hash.slice(1);
+  const hashParams = new URLSearchParams(rawHash);
+  if (hashParams.get('type') === 'recovery') {
+    const accessToken  = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+      history.replaceState(null, '', window.location.pathname);
+      hideLoader();
+      document.getElementById('loader').style.display      = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
+      const { data, error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (!error && data?.session) {
+        currentUser = data.session.user;
+        showPasswordResetModal();
+      } else {
+        showScreen('auth');
+      }
+      return;
+    }
+  }
+  // ── END RECOVERY ───────────────────────────────────────
 
   showLoader('מאמת...');
   populateInstitutionSelect();
@@ -103,11 +123,8 @@ async function init() {
   } catch(e) { console.error(e); showScreen('auth'); }
 
   db.auth.onAuthStateChange(async (event, session) => {
-    // Handle recovery flow — catch both PASSWORD_RECOVERY and SIGNED_IN
-    if ((event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isRecoveryFlow)) && session) {
-      isRecoveryFlow = false; // reset flag so next SIGNED_IN works normally
-      currentUser = session.user;
-      appLoaded   = false;
+    if (event === 'PASSWORD_RECOVERY' && session) {
+      currentUser = session.user; appLoaded = false;
       hideLoader();
       document.getElementById('loader').style.display      = 'none';
       document.getElementById('app-screen').style.display  = 'none';

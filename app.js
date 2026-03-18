@@ -86,6 +86,8 @@ let retChart      = null;
 let yvyChart      = null;
 let editMode      = false;
 let instTargetCatId = null; // which category we're picking institution for
+let instTargetMode   = 'cat'; // 'cat' | 'mortgage'
+let selectedMortgageInst = null; // institution id for mortgage
 
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
@@ -181,7 +183,7 @@ async function saveDisplayName() {
   // גם localStorage לסנכרון מיידי
   localStorage.setItem('display_name_v1', name);
   updateUserUI();
-  showToast('✅ שם עודכן');
+  showToast('שם עודכן');
 }
 
 
@@ -308,7 +310,7 @@ async function handleRegister() {
   hideLoader();
   if (error) return showAuthMsg(translateError(error.message), false);
   if (data?.user) await createDefaultCategories(data.user.id);
-  showAuthMsg('✅ נשלח אימייל אישור!', true);
+  showAuthMsg('נשלח אימייל אישור!', true);
 }
 
 async function handleMagicLink() {
@@ -318,7 +320,7 @@ async function handleMagicLink() {
   const { error } = await db.auth.signInWithOtp({ email });
   hideLoader();
   if (error) return showAuthMsg(translateError(error.message), false);
-  showAuthMsg('✅ קישור נשלח לאימייל!', true);
+  showAuthMsg('קישור נשלח לאימייל!', true);
 }
 
 async function handleLogout() {
@@ -390,7 +392,7 @@ async function addCategory() {
   await db.from('categories').insert({ user_id:currentUser.id, key, label, icon:'_svg', order_index:categories.length, institution_id:instId });
   await loadCategories(); hideLoader();
   renderCategoriesList(); renderDynamicFields();
-  showToast('✅ קטגוריה נוספה');
+  showToast('קטגוריה נוספה');
   ['new-cat-key','new-cat-label'].forEach(id => document.getElementById(id).value='');
   document.getElementById('new-cat-institution').value = '';
 }
@@ -401,7 +403,7 @@ async function deleteCategory(id) {
   await db.from('categories').delete().eq('id',id).eq('user_id',currentUser.id);
   await loadCategories(); hideLoader();
   renderCategoriesList(); renderDynamicFields();
-  showToast('🗑️ נמחקה');
+  showToast('נמחקה');
 }
 
 async function setInstitution(catId, instId) {
@@ -409,13 +411,22 @@ async function setInstitution(catId, instId) {
   await loadCategories();
   renderCategoriesList();
   renderCurrentReport();
-  showToast('✅ גוף מנהל עודכן');
+  showToast('גוף מנהל עודכן');
 }
 
 /* ── INSTITUTION MODAL ─────────────────────────────── */
 function openInstModal(catId) {
-  instTargetCatId = catId;
+  instTargetMode   = 'cat';
+  instTargetCatId  = catId;
   renderInstGrid(INSTITUTIONS);
+  document.getElementById('inst-modal').style.display = 'flex';
+  document.getElementById('inst-search').value = '';
+}
+
+function openMortgageInstModal() {
+  instTargetMode  = 'mortgage';
+  instTargetCatId = null;
+  renderInstGrid(INSTITUTIONS.filter(i => i.type === 'bank'));
   document.getElementById('inst-modal').style.display = 'flex';
   document.getElementById('inst-search').value = '';
 }
@@ -448,10 +459,37 @@ function renderInstGrid(list) {
 }
 
 async function pickInstitution(instId) {
+  if (instTargetMode === 'mortgage' || instTargetMode === 'mortgage_settings') {
+    closeInstModal();
+    if (instId) {
+      localStorage.setItem('mortgage_inst_v1', instId);
+    } else {
+      localStorage.removeItem('mortgage_inst_v1');
+    }
+    renderMortgageInstSettings();
+    renderCurrentReport();
+    showToast('גוף מנהל משכנתא עודכן');
+    return;
+  }
   if (!instTargetCatId) return;
-  const catId = instTargetCatId; // ← שמור לפני הסגירה
+  const catId = instTargetCatId;
   closeInstModal();
   await setInstitution(catId, instId);
+}
+
+function renderMortgageInstButton() {
+  const btn = document.getElementById('mortgage-inst-btn');
+  if (!btn) return;
+  const inst = selectedMortgageInst ? getInstitution(selectedMortgageInst) : null;
+  if (inst) {
+    btn.innerHTML = `<img src="${logoUrl(inst.domain)}" width="18" height="18" style="border-radius:4px;object-fit:contain" onerror="this.style.display='none'"/> ${inst.name}`;
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+  } else {
+    btn.innerHTML = `${ICONS_JS.bank} בחר גוף מנהל`;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }
 }
 
 /* ── RECORDS ────────────────────────────────────────── */
@@ -492,6 +530,8 @@ async function submitRecord() {
   if (!date) return alert('יש לבחור תאריך');
   const values = {};
   categories.forEach(cat => { const el=document.getElementById(`field_${cat.key}`); values[cat.key]=parseFloat(el?.value||0)||0; });
+  const mortInstSaved = localStorage.getItem('mortgage_inst_v1');
+  if (mortInstSaved) values._mortgage_inst = mortInstSaved;
   const mortgage = parseFloat(document.getElementById('new-mortgage').value||0)||0;
   const notes    = document.getElementById('new-notes').value.trim();
   const editId   = document.getElementById('edit-record-id').value;
@@ -513,7 +553,7 @@ async function submitRecord() {
   document.getElementById('dateSelect').value='';
   editMode=false;
   if (document.getElementById('tab-history').style.display!=='none') renderHistoryTab();
-  showToast(editMode?'✅ עודכן!':'✅ נשמר!');
+  showToast(editMode?'עודכן!':'נשמר!');
 }
 
 async function deleteRecord(id) {
@@ -524,7 +564,7 @@ async function deleteRecord(id) {
   renderCurrentReport(); renderHistoryTab();
   document.getElementById('history-detail').style.display='none';
   document.getElementById('dateSelect').value='';
-  showToast('🗑️ נמחק');
+  showToast('נמחק');
 }
 
 /* ── CALCULATIONS ───────────────────────────────────── */
@@ -722,9 +762,15 @@ function renderCurrentReport() {
   const liquid     = categories.filter(c=>liquidKeys.includes(c.key)).reduce((s,c)=>s+(calc[c.key]||0),0);
   const liquidPct  = calc.totalAssets ? ((liquid/calc.totalAssets)*100).toFixed(1) : '0';
  
+  const _mortInstId = localStorage.getItem('mortgage_inst_v1') || latest.values?._mortgage_inst;
+  const mortInst = _mortInstId ? getInstitution(_mortInstId) : null;
+  const mortInstHtml = mortInst
+    ? `<div class="ct-inst" style="margin-bottom:4px;display:flex;align-items:center;gap:4px"><img src="${logoUrl(mortInst.domain)}" width="14" height="14" style="border-radius:3px;object-fit:contain" onerror="this.style.display='none'"/> ${mortInst.name}</div>`
+    : '';
   const mortgageHero = calc.mortgage>0 ? `
     <div class="hero-tile danger" style="animation-delay:.1s">
       <div class="ht-label">${SVG_MORTGAGE} יתרת משכנתא</div>
+      ${mortInstHtml}
       <div class="ht-value blur-text" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
     </div>
     <div class="hero-tile warning" style="animation-delay:.15s">
@@ -945,8 +991,13 @@ function onDateChange() {
 function renderDetailCard(record) {
   const calc      = calcRecord(record);
   const dateLabel = new Date(record.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+  const _recMortInstId = localStorage.getItem('mortgage_inst_v1') || record.values?._mortgage_inst;
+  const recMortInst = _recMortInstId ? getInstitution(_recMortInstId) : null;
+  const mortInstLabel = recMortInst
+    ? `<img src="${logoUrl(recMortInst.domain)}" width="14" height="14" style="border-radius:3px;object-fit:contain;margin-left:4px" onerror="this.style.display='none'"/> ${recMortInst.name} · `
+    : '';
   const mortRows  = calc.mortgage>0 ? `
-    <div class="hd-row"><span class="hd-row-label">${ICONS_JS.home} יתרת משכנתא</span>
+    <div class="hd-row"><span class="hd-row-label">${ICONS_JS.home} ${mortInstLabel}יתרת משכנתא</span>
       <span class="hd-row-val neg blur-text">${fmt(calc.mortgage)}</span></div>
     <div class="hd-row total-row"><span class="hd-row-label">${ICONS_JS.diamond} שווי נקי</span>
       <span class="hd-row-val blur-text">${fmt(calc.netWorth)}</span></div>` : '';
@@ -1278,7 +1329,7 @@ async function deleteAccount() {
   } catch(e) { console.error(e); }
   hideLoader();
   closeSettings();
-  showToast('✅ כל הנתונים נמחקו');
+  showToast('כל הנתונים נמחקו');
   await db.auth.signOut();
 }
 
@@ -1292,6 +1343,7 @@ function showSettings(tab) {
   if (toggle) toggle.checked = isDark;
   setTimeout(renderPasswordSection, 0);
   setTimeout(renderPartnerSection, 0);
+  setTimeout(renderMortgageInstSettings, 0);
 }
 function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
 function closeSettingsOutside(e) { if(e.target.id==='settings-modal') closeSettings(); }
@@ -1365,7 +1417,47 @@ async function saveCatEdit(id) {
   hideLoader();
   renderCategoriesList();
   renderCurrentReport();
-  showToast('✅ קטגוריה עודכנה');
+  showToast('קטגוריה עודכנה');
+}
+
+/* ── MORTGAGE INSTITUTION IN SETTINGS ───────────────── */
+function renderMortgageInstSettings() {
+  const section = document.getElementById('mortgage-inst-section');
+  if (!section) return;
+  const savedId = localStorage.getItem('mortgage_inst_v1');
+  const inst    = savedId ? getInstitution(savedId) : null;
+  section.innerHTML = inst
+    ? `<div class="cat-item" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <img src="${logoUrl(inst.domain)}" alt="" class="cat-list-logo" onerror="this.style.display='none'"/>
+          <div>
+            <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${inst.name}</div>
+            <div style="font-size:.72rem;color:var(--green)">גוף מנהל משכנתא</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="cat-action-btn" onclick="openMortgageInstFromSettings()" title="שנה">${ICONS_JS.edit}</button>
+          <button class="cat-action-btn" onclick="clearMortgageInst()" title="הסר" style="color:var(--red)">${ICONS_JS.x}</button>
+        </div>
+      </div>`
+    : `<button class="mortgage-inst-btn" onclick="openMortgageInstFromSettings()" style="margin-top:4px">
+        ${ICONS_JS.bank} בחר גוף מנהל משכנתא
+      </button>`;
+}
+
+function openMortgageInstFromSettings() {
+  instTargetMode  = 'mortgage_settings';
+  instTargetCatId = null;
+  renderInstGrid(INSTITUTIONS.filter(i => i.type === 'bank'));
+  document.getElementById('inst-modal').style.display = 'flex';
+  document.getElementById('inst-search').value = '';
+}
+
+function clearMortgageInst() {
+  localStorage.removeItem('mortgage_inst_v1');
+  renderMortgageInstSettings();
+  renderCurrentReport();
+  showToast('גוף מנהל משכנתא הוסר');
 }
 
 /* ── DRAG & DROP reorder ─────────────────────────────── */
@@ -1403,7 +1495,7 @@ async function saveCategoryOrder() {
     db.from('categories').update({ order_index: i }).eq('id', cat.id).eq('user_id', currentUser.id)
   );
   await Promise.all(updates);
-  showToast('✅ סדר נשמר');
+  showToast('סדר נשמר');
 }
 
 /* ── TAB SWITCH ─────────────────────────────────────── */

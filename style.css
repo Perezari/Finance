@@ -1381,3 +1381,27 @@ input[type="date"].form-input {
 input[type="date"]::-webkit-date-and-time-value {
   text-align: right;
 }
+
+/* ══ MORTGAGE INSTITUTION BUTTON ════════════════════ */
+.mortgage-inst-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--ink-3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+  width: 100%;
+  justify-content: center;
+}
+.mortgage-inst-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}

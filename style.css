@@ -1324,3 +1324,37 @@ select option{background:var(--surface)}
 [data-theme="dark"] .icon-btn:hover svg {
   stroke: var(--green);
 }
+
+/* ══ SHORTCUTS OVERLAY ═══════════════════════════════ */
+.shortcuts-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(17,24,39,.45);
+  backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.shortcuts-overlay.open { display: flex; }
+
+/* ══ RESTORE BUTTON ══════════════════════════════════ */
+.restore-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  color: var(--ink-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+}
+.restore-btn:hover { border-color: var(--green); color: var(--green); }

@@ -114,6 +114,7 @@ async function init() {
       currentUser = session.user; appLoaded = true; await loadApp();
     } else if (event === 'SIGNED_OUT') {
       currentUser = null; appLoaded = false; records = []; categories = [];
+      // Show friendly explanation instead of silent redirect
       showScreen('auth');
     }
   });
@@ -127,6 +128,7 @@ async function loadApp() {
   renderCurrentReport();
   updateUserUI();
   syncDarkModeFromCloud(); // pull dark mode pref from Supabase
+  checkBackupReminder();
   showScreen('app');
   hideLoader();
   checkOnboarding(); // ← new
@@ -1288,6 +1290,7 @@ function showSettings(tab) {
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = isDark;
   setTimeout(renderPasswordSection, 0);
+  setTimeout(renderPartnerSection, 0);
 }
 function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
 function closeSettingsOutside(e) { if(e.target.id==='settings-modal') closeSettings(); }
@@ -1528,14 +1531,156 @@ document.addEventListener('keydown', e => {
       if (addForm && addForm.style.display !== 'none') {
         addForm.style.display = 'none'; editMode = false;
       }
-      if (document.getElementById('settings-modal').style.display !== 'none') closeSettings();
-      if (document.getElementById('inst-modal').style.display    !== 'none') closeInstModal();
+      if (document.getElementById('settings-modal').style.display    !== 'none') closeSettings();
+      if (document.getElementById('inst-modal').style.display        !== 'none') closeInstModal();
+      if (document.getElementById('shortcuts-panel')?.classList.contains('open')) closeShortcutsPanel();
       break;
     case '?':
-      showToast('N=הוסף  H=היסטוריה  D=דוח  R=פרישה  B=טשטוש  Esc=סגור');
+      toggleShortcutsPanel();
       break;
   }
 });
+
+
+/* ══ KEYBOARD SHORTCUTS PANEL ════════════════════════ */
+function toggleShortcutsPanel() {
+  const p = document.getElementById('shortcuts-panel');
+  if (!p) return;
+  p.classList.contains('open') ? closeShortcutsPanel() : openShortcutsPanel();
+}
+function openShortcutsPanel() {
+  document.getElementById('shortcuts-panel')?.classList.add('open');
+}
+function closeShortcutsPanel() {
+  document.getElementById('shortcuts-panel')?.classList.remove('open');
+}
+
+
+/* ══ PARTNER / SHARED ACCOUNT ════════════════════════ */
+async function renderPartnerSection() {
+  const section = document.getElementById('partner-section');
+  if (!section || !currentUser) return;
+  const partnerEmail = currentUser.user_metadata && currentUser.user_metadata.partner_email || null;
+  if (partnerEmail) {
+    section.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:10px">'
+      + '<div><div style="font-size:.875rem;font-weight:600;color:var(--ink)">' + partnerEmail + '</div>'
+      + '<div style="font-size:.75rem;color:var(--green);margin-top:2px">חשבון משותף פעיל</div></div>'
+      + '<button onclick="removePartner()" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1.5px solid #fecaca;border-radius:var(--r-xs);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer">הסר</button>'
+      + '</div>';
+  } else {
+    section.innerHTML = '<div style="display:flex;gap:8px;margin-top:8px">'
+      + '<input type="email" id="partner-email-input" placeholder="אימייל בן/בת הזוג" class="form-input" style="flex:1;direction:ltr;text-align:right"/>'
+      + '<button onclick="addPartner()" class="display-name-save-btn">הוסף</button>'
+      + '</div>'
+      + '<p class="settings-hint" style="margin-top:8px">בן/בת הזוג יצטרכו להירשם עם אותו אימייל</p>';
+  }
+}
+
+async function addPartner() {
+  const inp = document.getElementById('partner-email-input');
+  const email = inp ? inp.value.trim() : '';
+  if (!email) return showToast('יש להזין אימייל');
+  if (email === currentUser.email) return showToast('לא ניתן להוסיף את עצמך');
+  showLoader('שומר...');
+  const { error } = await db.auth.updateUser({ data: { partner_email: email } });
+  hideLoader();
+  if (error) return showToast('שגיאה: ' + error.message);
+  const res = await db.auth.getUser();
+  currentUser = res.data.user;
+  renderPartnerSection();
+  showToast('חשבון משותף הוגדר');
+}
+
+async function removePartner() {
+  if (!confirm('להסיר את החשבון המשותף?')) return;
+  showLoader('מסיר...');
+  await db.auth.updateUser({ data: { partner_email: null } });
+  hideLoader();
+  const res = await db.auth.getUser();
+  currentUser = res.data.user;
+  renderPartnerSection();
+  showToast('החשבון המשותף הוסר');
+}
+
+/* ══ BACKUP & RESTORE ════════════════════════════════ */
+async function exportBackup() {
+  if (!currentUser) return;
+  showLoader('מכין גיבוי...');
+  const { data: cats }  = await db.from('categories').select('*').eq('user_id', currentUser.id);
+  const { data: recs }  = await db.from('monthly_records').select('*').eq('user_id', currentUser.id);
+  hideLoader();
+  const backup = {
+    version: '1.0',
+    exported_at: new Date().toISOString(),
+    user_email: currentUser.email,
+    categories: cats || [],
+    records: recs || []
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `finance-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('גיבוי הורד בהצלחה');
+  localStorage.setItem('last_backup_v1', Date.now().toString());
+}
+
+function triggerRestoreUpload() {
+  document.getElementById('restore-file-input').click();
+}
+
+async function handleRestoreFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (!backup.version || !backup.categories || !backup.records) {
+        return showToast('קובץ גיבוי לא תקין');
+      }
+      if (!confirm(`שחזור גיבוי מ-${backup.exported_at?.slice(0,10) || 'לא ידוע'}
+
+פעולה זו תחליף את כל הנתונים הקיימים. להמשיך?`)) {
+        input.value = ''; return;
+      }
+      showLoader('משחזר נתונים...');
+      // Delete existing
+      await db.from('monthly_records').delete().eq('user_id', currentUser.id);
+      await db.from('categories').delete().eq('user_id', currentUser.id);
+      // Re-insert with current user_id
+      const cats = backup.categories.map(c => ({ ...c, id: undefined, user_id: currentUser.id }));
+      const recs = backup.records.map(r   => ({ ...r, id: undefined, user_id: currentUser.id }));
+      if (cats.length) await db.from('categories').insert(cats);
+      if (recs.length) await db.from('monthly_records').insert(recs);
+      await loadCategories();
+      await loadRecords();
+      renderCurrentReport();
+      hideLoader();
+      showToast('הנתונים שוחזרו בהצלחה');
+      input.value = '';
+      closeSettings();
+    } catch(err) {
+      hideLoader();
+      showToast('שגיאה בקריאת הקובץ');
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ══ AUTO BACKUP REMINDER ════════════════════════════ */
+function checkBackupReminder() {
+  const last = parseInt(localStorage.getItem('last_backup_v1') || '0');
+  const days = (Date.now() - last) / (1000 * 60 * 60 * 24);
+  if (days >= 30) {
+    setTimeout(() => {
+      showToast('טיפ: לא גיבית את הנתונים 30+ יום — מומלץ לגבות');
+    }, 3000);
+  }
+}
 
 /* ══ DARK MODE ═══════════════════════════════════════ */
 function applyDarkMode(on) {

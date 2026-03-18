@@ -26,6 +26,7 @@ const INSTITUTIONS = [
   { id:'analyst',    name:'אנליסט',             domain:'https://www.analyst.co.il/',       type:'invest' },
   { id:'ibi',        name:'IBI',                domain:'ibi.co.il',           type:'invest' },
   { id:'iek',        name:'ילין לפידות',        domain:'https://www.yl-invest.co.il/',         type:'invest' },
+  { id:'interactive',        name:'אינטראקטיב ישראל',        domain:'https://www.inter-il.com/client-portal/',         type:'invest' },
   /* Savings funds */
   { id:'worker',     name:'קרן הגמל לעובד',     domain:'hishtalmut.co.il',    type:'savings'},
 ];

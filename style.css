@@ -1067,23 +1067,18 @@ select option{background:var(--surface)}
 }
 .pwd-save-btn:hover { background: var(--green-mid); }
 
-/* ══ PASSWORD RESET MODAL — always on top ════════════ */
-#pwd-reset-modal {
-  z-index: 9998;
-  align-items: center;
-  background: rgba(17,24,39,.6);
-  backdrop-filter: blur(8px);
-}
 
-/* ══ PASSWORD RESET OVERLAY ══════════════════════════ */
-.pwd-reset-overlay {
+
+/* ══ PASSWORD RESET MODAL ════════════════════════════ */
+#pwd-reset-modal {
   position: fixed;
   inset: 0;
   z-index: 9998;
-  background: rgba(17,24,39,.55);
-  backdrop-filter: blur(10px);
-  display: flex;
+  background: rgba(17,24,39,.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   align-items: center;
   justify-content: center;
   padding: 24px;
+  /* display toggled by JS between none / flex */
 }

@@ -92,11 +92,12 @@ async function init() {
 
   // Detect password recovery link BEFORE anything else
   const hash = window.location.hash;
-  if (hash.includes('type=recovery') || hash.includes('type=signup')) {
-    // Let Supabase parse the token from hash — it fires PASSWORD_RECOVERY event
+  if (hash.includes('type=recovery')) {
     hideLoader();
-    document.getElementById('loader').style.display = 'none';
-    // Wait for onAuthStateChange to fire with PASSWORD_RECOVERY
+    // Show auth screen as background so it's not blank
+    document.getElementById('auth-screen').style.display = 'flex';
+    populateInstitutionSelect();
+    // onAuthStateChange will fire PASSWORD_RECOVERY and show the modal
     return;
   }
 
@@ -113,8 +114,9 @@ async function init() {
     if (event === 'PASSWORD_RECOVERY') {
       currentUser = session.user;
       document.getElementById('loader').style.display      = 'none';
-      document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app-screen').style.display  = 'none';
+      // Keep auth-screen visible as background, show modal on top
+      document.getElementById('auth-screen').style.display = 'flex';
       showPasswordResetModal();
       return;
     }
@@ -194,7 +196,6 @@ async function saveDisplayName() {
 function showPasswordResetModal() {
   const m = document.getElementById('pwd-reset-modal');
   m.style.display = 'flex';
-  m.classList.add('pwd-reset-overlay');
 }
 
 function closePasswordResetModal() {
@@ -215,8 +216,8 @@ async function confirmPasswordReset() {
   if (error) return showToast('שגיאה: ' + error.message);
 
   closePasswordResetModal();
+  document.getElementById('auth-screen').style.display = 'none';
   showToast('הסיסמה עודכנה בהצלחה');
-  // Now load the app normally
   if (currentUser) { await loadApp(); }
 }
 

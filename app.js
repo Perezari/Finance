@@ -26,7 +26,6 @@ const INSTITUTIONS = [
   { id:'analyst',    name:'אנליסט',             domain:'https://www.analyst.co.il/',       type:'invest' },
   { id:'ibi',        name:'IBI',                domain:'ibi.co.il',           type:'invest' },
   { id:'iek',        name:'ילין לפידות',        domain:'https://www.yl-invest.co.il/',         type:'invest' },
-  { id:'interactive',        name:'אינטראקטיב ישראל',        domain:'https://www.inter-il.com/client-portal/',         type:'invest' },
   /* Savings funds */
   { id:'worker',     name:'קרן הגמל לעובד',     domain:'hishtalmut.co.il',    type:'savings'},
 ];
@@ -183,7 +182,7 @@ async function saveDisplayName() {
   // גם localStorage לסנכרון מיידי
   localStorage.setItem('display_name_v1', name);
   updateUserUI();
-  showToast('שם עודכן');
+  showToast('✅ שם עודכן');
 }
 
 
@@ -310,7 +309,7 @@ async function handleRegister() {
   hideLoader();
   if (error) return showAuthMsg(translateError(error.message), false);
   if (data?.user) await createDefaultCategories(data.user.id);
-  showAuthMsg('נשלח אימייל אישור!', true);
+  showAuthMsg('✅ נשלח אימייל אישור!', true);
 }
 
 async function handleMagicLink() {
@@ -320,7 +319,7 @@ async function handleMagicLink() {
   const { error } = await db.auth.signInWithOtp({ email });
   hideLoader();
   if (error) return showAuthMsg(translateError(error.message), false);
-  showAuthMsg('קישור נשלח לאימייל!', true);
+  showAuthMsg('✅ קישור נשלח לאימייל!', true);
 }
 
 async function handleLogout() {
@@ -392,7 +391,7 @@ async function addCategory() {
   await db.from('categories').insert({ user_id:currentUser.id, key, label, icon:'_svg', order_index:categories.length, institution_id:instId });
   await loadCategories(); hideLoader();
   renderCategoriesList(); renderDynamicFields();
-  showToast('קטגוריה נוספה');
+  showToast('✅ קטגוריה נוספה');
   ['new-cat-key','new-cat-label'].forEach(id => document.getElementById(id).value='');
   document.getElementById('new-cat-institution').value = '';
 }
@@ -403,7 +402,7 @@ async function deleteCategory(id) {
   await db.from('categories').delete().eq('id',id).eq('user_id',currentUser.id);
   await loadCategories(); hideLoader();
   renderCategoriesList(); renderDynamicFields();
-  showToast('נמחקה');
+  showToast('🗑️ נמחקה');
 }
 
 async function setInstitution(catId, instId) {
@@ -411,7 +410,7 @@ async function setInstitution(catId, instId) {
   await loadCategories();
   renderCategoriesList();
   renderCurrentReport();
-  showToast('גוף מנהל עודכן');
+  showToast('✅ גוף מנהל עודכן');
 }
 
 /* ── INSTITUTION MODAL ─────────────────────────────── */
@@ -553,7 +552,7 @@ async function submitRecord() {
   document.getElementById('dateSelect').value='';
   editMode=false;
   if (document.getElementById('tab-history').style.display!=='none') renderHistoryTab();
-  showToast(editMode?'עודכן!':'נשמר!');
+  showToast(editMode?'✅ עודכן!':'✅ נשמר!');
 }
 
 async function deleteRecord(id) {
@@ -564,7 +563,7 @@ async function deleteRecord(id) {
   renderCurrentReport(); renderHistoryTab();
   document.getElementById('history-detail').style.display='none';
   document.getElementById('dateSelect').value='';
-  showToast('נמחק');
+  showToast('🗑️ נמחק');
 }
 
 /* ── CALCULATIONS ───────────────────────────────────── */
@@ -762,24 +761,38 @@ function renderCurrentReport() {
   const liquid     = categories.filter(c=>liquidKeys.includes(c.key)).reduce((s,c)=>s+(calc[c.key]||0),0);
   const liquidPct  = calc.totalAssets ? ((liquid/calc.totalAssets)*100).toFixed(1) : '0';
  
+  // Previous month calc (used for mortgage delta + cat badges)
+  const prevCalc = records.length >= 2 ? calcRecord(records[records.length-2]) : null;
+
   const _mortInstId = localStorage.getItem('mortgage_inst_v1') || latest.values?._mortgage_inst;
   const mortInst = _mortInstId ? getInstitution(_mortInstId) : null;
-  const mortInstHtml = mortInst
-    ? `<div class="ct-inst" style="margin-bottom:4px;display:flex;align-items:center;gap:4px"><img src="${logoUrl(mortInst.domain)}" width="14" height="14" style="border-radius:3px;object-fit:contain" onerror="this.style.display='none'"/> ${mortInst.name}</div>`
-    : '';
+  // Mortgage month-over-month delta
+  const prevMort = prevCalc ? prevCalc.mortgage : null;
+  let mortDeltaHtml = '';
+  if (prevMort != null && calc.mortgage > 0) {
+    const md = calc.mortgage - prevMort;
+    const mp = prevMort ? (md / prevMort * 100).toFixed(1) : null;
+    if (mp !== null) {
+      // Invert sign: more debt = negative, less debt = positive
+      const mCls  = md <= 0 ? 'pos' : 'neg';
+      const mSign = md <= 0 ? '-' : '+'; // decrease in debt shown as -, increase as +
+      const mpAbs = Math.abs(parseFloat(mp)).toFixed(1);
+      mortDeltaHtml = `<div class="ct-growth ${mCls}">${mSign}${mpAbs}%</div>`;
+    }
+  }
+
   const mortgageHero = calc.mortgage>0 ? `
-    <div class="hero-tile danger" style="animation-delay:.1s">
-      <div class="ht-label">${SVG_MORTGAGE} יתרת משכנתא</div>
-      ${mortInstHtml}
-      <div class="ht-value blur-text" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
+    <div class="hero-tile danger" style="animation-delay:.1s;position:relative">
+      <div class="ht-label" style="margin-bottom:4px">${SVG_MORTGAGE} יתרת משכנתא</div>
+      ${mortInst ? `<span class="ct-inst" style="display:flex;align-items:center;gap:4px;margin-bottom:8px"><img src="${logoUrl(mortInst.domain)}" width="13" height="13" style="border-radius:3px;object-fit:contain" onerror="this.style.display='none'"/>${mortInst.name}</span>` : ''}
+      <div class="ht-value blur-text" style="margin-bottom:6px" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
+      ${mortDeltaHtml}
     </div>
     <div class="hero-tile warning" style="animation-delay:.15s">
       <div class="ht-label">${SVG_NETWORTH} שווי נקי</div>
       <div class="ht-value blur-text" data-countup="${calc.netWorth}">${fmt(calc.netWorth)}</div>
     </div>` : '';
  
-  // Previous month for per-category delta
-  const prevCalc = records.length >= 2 ? calcRecord(records[records.length-2]) : null;
 
   const catTiles = categories.map((cat,i) => {
     const inst     = cat.institution_id ? getInstitution(cat.institution_id) : null;
@@ -1329,7 +1342,7 @@ async function deleteAccount() {
   } catch(e) { console.error(e); }
   hideLoader();
   closeSettings();
-  showToast('כל הנתונים נמחקו');
+  showToast('✅ כל הנתונים נמחקו');
   await db.auth.signOut();
 }
 
@@ -1417,7 +1430,7 @@ async function saveCatEdit(id) {
   hideLoader();
   renderCategoriesList();
   renderCurrentReport();
-  showToast('קטגוריה עודכנה');
+  showToast('✅ קטגוריה עודכנה');
 }
 
 /* ── MORTGAGE INSTITUTION IN SETTINGS ───────────────── */
@@ -1495,7 +1508,7 @@ async function saveCategoryOrder() {
     db.from('categories').update({ order_index: i }).eq('id', cat.id).eq('user_id', currentUser.id)
   );
   await Promise.all(updates);
-  showToast('סדר נשמר');
+  showToast('✅ סדר נשמר');
 }
 
 /* ── TAB SWITCH ─────────────────────────────────────── */

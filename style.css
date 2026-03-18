@@ -1405,3 +1405,13 @@ input[type="date"]::-webkit-date-and-time-value {
   border-color: var(--green);
   color: var(--green);
 }
+
+/* ── ct-growth dark mode fix ──────────────────────── */
+[data-theme="dark"] .ct-growth.neg {
+  background: rgba(239,68,68,.25);
+  color: #f87171;
+}
+[data-theme="dark"] .ct-growth.pos {
+  background: rgba(14,158,126,.25);
+  color: #34d399;
+}

@@ -90,15 +90,9 @@ let instTargetCatId = null; // which category we're picking institution for
 async function init() {
   initDarkMode();
 
-  // Detect password recovery link BEFORE anything else
-  const hash = window.location.hash;
-  if (hash.includes('type=recovery')) {
-    hideLoader();
-    // Show auth screen as background so it's not blank
+  // If recovery link — show auth screen as background while we wait for the event
+  if (window.location.hash.includes('type=recovery')) {
     document.getElementById('auth-screen').style.display = 'flex';
-    populateInstitutionSelect();
-    // onAuthStateChange will fire PASSWORD_RECOVERY and show the modal
-    return;
   }
 
   showLoader('מאמת...');
@@ -113,9 +107,10 @@ async function init() {
   db.auth.onAuthStateChange(async (event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
       currentUser = session.user;
+      appLoaded = false; // prevent normal SIGNED_IN flow from taking over
+      hideLoader();
       document.getElementById('loader').style.display      = 'none';
       document.getElementById('app-screen').style.display  = 'none';
-      // Keep auth-screen visible as background, show modal on top
       document.getElementById('auth-screen').style.display = 'flex';
       showPasswordResetModal();
       return;

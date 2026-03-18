@@ -1673,7 +1673,12 @@ async function handleRestoreFile(input) {
 
 /* ══ AUTO BACKUP REMINDER ════════════════════════════ */
 function checkBackupReminder() {
-  const last = parseInt(localStorage.getItem('last_backup_v1') || '0');
+  // First time ever — set today so reminder doesn't fire immediately
+  if (!localStorage.getItem('last_backup_v1')) {
+    localStorage.setItem('last_backup_v1', Date.now().toString());
+    return;
+  }
+  const last = parseInt(localStorage.getItem('last_backup_v1'));
   const days = (Date.now() - last) / (1000 * 60 * 60 * 24);
   if (days >= 30) {
     setTimeout(() => {

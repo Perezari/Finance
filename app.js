@@ -130,11 +130,18 @@ async function loadApp() {
   loadRetirementSettings();
   renderCurrentReport();
   updateUserUI();
-  syncDarkModeFromCloud(); // pull dark mode pref from Supabase
-  checkBackupReminder();
+  syncDarkModeFromCloud();
+  checkAutoBackup();
+  // Fix stale _share_invite row if owner name wasn't stored correctly
+  const isOwner = !!(currentUser.user_metadata?.partner_email);
+  if (isOwner) {
+    const ownerName = currentUser.user_metadata?.full_name || currentUser.email;
+    db.from('categories').update({ label: ownerName, icon: currentUser.email })
+      .eq('user_id', currentUser.id).eq('key', '_share_invite');
+  }
   showScreen('app');
   hideLoader();
-  checkOnboarding(); // ← new
+  checkOnboarding();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -188,7 +195,47 @@ async function saveDisplayName() {
 
 
 
-/* ── PASSWORD RESET MODAL ────────────────────────────── */
+/* ── PARTNER BANNER ──────────────────────────────────── */
+async function renderPartnerBanner() {
+  const banner = document.getElementById('partner-banner');
+  if (!banner || !currentUser) return;
+  const accepted = !!(currentUser.user_metadata?.accepted_share_from);
+  if (!accepted) { banner.style.display = 'none'; return; }
+
+  // Try metadata first (set during acceptShare), fallback to invite row
+  let display = currentUser.user_metadata?.partner_owner_name
+             || currentUser.user_metadata?.partner_owner_email
+             || '';
+
+  if (!display) {
+    const { data: rows } = await db.from('categories')
+      .select('label,icon').eq('key', '_share_invite').neq('user_id', currentUser.id).limit(1);
+    if (rows?.[0]) {
+      display = rows[0].label !== '_share_invite' ? rows[0].label : rows[0].icon || '';
+      // Cache it for next time
+      if (display) {
+        await db.auth.updateUser({ data: {
+          partner_owner_name:  rows[0].label,
+          partner_owner_email: rows[0].icon
+        }});
+        const res = await db.auth.getUser(); currentUser = res.data.user;
+      }
+    }
+  }
+
+  if (display) {
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>צופה בתיק של <strong>${display}</strong></span>
+      </div>`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+
 function showPasswordResetModal() {
   const m = document.getElementById('pwd-reset-modal');
   m.style.display = 'flex';
@@ -1792,13 +1839,25 @@ async function renderPartnerSection() {
   }
 
   if (accepted) {
-    // ── VIEWER: accepted, read-only ──
+    let ownerName  = currentUser.user_metadata?.partner_owner_name  || '';
+    let ownerEmail = currentUser.user_metadata?.partner_owner_email || '';
+    if (!ownerName && !ownerEmail) {
+      const { data: rows } = await db.from('categories')
+        .select('label,icon').eq('key', '_share_invite').neq('user_id', currentUser.id).limit(1);
+      if (rows?.[0]) {
+        // label holds name (if set after update), icon holds email
+        const lbl = rows[0].label;
+        ownerName  = (lbl && lbl !== '_share_invite') ? lbl : '';
+        ownerEmail = rows[0].icon && rows[0].icon !== '_share' ? rows[0].icon : '';
+      }
+    }
+    const display = ownerName || ownerEmail || 'בעל החשבון';
     section.innerHTML =
-      '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2,#f0fdf9);border:1.5px solid var(--green);border-radius:var(--r-xs);margin-bottom:10px">'
+      '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--green-light,rgba(14,158,126,.12));border:1.5px solid var(--green);border-radius:var(--r-xs);margin-bottom:10px">'
       + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
       + '<div style="flex:1">'
-      + '<div style="font-size:.875rem;font-weight:600;color:var(--ink)">מצב צפייה משותפת</div>'
-      + '<div style="font-size:.75rem;color:var(--ink-4);margin-top:2px">את/ה צופה בתיק הפיננסי המשותף. רק בעל החשבון יכול לנהל את השיתוף.</div>'
+      + `<div style="font-size:.875rem;font-weight:600;color:var(--ink)">מחובר לתיק של ${display}</div>`
+      + '<div style="font-size:.75rem;color:var(--ink-3);margin-top:2px">רק בעל החשבון יכול לנהל את השיתוף.</div>'
       + '</div>'
       + '</div>';
     return;
@@ -1834,10 +1893,18 @@ async function renderPartnerSection() {
 
 async function acceptShare() {
   showLoader('מאשר...');
-  // Grab the owner's user_id from accessible records
-  const { data: allRecs } = await db.from('monthly_records').select('user_id').limit(1);
-  const ownerUserId = (allRecs || []).find(r => r.user_id !== currentUser.id)?.user_id || 'shared';
-  await db.auth.updateUser({ data: { accepted_share_from: ownerUserId, declined_share: null } });
+  const { data: inviteRows } = await db.from('categories')
+    .select('user_id,label,icon').eq('key', '_share_invite').neq('user_id', currentUser.id).limit(1);
+  const invite      = inviteRows?.[0];
+  const ownerUserId = invite?.user_id || 'shared';
+  const ownerName   = invite?.label   || '';
+  const ownerEmail  = invite?.icon    || '';
+  await db.auth.updateUser({ data: {
+    accepted_share_from: ownerUserId,
+    partner_owner_name:  ownerName,
+    partner_owner_email: ownerEmail,
+    declined_share: null
+  }});
   const res = await db.auth.getUser(); currentUser = res.data.user;
   hideLoader();
   closeSettings();
@@ -1863,10 +1930,11 @@ async function addPartner() {
   showLoader('שומר...');
   const { error } = await db.auth.updateUser({ data: { partner_email: email } });
   if (error) { hideLoader(); return showToast('שגיאה: ' + error.message); }
-  // Write an explicit invite row so the viewer can detect it reliably
+  // Write invite row — include owner name+email so viewer can display it
+  const ownerName  = currentUser.user_metadata?.full_name || currentUser.email;
   await db.from('categories').upsert({
-    user_id: currentUser.id, key: '_share_invite', label: '_share_invite',
-    icon: '_share', order_index: 9999
+    user_id: currentUser.id, key: '_share_invite', label: ownerName,
+    icon: currentUser.email, order_index: 9999
   }, { onConflict: 'user_id,key' });
   hideLoader();
   const res = await db.auth.getUser();
@@ -1892,16 +1960,9 @@ async function removePartner() {
 async function exportBackup() {
   if (!currentUser) return;
   showLoader('מכין גיבוי...');
-  const { data: cats }  = await db.from('categories').select('*').eq('user_id', currentUser.id);
-  const { data: recs }  = await db.from('monthly_records').select('*').eq('user_id', currentUser.id);
+  const { cats, recs } = await gatherBackupData();
   hideLoader();
-  const backup = {
-    version: '1.0',
-    exported_at: new Date().toISOString(),
-    user_email: currentUser.email,
-    categories: cats || [],
-    records: recs || []
-  };
+  const backup = buildBackupObject(cats, recs);
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -1957,21 +2018,51 @@ async function handleRestoreFile(input) {
   reader.readAsText(file);
 }
 
-/* ══ AUTO BACKUP REMINDER ════════════════════════════ */
-function checkBackupReminder() {
-  // First time ever — set today so reminder doesn't fire immediately
+/* ══ AUTO BACKUP (monthly modal) ════════════════════════ */
+function checkAutoBackup() {
   if (!localStorage.getItem('last_backup_v1')) {
     localStorage.setItem('last_backup_v1', Date.now().toString());
     return;
   }
   const last = parseInt(localStorage.getItem('last_backup_v1'));
-  const days = (Date.now() - last) / (1000 * 60 * 60 * 24);
+  const days  = (Date.now() - last) / (1000 * 60 * 60 * 24);
   if (days >= 30) {
-    setTimeout(() => {
-      showToast('טיפ: לא גיבית את הנתונים 30+ יום — מומלץ לגבות');
-    }, 3000);
+    setTimeout(() => showBackupModal(), 2500);
   }
 }
+
+function showBackupModal() {
+  const m = document.getElementById('backup-modal');
+  if (m) m.style.display = 'flex';
+}
+
+function closeBackupModal() {
+  const m = document.getElementById('backup-modal');
+  if (m) m.style.display = 'none';
+  localStorage.setItem('last_backup_v1', Date.now().toString());
+}
+
+async function backupAndClose() {
+  await exportBackup();
+  closeBackupModal();
+}
+
+async function gatherBackupData() {
+  const { data: cats } = await db.from('categories').select('*').eq('user_id', currentUser.id);
+  const { data: recs } = await db.from('monthly_records').select('*').eq('user_id', currentUser.id);
+  return { cats: cats || [], recs: recs || [] };
+}
+
+function buildBackupObject(cats, recs) {
+  return {
+    version: '1.0',
+    exported_at: new Date().toISOString(),
+    user_email: currentUser.email,
+    categories: cats,
+    records: recs
+  };
+}
+
 
 /* ══ DARK MODE ═══════════════════════════════════════ */
 function applyDarkMode(on) {

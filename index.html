@@ -457,6 +457,26 @@
   </div>
 </div>
 
+<!-- ══ MONTHLY BACKUP MODAL ═══════════════════════════ -->
+<div id="backup-modal" class="modal-overlay" style="display:none;">
+  <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:380px;box-shadow:var(--shadow-lg);overflow:hidden;animation:fadeUp .22s ease">
+    <div style="padding:28px 24px 8px;text-align:center">
+      <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--green-light,#d1fae5),#a7f3d0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--ink);margin-bottom:8px">זמן לגיבוי חודשי!</div>
+      <div style="font-size:.875rem;color:var(--ink-3);line-height:1.6;margin-bottom:24px">עבר חודש מהגיבוי האחרון. מומלץ לגבות את הנתונים שלך כעת.</div>
+    </div>
+    <div style="padding:0 24px 28px;display:flex;flex-direction:column;gap:10px">
+      <button onclick="backupAndClose()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:var(--green);color:#fff;border:none;border-radius:var(--r-xs);font-family:var(--font);font-size:.9rem;font-weight:600;cursor:pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        הורד גיבוי
+      </button>
+      <button onclick="closeBackupModal()" style="padding:10px;background:none;border:none;font-family:var(--font);font-size:.85rem;color:var(--ink-4);cursor:pointer">תזכיר לי בפעם הבאה</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ RESTORE FILE INPUT (hidden) ═══════════════════ -->
 <input type="file" id="restore-file-input" accept=".json" style="display:none" onchange="handleRestoreFile(this)"/>
 

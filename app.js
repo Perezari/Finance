@@ -1776,6 +1776,7 @@ async function acceptShare() {
   await db.auth.updateUser({ data: { accepted_share_from: ownerUserId, declined_share: null } });
   const res = await db.auth.getUser(); currentUser = res.data.user;
   hideLoader();
+  closeSettings();
   await loadApp();
   showToast('✅ גישה אושרה — אתה רואה את התיק המשותף');
 }

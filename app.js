@@ -130,6 +130,9 @@ async function loadApp() {
   showLoader('טוען נתונים...');
   await Promise.all([loadCategories(), loadRecords()]);
   loadRetirementSettings();
+  // Sync mortgage institution from Supabase to localStorage
+  const cloudMortInst = currentUser?.user_metadata?.mortgage_inst;
+  if (cloudMortInst) localStorage.setItem('mortgage_inst_v1', cloudMortInst);
   renderCurrentReport();
   updateUserUI();
   syncDarkModeFromCloud();
@@ -533,6 +536,10 @@ async function pickInstitution(instId) {
       localStorage.setItem('mortgage_inst_v1', instId);
     } else {
       localStorage.removeItem('mortgage_inst_v1');
+    }
+    // Sync to Supabase
+    if (currentUser) {
+      await db.auth.updateUser({ data: { mortgage_inst: instId || null } });
     }
     renderMortgageInstSettings();
     renderCurrentReport();
@@ -1790,8 +1797,15 @@ async function saveCatEdit(id) {
 function renderMortgageInstSettings() {
   const section = document.getElementById('mortgage-inst-section');
   if (!section) return;
-  const savedId = localStorage.getItem('mortgage_inst_v1');
-  const inst    = savedId ? getInstitution(savedId) : null;
+  // Read from localStorage, fallback to Supabase user_metadata
+  const savedId = localStorage.getItem('mortgage_inst_v1')
+    || currentUser?.user_metadata?.mortgage_inst
+    || null;
+  // Keep localStorage in sync
+  if (savedId && !localStorage.getItem('mortgage_inst_v1')) {
+    localStorage.setItem('mortgage_inst_v1', savedId);
+  }
+  const inst = savedId ? getInstitution(savedId) : null;
   section.innerHTML = inst
     ? `<div class="cat-item" style="margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:8px;flex:1">
@@ -1819,8 +1833,9 @@ function openMortgageInstFromSettings() {
   document.getElementById('inst-search').value = '';
 }
 
-function clearMortgageInst() {
+async function clearMortgageInst() {
   localStorage.removeItem('mortgage_inst_v1');
+  if (currentUser) await db.auth.updateUser({ data: { mortgage_inst: null } });
   renderMortgageInstSettings();
   renderCurrentReport();
   showToast('גוף מנהל משכנתא הוסר');

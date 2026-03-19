@@ -862,7 +862,7 @@ function renderCurrentReport() {
     }
 
     return `
-    <div class="cat-tile" style="animation-delay:${.05*(i+1)}s">
+    <div class="cat-tile" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCatHistory('${cat.key}','${cat.label}')">
       ${logoHtml}
       <span class="ct-icon" ${inst?'style="display:none"':''}>${getCatSvg(cat)}</span>
       <div class="ct-label">${cat.label}${inst?`<span class="ct-inst">${inst.name}</span>`:''}</div>
@@ -1683,6 +1683,7 @@ document.addEventListener('keydown', e => {
       }
       if (document.getElementById('settings-modal').style.display    !== 'none') closeSettings();
       if (document.getElementById('inst-modal').style.display        !== 'none') closeInstModal();
+      if (document.getElementById('cat-history-panel')?.style.display !== 'none') closeCatHistory();
       if (document.getElementById('shortcuts-panel')?.classList.contains('open')) closeShortcutsPanel();
       break;
     case '?':
@@ -1703,6 +1704,66 @@ function openShortcutsPanel() {
 }
 function closeShortcutsPanel() {
   document.getElementById('shortcuts-panel')?.classList.remove('open');
+}
+
+/* ══ CATEGORY HISTORY PANEL ══════════════════════════ */
+function openCatHistory(catKey, catLabel) {
+  const panel = document.getElementById('cat-history-panel');
+  const title = document.getElementById('cat-history-title');
+  const body  = document.getElementById('cat-history-body');
+  if (!panel) return;
+
+  title.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> ${catLabel} — 12 חודשים אחרונים`;
+
+  // Build last 12 month entries
+  const sorted = [...records].sort((a,b) => new Date(a.record_date)-new Date(b.record_date));
+  const last12 = sorted.slice(-13); // up to 13 so we can compute delta for the oldest
+
+  if (last12.length < 2) {
+    body.innerHTML = '<div style="text-align:center;color:var(--ink-4);font-size:.875rem;padding:24px 0">אין מספיק נתונים היסטוריים</div>';
+    panel.style.display = 'flex';
+    return;
+  }
+
+  let rows = '';
+  for (let i = last12.length - 1; i >= 1; i--) {
+    const cur  = last12[i];
+    const prev = last12[i - 1];
+    const curVal  = (cur.values  || {})[catKey] || 0;
+    const prevVal = (prev.values || {})[catKey] || 0;
+    const dateLabel = new Date(cur.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
+
+    let deltaHtml = '';
+    if (prevVal > 0) {
+      const delta = curVal - prevVal;
+      const pct   = (delta / prevVal * 100).toFixed(1);
+      const pos   = delta >= 0;
+      const sign  = pos ? '+' : '';
+      const color = pos ? 'var(--green)' : 'var(--red)';
+      deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:${color};font-family:var(--mono)">${sign}${pct}%</span>`;
+    } else if (curVal > 0 && prevVal === 0) {
+      deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:var(--green);font-family:var(--mono)">חדש</span>`;
+    } else {
+      deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
+    }
+
+    rows += `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-3)">${dateLabel}</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-2)">${fmt(curVal)}</span>
+        ${deltaHtml}
+      </div>
+    </div>`;
+  }
+
+  body.innerHTML = rows;
+  panel.style.display = 'flex';
+}
+
+function closeCatHistory() {
+  const panel = document.getElementById('cat-history-panel');
+  if (panel) panel.style.display = 'none';
 }
 
 

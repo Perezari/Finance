@@ -357,13 +357,29 @@ async function createDefaultCategories(userId) {
 }
 
 async function loadCategories() {
-  const { data } = await db.from('categories').select('*').order('order_index');
-  categories = data || [];
-  if (!categories.length) {
-    await createDefaultCategories(currentUser.id);
-    const { data: fresh } = await db.from('categories').select('*').order('order_index');
-    categories = fresh || [];
+  // Fetch ALL categories accessible via RLS (own + partner's if RLS allows)
+  const { data: all } = await db.from('categories').select('*').order('order_index');
+  const allCats = all || [];
+
+  const own     = allCats.filter(c => c.user_id === currentUser.id);
+  const partner = allCats.filter(c => c.user_id !== currentUser.id);
+
+  // If current user set partner_email → they are the primary owner, show own data
+  const isOwner = !!(currentUser.user_metadata?.partner_email);
+
+  if (isOwner) {
+    // Primary user: always show own categories
+    if (own.length) { categories = own; return; }
+  } else {
+    // Secondary/viewer: if partner has categories, show theirs
+    if (partner.length) { categories = partner; return; }
+    if (own.length)     { categories = own; return; }
   }
+
+  // No data at all — create defaults
+  await createDefaultCategories(currentUser.id);
+  const { data: fresh } = await db.from('categories').select('*').eq('user_id', currentUser.id).order('order_index');
+  categories = fresh || [];
 }
 
 function getInstitution(id) { return INSTITUTIONS.find(i => i.id === id) || null; }
@@ -494,8 +510,22 @@ function renderMortgageInstButton() {
 
 /* ── RECORDS ────────────────────────────────────────── */
 async function loadRecords() {
-  const { data } = await db.from('monthly_records').select('*').order('record_date',{ascending:true});
-  records = data || [];
+  // Fetch ALL records accessible via RLS (own + partner's if RLS allows)
+  const { data: all } = await db.from('monthly_records').select('*').order('record_date',{ascending:true});
+  const allRecs = all || [];
+
+  const own     = allRecs.filter(r => r.user_id === currentUser.id);
+  const partner = allRecs.filter(r => r.user_id !== currentUser.id);
+
+  // If current user set partner_email → they are the primary owner, show own records
+  const isOwner = !!(currentUser.user_metadata?.partner_email);
+
+  if (isOwner) {
+    records = own;
+  } else {
+    // Secondary/viewer: show partner's records if available, else own
+    records = partner.length ? partner : own;
+  }
 }
 
 function openAddForm(record) {
@@ -1667,19 +1697,39 @@ function closeShortcutsPanel() {
 async function renderPartnerSection() {
   const section = document.getElementById('partner-section');
   if (!section || !currentUser) return;
-  const partnerEmail = currentUser.user_metadata && currentUser.user_metadata.partner_email || null;
-  if (partnerEmail) {
+
+  const isOwner      = !!(currentUser.user_metadata?.partner_email);
+  const partnerEmail = currentUser.user_metadata?.partner_email || null;
+
+  if (isOwner) {
+    // ── PRIMARY USER: can manage sharing ──
     section.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:10px">'
       + '<div><div style="font-size:.875rem;font-weight:600;color:var(--ink)">' + partnerEmail + '</div>'
       + '<div style="font-size:.75rem;color:var(--green);margin-top:2px">חשבון משותף פעיל</div></div>'
       + '<button onclick="removePartner()" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1.5px solid #fecaca;border-radius:var(--r-xs);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer">הסר</button>'
       + '</div>';
   } else {
-    section.innerHTML = '<div style="display:flex;gap:8px;margin-top:8px">'
-      + '<input type="email" id="partner-email-input" placeholder="אימייל בן/בת הזוג" class="form-input" style="flex:1;direction:ltr;text-align:right"/>'
-      + '<button onclick="addPartner()" class="display-name-save-btn">הוסף</button>'
-      + '</div>'
-      + '<p class="settings-hint" style="margin-top:8px">בן/בת הזוג יצטרכו להירשם עם אותו אימייל</p>';
+    // ── Check if this user is a viewer (partner's RLS lets them see records from another user) ──
+    const { data: all } = await db.from('monthly_records').select('user_id').limit(1);
+    const hasPartnerData = (all || []).some(r => r.user_id !== currentUser.id);
+
+    if (hasPartnerData) {
+      // Read-only view — not the owner
+      section.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2,#f0fdf9);border:1.5px solid var(--green);border-radius:var(--r-xs);margin-bottom:10px">'
+        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+        + '<div>'
+        + '<div style="font-size:.875rem;font-weight:600;color:var(--ink)">מצב צפייה משותפת</div>'
+        + '<div style="font-size:.75rem;color:var(--ink-4);margin-top:2px">את/ה צופה בתיק הפיננסי המשותף. רק בעל החשבון יכול לנהל את השיתוף.</div>'
+        + '</div>'
+        + '</div>';
+    } else {
+      // No partner data — show add form
+      section.innerHTML = '<div style="display:flex;gap:8px;margin-top:8px">'
+        + '<input type="email" id="partner-email-input" placeholder="אימייל בן/בת הזוג" class="form-input" style="flex:1;direction:ltr;text-align:right"/>'
+        + '<button onclick="addPartner()" class="display-name-save-btn">הוסף</button>'
+        + '</div>'
+        + '<p class="settings-hint" style="margin-top:8px">בן/בת הזוג יצטרכו להירשם עם אותו אימייל</p>';
+    }
   }
 }
 

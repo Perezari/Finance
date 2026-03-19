@@ -764,11 +764,13 @@ function renderWizard() {
     if (hint && prevVal !== null) {
       hint.innerHTML = `<span style="font-family:var(--font);font-size:.82rem;color:var(--ink-3)">חודש שעבר: </span><span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-3)">${fmt(prevVal)}</span>`;
     }
-    // Auto-focus
-    setTimeout(() => document.getElementById('wz-cat-val')?.select(), 50);
+    // Auto-focus — immediate focus keeps keyboard open on mobile
+    const catInput = document.getElementById('wz-cat-val');
+    if (catInput) { catInput.focus(); catInput.select(); }
   }
   if (step.type === 'mortgage') {
-    setTimeout(() => document.getElementById('wz-mortgage-val')?.select(), 50);
+    const mortInput = document.getElementById('wz-mortgage-val');
+    if (mortInput) { mortInput.focus(); mortInput.select(); }
   }
 
   // Button labels
@@ -795,6 +797,8 @@ function wizardSaveStep() {
 }
 
 function wizardNext() {
+  // Save current input value before transition
+  const activeInput = document.activeElement;
   wizardSaveStep();
   const steps = wizardSteps();
   // Check for duplicate date when moving past the date step
@@ -809,6 +813,8 @@ function wizardNext() {
     wizardStep++;
     renderWizard();
   } else {
+    // Blur before submit so keyboard closes cleanly
+    if (activeInput) activeInput.blur();
     wizardSubmit();
   }
 }

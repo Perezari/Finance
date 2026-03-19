@@ -85,9 +85,11 @@ let mainChart     = null;
 let retChart      = null;
 let yvyChart      = null;
 let editMode      = false;
-let instTargetCatId = null; // which category we're picking institution for
-let instTargetMode   = 'cat'; // 'cat' | 'mortgage'
-let selectedMortgageInst = null; // institution id for mortgage
+let instTargetCatId = null;
+let instTargetMode   = 'cat';
+let selectedMortgageInst = null;
+let wizardStep    = 0;
+let wizardData    = {}; // holds values across steps
 
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
@@ -589,29 +591,277 @@ async function loadRecords() {
 }
 
 function openAddForm(record) {
-  editMode = !!record;
+  if (record) {
+    // Edit mode — use original form
+    openEditForm(record);
+  } else {
+    // New entry — open wizard
+    openWizard();
+  }
+}
+
+/* ══ WIZARD ══════════════════════════════════════════ */
+function openWizard() {
+  editMode  = false;
+  wizardData = {};
+  const last = records.length ? records[records.length - 1] : null;
+  const today = new Date();
+  wizardData.date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-10`;
+  if (last) {
+    wizardData.mortgage = last.mortgage_balance || 0;
+    wizardData.values   = { ...(last.values || {}) };
+  } else {
+    wizardData.mortgage = 0;
+    wizardData.values   = {};
+  }
+  wizardData.notes  = '';
+  wizardData.editId = null;
+  wizardStep = 0;
+  renderWizard();
+  document.getElementById('wizard-modal').style.display = 'flex';
+  const titleEl = document.getElementById('wz-title');
+  if (titleEl) titleEl.textContent = editMode ? 'עריכת חודש' : 'הוספת חודש חדש';
+}
+
+function openWizardEdit(record) {
+  editMode  = true;
+  wizardData = {
+    editId:   record.id,
+    date:     record.record_date,
+    mortgage: record.mortgage_balance || 0,
+    values:   { ...(record.values || {}) },
+    notes:    record.notes || ''
+  };
+  wizardStep = 0;
+  renderWizard();
+  document.getElementById('wizard-modal').style.display = 'flex';
+  const titleEl = document.getElementById('wz-title');
+  if (titleEl) titleEl.textContent = 'עריכת חודש';
+}
+
+function closeWizard() {
+  document.getElementById('wizard-modal').style.display = 'none';
+}
+
+function wizardSteps() {
+  // Step 0: date
+  // Steps 1..N: one per category
+  // Step N+1: mortgage (if any mortgage data exists or last had mortgage)
+  // Step N+2: notes + confirm
+  const catSteps = categories.map((cat, i) => ({ type: 'cat', cat, index: i }));
+  const hasMortgage = !!(wizardData.mortgage || localStorage.getItem('mortgage_inst_v1'));
+  const steps = [
+    { type: 'date' },
+    ...catSteps,
+    ...(hasMortgage ? [{ type: 'mortgage' }] : []),
+    { type: 'summary' }
+  ];
+  return steps;
+}
+
+function renderWizard() {
+  const steps   = wizardSteps();
+  const total   = steps.length;
+  const step    = steps[wizardStep];
+  const isFirst = wizardStep === 0;
+  const isLast  = wizardStep === total - 1;
+
+  // Progress bar
+  const pct = Math.round((wizardStep / (total - 1)) * 100);
+
+  let bodyHtml = '';
+
+  if (step.type === 'date') {
+    bodyHtml = `
+      <div class="wz-step-icon">📅</div>
+      <div class="wz-step-title">באיזה חודש אנחנו?</div>
+      <div class="wz-step-sub">בחר את תאריך הדיווח</div>
+      <input type="date" id="wz-date" class="form-input wz-input" value="${wizardData.date}" style="direction:ltr;text-align:center;font-size:1.1rem;margin-top:8px"/>`;
+  }
+  else if (step.type === 'cat') {
+    const cat  = step.cat;
+    const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
+    const val  = wizardData.values?.[cat.key] || '';
+    const logoHtml = inst
+      ? `<img src="${logoUrl(inst.domain)}" alt="${inst.name}" style="width:40px;height:40px;border-radius:10px;object-fit:contain;margin-bottom:4px" onerror="this.style.display='none'"/>`
+      : `<div style="color:var(--ink-3);margin-bottom:4px">${getCatSvg({...cat, key:cat.key})}</div>`;
+    const instHtml = inst
+      ? `<div style="font-size:.82rem;color:var(--green);margin-bottom:16px;font-family:var(--font)">${inst.name}</div>`
+      : `<div style="font-size:.82rem;color:var(--ink-3);margin-bottom:16px;font-family:var(--font)">ללא גוף מנהל</div>`;
+    bodyHtml = `
+      <div class="wz-step-icon">${logoHtml}</div>
+      <div class="wz-step-title">${cat.label}</div>
+      ${instHtml}
+      <div class="wz-amount-wrap">
+        <span class="wz-currency">₪</span>
+        <input type="number" id="wz-cat-val" class="form-input wz-amount-input"
+          value="${val}" placeholder="0" inputmode="numeric"/>
+      </div>
+      <div class="wz-prev-hint" id="wz-prev-hint"></div>`;
+  }
+  else if (step.type === 'mortgage') {
+    const mortInstId = localStorage.getItem('mortgage_inst_v1');
+    const mortInst   = mortInstId ? getInstitution(mortInstId) : null;
+    const logoHtml   = mortInst
+      ? `<img src="${logoUrl(mortInst.domain)}" alt="${mortInst.name}" style="width:40px;height:40px;border-radius:10px;object-fit:contain;margin-bottom:4px" onerror="this.style.display='none'"/>`
+      : `<div style="font-size:2rem;margin-bottom:4px">🏠</div>`;
+    const instHtml = mortInst
+      ? `<div style="font-size:.82rem;color:var(--green);margin-bottom:16px;font-family:var(--font)">${mortInst.name}</div>`
+      : `<div style="font-size:.82rem;color:var(--ink-3);margin-bottom:16px;font-family:var(--font)">ללא גוף מנהל</div>`;
+    bodyHtml = `
+      <div class="wz-step-icon">${logoHtml}</div>
+      <div class="wz-step-title">יתרת משכנתא</div>
+      ${instHtml}
+      <div class="wz-amount-wrap">
+        <span class="wz-currency">₪</span>
+        <input type="number" id="wz-mortgage-val" class="form-input wz-amount-input"
+          value="${wizardData.mortgage || ''}" placeholder="0" inputmode="numeric"/>
+      </div>`;
+  }
+  else if (step.type === 'summary') {
+    const dateLabel = wizardData.date
+      ? new Date(wizardData.date).toLocaleDateString('he-IL',{year:'numeric',month:'long'})
+      : '';
+    const rows = categories.map(cat => {
+      const v   = wizardData.values?.[cat.key] || 0;
+      const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
+      return `<div class="wz-summary-row">
+        <span style="color:var(--ink-3)">${cat.label}${inst?` · <span style="color:var(--green);font-size:.75rem">${inst.name}</span>`:''}</span>
+        <span style="font-family:var(--mono);font-weight:600">${fmt(v)}</span>
+      </div>`;
+    }).join('');
+    const mortRow = wizardData.mortgage > 0 ? `
+      <div class="wz-summary-row">
+        <span style="color:var(--ink-3)">יתרת משכנתא</span>
+        <span style="font-family:var(--mono);font-weight:600;color:var(--red)">${fmt(wizardData.mortgage)}</span>
+      </div>` : '';
+    const saveSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+    bodyHtml = `
+      <div class="wz-step-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="wz-step-title">סיכום — ${dateLabel}</div>
+      <div class="wz-summary-list">${rows}${mortRow}</div>
+      <textarea id="wz-notes" class="form-input" placeholder="הערה קצרה (אופציונלי)" rows="2"
+        style="margin-top:12px;resize:none;direction:rtl;text-align:right;width:100%">${wizardData.notes||''}</textarea>`;
+    // Update save button label with SVG
+    setTimeout(() => {
+      const btn = document.getElementById('wz-next-btn');
+      if (btn) btn.innerHTML = `${saveSvg} שמור`;
+    }, 0);
+  }
+
+  document.getElementById('wizard-body').innerHTML = `
+    <div class="wz-progress-wrap">
+      <div class="wz-progress-bar" style="width:${pct}%"></div>
+    </div>
+    <div class="wz-step-counter">${wizardStep + 1} / ${total}</div>
+    <div class="wz-content">${bodyHtml}</div>`;
+
+  // Show prev hint for category steps
+  if (step.type === 'cat') {
+    const last = records.length ? records[records.length - 1] : null;
+    const prevVal = last ? (last.values?.[step.cat.key] || 0) : null;
+    const hint = document.getElementById('wz-prev-hint');
+    if (hint && prevVal !== null) {
+      hint.innerHTML = `<span style="font-family:var(--font);font-size:.82rem;color:var(--ink-3)">חודש שעבר: </span><span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-3)">${fmt(prevVal)}</span>`;
+    }
+    // Auto-focus
+    setTimeout(() => document.getElementById('wz-cat-val')?.select(), 50);
+  }
+  if (step.type === 'mortgage') {
+    setTimeout(() => document.getElementById('wz-mortgage-val')?.select(), 50);
+  }
+
+  // Button labels
+  document.getElementById('wz-prev-btn').style.visibility = isFirst ? 'hidden' : 'visible';
+  document.getElementById('wz-next-btn').textContent = isLast ? '💾 שמור' : 'הבא ←';
+}
+
+function wizardSaveStep() {
+  const steps = wizardSteps();
+  const step  = steps[wizardStep];
+  if (step.type === 'date') {
+    const v = document.getElementById('wz-date')?.value;
+    if (!v) return showToast('יש לבחור תאריך');
+    wizardData.date = v;
+  } else if (step.type === 'cat') {
+    const v = parseFloat(document.getElementById('wz-cat-val')?.value || 0) || 0;
+    wizardData.values = wizardData.values || {};
+    wizardData.values[step.cat.key] = v;
+  } else if (step.type === 'mortgage') {
+    wizardData.mortgage = parseFloat(document.getElementById('wz-mortgage-val')?.value || 0) || 0;
+  } else if (step.type === 'summary') {
+    wizardData.notes = document.getElementById('wz-notes')?.value.trim() || '';
+  }
+}
+
+function wizardNext() {
+  wizardSaveStep();
+  const steps = wizardSteps();
+  // Check for duplicate date when moving past the date step
+  if (steps[wizardStep]?.type === 'date' && !wizardData.editId) {
+    const exists = records.find(r => r.record_date === wizardData.date);
+    if (exists) {
+      showToast('⚠️ חודש זה כבר קיים — בחר אותו מהרשימה כדי לערוך');
+      return;
+    }
+  }
+  if (wizardStep < steps.length - 1) {
+    wizardStep++;
+    renderWizard();
+  } else {
+    wizardSubmit();
+  }
+}
+
+function wizardPrev() {
+  wizardSaveStep();
+  if (wizardStep > 0) { wizardStep--; renderWizard(); }
+}
+
+async function wizardSubmit() {
+  const { date, mortgage, values, notes, editId } = wizardData;
+  if (!date) return showToast('יש לבחור תאריך');
+  const mortInstSaved = localStorage.getItem('mortgage_inst_v1');
+  if (mortInstSaved) values._mortgage_inst = mortInstSaved;
+  showLoader(editId ? 'מעדכן...' : 'שומר...');
+  let error;
+  if (editId) {
+    ({ error } = await db.from('monthly_records')
+      .update({ record_date: date, values, mortgage_balance: mortgage || 0, notes })
+      .eq('id', editId).eq('user_id', currentUser.id));
+  } else {
+    ({ error } = await db.from('monthly_records').upsert(
+      { user_id: currentUser.id, record_date: date, values, mortgage_balance: mortgage || 0, notes },
+      { onConflict: 'user_id,record_date' }
+    ));
+  }
+  hideLoader();
+  if (error) return showToast('שגיאה: ' + error.message);
+  closeWizard();
+  await loadRecords();
+  renderCurrentReport();
+  document.getElementById('history-detail').style.display = 'none';
+  document.getElementById('dateSelect').value = '';
+  if (document.getElementById('tab-history').style.display !== 'none') renderHistoryTab();
+  showToast(editId ? '✅ עודכן!' : '✅ נשמר!');
+}
+
+function openEditForm(record) {
+  editMode = true;
   const form      = document.getElementById('add-form');
   const title     = document.getElementById('form-title');
   const submitBtn = document.getElementById('submit-btn');
   const editId    = document.getElementById('edit-record-id');
   renderDynamicFields();
   form.style.display = 'block';
-  if (record) {
-    title.innerHTML       = `${ICONS_JS.edit} עריכת חודש`;
-    submitBtn.innerHTML   = `${ICONS_JS.save} עדכן`;
-    editId.value          = record.id;
-    document.getElementById('new-date').value     = record.record_date;
-    document.getElementById('new-mortgage').value = record.mortgage_balance || '';
-    document.getElementById('new-notes').value    = record.notes || '';
-    const vals = record.values || {};
-    categories.forEach(cat => { const el=document.getElementById(`field_${cat.key}`); if(el) el.value=vals[cat.key]||''; });
-  } else {
-    title.innerHTML       = `${ICONS_JS.plus} הוספת חודש חדש`;
-    submitBtn.innerHTML   = `${ICONS_JS.save} שמור`;
-    editId.value          = '';
-    ['new-date','new-mortgage','new-notes'].forEach(id=>document.getElementById(id).value='');
-    categories.forEach(cat=>{ const el=document.getElementById(`field_${cat.key}`); if(el) el.value=''; });
-  }
+  title.innerHTML       = `${ICONS_JS.edit} עריכת חודש`;
+  submitBtn.innerHTML   = `${ICONS_JS.save} עדכן`;
+  editId.value          = record.id;
+  document.getElementById('new-date').value     = record.record_date;
+  document.getElementById('new-mortgage').value = record.mortgage_balance || '';
+  document.getElementById('new-notes').value    = record.notes || '';
+  const vals = record.values || {};
+  categories.forEach(cat => { const el=document.getElementById(`field_${cat.key}`); if(el) el.value=vals[cat.key]||''; });
   setTimeout(()=>form.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
@@ -1113,7 +1363,7 @@ function renderDetailCard(record) {
       <div class="hd-header">
         <span class="hd-date">${ICONS_JS.calendar} ${dateLabel}</span>
         <div style="display:flex;gap:8px">
-          <button class="edit-btn" onclick="openAddForm(${JSON.stringify(record).replace(/"/g,'&quot;')})">${ICONS_JS.edit} ערוך</button>
+          <button class="edit-btn" onclick="openWizardEdit(${JSON.stringify(record).replace(/"/g,'&quot;')})">${ICONS_JS.edit} ערוך</button>
           <button class="delete-btn" onclick="deleteRecord('${record.id}')">${ICONS_JS.trash} מחק</button>
         </div>
       </div>
@@ -1792,7 +2042,7 @@ function openCatHistory(catKey, catLabel) {
       const color = pos ? 'var(--green)' : 'var(--red)';
       deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:${color};font-family:var(--mono)">${sign}${pct}%</span>`;
     } else if (curVal > 0 && prevVal === 0) {
-      deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:var(--green);font-family:var(--mono)">חדש</span>`;
+      deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:var(--green);font-family:var(--font)">חדש</span>`;
     } else {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }

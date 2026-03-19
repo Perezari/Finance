@@ -457,6 +457,21 @@
   </div>
 </div>
 
+<!-- ══ WIZARD MODAL ═══════════════════════════════════ -->
+<div id="wizard-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeWizard()">
+  <div class="wz-card">
+    <div class="wz-header">
+    <span style="font-size:.9rem;font-weight:700;color:var(--ink)" id="wz-title">הוספת חודש חדש</span>
+      <button onclick="closeWizard()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="wizard-body" style="flex:1;overflow-y:auto"></div>
+    <div class="wz-footer">
+      <button id="wz-prev-btn" onclick="wizardPrev()" class="wz-btn-secondary">→ הקודם</button>
+      <button id="wz-next-btn" onclick="wizardNext()" class="wz-btn-primary">הבא ←</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MONTHLY BACKUP MODAL ═══════════════════════════ -->
 <div id="backup-modal" class="modal-overlay" style="display:none;">
   <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:380px;box-shadow:var(--shadow-lg);overflow:hidden;animation:fadeUp .22s ease">

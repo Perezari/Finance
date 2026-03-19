@@ -147,8 +147,7 @@ function updateUserUI() {
   if (!currentUser) return;
   const email       = currentUser.email || '';
   const metaName    = currentUser.user_metadata?.full_name || '';
-  const savedName   = localStorage.getItem('display_name_v1') || '';
-  const displayName = metaName || savedName || email;
+  const displayName = metaName || email;
 
   ['user-email-display','user-email-display2'].forEach(id => {
     const el = document.getElementById(id); if (el) el.textContent = email;
@@ -161,9 +160,9 @@ function updateUserUI() {
   const av = document.getElementById('user-avatar-char');
   if (av) av.textContent = (displayName[0] || '?').toUpperCase();
 
-  // Prefill settings input
+  // Always prefill from Supabase metadata (overwrite any stale value)
   const input = document.getElementById('settings-display-name');
-  if (input && !input.value) input.value = savedName || metaName;
+  if (input) input.value = metaName;
 }
 
 /* ── 2. NEW FUNCTION — save display name ─────────────── */
@@ -173,15 +172,16 @@ async function saveDisplayName() {
   if (!name) return showToast('⚠️ יש להזין שם');
 
   showLoader('שומר שם...');
-  const { error } = await db.auth.updateUser({
+  const { data, error } = await db.auth.updateUser({
     data: { full_name: name }
   });
   hideLoader();
 
   if (error) return showToast('❌ שגיאה: ' + error.message);
 
-  // גם localStorage לסנכרון מיידי
-  localStorage.setItem('display_name_v1', name);
+  // Update currentUser from the fresh response so UI reflects immediately
+  if (data?.user) currentUser = data.user;
+  localStorage.removeItem('display_name_v1'); // clean up old cache if exists
   updateUserUI();
   showToast('✅ שם עודכן');
 }
@@ -357,26 +357,29 @@ async function createDefaultCategories(userId) {
 }
 
 async function loadCategories() {
-  // Fetch ALL categories accessible via RLS (own + partner's if RLS allows)
   const { data: all } = await db.from('categories').select('*').order('order_index');
   const allCats = all || [];
 
-  const own     = allCats.filter(c => c.user_id === currentUser.id);
-  const partner = allCats.filter(c => c.user_id !== currentUser.id);
+  const own     = allCats.filter(c => c.user_id === currentUser.id && c.key !== '_share_invite');
+  const partner = allCats.filter(c => c.user_id !== currentUser.id && c.key !== '_share_invite');
 
-  // If current user set partner_email → they are the primary owner, show own data
-  const isOwner = !!(currentUser.user_metadata?.partner_email);
+  const isOwner   = !!(currentUser.user_metadata?.partner_email);
+  const accepted  = !!(currentUser.user_metadata?.accepted_share_from);
 
   if (isOwner) {
-    // Primary user: always show own categories
     if (own.length) { categories = own; return; }
-  } else {
-    // Secondary/viewer: if partner has categories, show theirs
-    if (partner.length) { categories = partner; return; }
-    if (own.length)     { categories = own; return; }
+  } else if (accepted) {
+    if (partner.length) {
+      categories = partner; return;
+    } else {
+      // Owner removed sharing — clear our acceptance
+      await db.auth.updateUser({ data: { accepted_share_from: null } });
+      const res = await db.auth.getUser(); currentUser = res.data.user;
+    }
   }
 
-  // No data at all — create defaults
+  if (own.length) { categories = own; return; }
+
   await createDefaultCategories(currentUser.id);
   const { data: fresh } = await db.from('categories').select('*').eq('user_id', currentUser.id).order('order_index');
   categories = fresh || [];
@@ -510,22 +513,32 @@ function renderMortgageInstButton() {
 
 /* ── RECORDS ────────────────────────────────────────── */
 async function loadRecords() {
-  // Fetch ALL records accessible via RLS (own + partner's if RLS allows)
   const { data: all } = await db.from('monthly_records').select('*').order('record_date',{ascending:true});
   const allRecs = all || [];
 
   const own     = allRecs.filter(r => r.user_id === currentUser.id);
   const partner = allRecs.filter(r => r.user_id !== currentUser.id);
 
-  // If current user set partner_email → they are the primary owner, show own records
-  const isOwner = !!(currentUser.user_metadata?.partner_email);
+  const isOwner  = !!(currentUser.user_metadata?.partner_email);
+  const accepted = !!(currentUser.user_metadata?.accepted_share_from);
 
   if (isOwner) {
-    records = own;
-  } else {
-    // Secondary/viewer: show partner's records if available, else own
-    records = partner.length ? partner : own;
+    records = own; return;
   }
+  if (accepted) {
+    // Verify invite row still exists (owner hasn't removed sharing)
+    const { data: inviteRows } = await db.from('categories')
+      .select('user_id').eq('key', '_share_invite').neq('user_id', currentUser.id).limit(1);
+    const inviteStillActive = !!(inviteRows && inviteRows.length > 0);
+    if (inviteStillActive && partner.length) {
+      records = partner; return;
+    } else if (!inviteStillActive) {
+      // Owner removed sharing — clear our acceptance
+      await db.auth.updateUser({ data: { accepted_share_from: null, declined_share: null } });
+      const res = await db.auth.getUser(); currentUser = res.data.user;
+    }
+  }
+  records = own;
 }
 
 function openAddForm(record) {
@@ -1698,39 +1711,83 @@ async function renderPartnerSection() {
   const section = document.getElementById('partner-section');
   if (!section || !currentUser) return;
 
-  const isOwner      = !!(currentUser.user_metadata?.partner_email);
+  const isOwner   = !!(currentUser.user_metadata?.partner_email);
+  const accepted  = !!(currentUser.user_metadata?.accepted_share_from);
+  const declined  = !!(currentUser.user_metadata?.declined_share);
   const partnerEmail = currentUser.user_metadata?.partner_email || null;
 
   if (isOwner) {
-    // ── PRIMARY USER: can manage sharing ──
-    section.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:10px">'
+    // ── OWNER: can manage sharing ──
+    section.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:10px">'
       + '<div><div style="font-size:.875rem;font-weight:600;color:var(--ink)">' + partnerEmail + '</div>'
       + '<div style="font-size:.75rem;color:var(--green);margin-top:2px">חשבון משותף פעיל</div></div>'
       + '<button onclick="removePartner()" style="padding:5px 12px;background:var(--red-light);color:var(--red);border:1.5px solid #fecaca;border-radius:var(--r-xs);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer">הסר</button>'
       + '</div>';
-  } else {
-    // ── Check if this user is a viewer (partner's RLS lets them see records from another user) ──
-    const { data: all } = await db.from('monthly_records').select('user_id').limit(1);
-    const hasPartnerData = (all || []).some(r => r.user_id !== currentUser.id);
-
-    if (hasPartnerData) {
-      // Read-only view — not the owner
-      section.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2,#f0fdf9);border:1.5px solid var(--green);border-radius:var(--r-xs);margin-bottom:10px">'
-        + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
-        + '<div>'
-        + '<div style="font-size:.875rem;font-weight:600;color:var(--ink)">מצב צפייה משותפת</div>'
-        + '<div style="font-size:.75rem;color:var(--ink-4);margin-top:2px">את/ה צופה בתיק הפיננסי המשותף. רק בעל החשבון יכול לנהל את השיתוף.</div>'
-        + '</div>'
-        + '</div>';
-    } else {
-      // No partner data — show add form
-      section.innerHTML = '<div style="display:flex;gap:8px;margin-top:8px">'
-        + '<input type="email" id="partner-email-input" placeholder="אימייל בן/בת הזוג" class="form-input" style="flex:1;direction:ltr;text-align:right"/>'
-        + '<button onclick="addPartner()" class="display-name-save-btn">הוסף</button>'
-        + '</div>'
-        + '<p class="settings-hint" style="margin-top:8px">בן/בת הזוג יצטרכו להירשם עם אותו אימייל</p>';
-    }
+    return;
   }
+
+  if (accepted) {
+    // ── VIEWER: accepted, read-only ──
+    section.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2,#f0fdf9);border:1.5px solid var(--green);border-radius:var(--r-xs);margin-bottom:10px">'
+      + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+      + '<div style="flex:1">'
+      + '<div style="font-size:.875rem;font-weight:600;color:var(--ink)">מצב צפייה משותפת</div>'
+      + '<div style="font-size:.75rem;color:var(--ink-4);margin-top:2px">את/ה צופה בתיק הפיננסי המשותף. רק בעל החשבון יכול לנהל את השיתוף.</div>'
+      + '</div>'
+      + '</div>';
+    return;
+  }
+
+  // ── Check for explicit invite row written by owner ──
+  const { data: inviteRows } = await db.from('categories')
+    .select('user_id').eq('key', '_share_invite').neq('user_id', currentUser.id).limit(1);
+  const hasPendingInvite = !!(inviteRows && inviteRows.length > 0);
+
+  if (hasPendingInvite && !declined) {
+    // ── PENDING INVITATION ──
+    section.innerHTML =
+      '<div style="padding:12px;background:var(--amber-light,#fffbeb);border:1.5px solid #fcd34d;border-radius:var(--r-xs);margin-bottom:10px">'
+      + '<div style="font-size:.875rem;font-weight:700;color:#92400e;margin-bottom:4px">📩 הוזמנת לצפייה בתיק משותף</div>'
+      + '<div style="font-size:.78rem;color:#78350f;margin-bottom:12px">מישהו שיתף איתך את התיק הפיננסי שלו. האם ברצונך לקבל גישה?</div>'
+      + '<div style="display:flex;gap:8px">'
+      + '<button onclick="acceptShare()" style="flex:1;padding:7px 0;background:var(--green);color:#fff;border:none;border-radius:var(--r-xs);font-family:var(--font);font-size:.82rem;font-weight:700;cursor:pointer">✅ אשר גישה</button>'
+      + '<button onclick="declineShare()" style="flex:1;padding:7px 0;background:var(--red-light);color:var(--red);border:1.5px solid #fecaca;border-radius:var(--r-xs);font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer">❌ דחה</button>'
+      + '</div>'
+      + '</div>';
+    return;
+  }
+
+  // ── NO CONNECTION: show add form ──
+  section.innerHTML =
+    '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<input type="email" id="partner-email-input" placeholder="אימייל בן/בת הזוג" class="form-input" style="flex:1;direction:ltr;text-align:right"/>'
+    + '<button onclick="addPartner()" class="display-name-save-btn">הוסף</button>'
+    + '</div>'
+    + '<p class="settings-hint" style="margin-top:8px">בן/בת הזוג יצטרכו להירשם עם אותו אימייל</p>';
+}
+
+async function acceptShare() {
+  showLoader('מאשר...');
+  // Grab the owner's user_id from accessible records
+  const { data: allRecs } = await db.from('monthly_records').select('user_id').limit(1);
+  const ownerUserId = (allRecs || []).find(r => r.user_id !== currentUser.id)?.user_id || 'shared';
+  await db.auth.updateUser({ data: { accepted_share_from: ownerUserId, declined_share: null } });
+  const res = await db.auth.getUser(); currentUser = res.data.user;
+  hideLoader();
+  await loadApp();
+  showToast('✅ גישה אושרה — אתה רואה את התיק המשותף');
+}
+
+async function declineShare() {
+  if (!confirm('לדחות את הגישה לתיק המשותף?')) return;
+  showLoader('דוחה...');
+  await db.auth.updateUser({ data: { declined_share: true, accepted_share_from: null } });
+  const res = await db.auth.getUser(); currentUser = res.data.user;
+  hideLoader();
+  renderPartnerSection();
+  showToast('הגישה נדחתה');
 }
 
 async function addPartner() {
@@ -1740,8 +1797,13 @@ async function addPartner() {
   if (email === currentUser.email) return showToast('לא ניתן להוסיף את עצמך');
   showLoader('שומר...');
   const { error } = await db.auth.updateUser({ data: { partner_email: email } });
+  if (error) { hideLoader(); return showToast('שגיאה: ' + error.message); }
+  // Write an explicit invite row so the viewer can detect it reliably
+  await db.from('categories').upsert({
+    user_id: currentUser.id, key: '_share_invite', label: '_share_invite',
+    icon: '_share', order_index: 9999
+  }, { onConflict: 'user_id,key' });
   hideLoader();
-  if (error) return showToast('שגיאה: ' + error.message);
   const res = await db.auth.getUser();
   currentUser = res.data.user;
   renderPartnerSection();
@@ -1751,6 +1813,8 @@ async function addPartner() {
 async function removePartner() {
   if (!confirm('להסיר את החשבון המשותף?')) return;
   showLoader('מסיר...');
+  // Delete the explicit invite row — this is what the viewer checks
+  await db.from('categories').delete().eq('user_id', currentUser.id).eq('key', '_share_invite');
   await db.auth.updateUser({ data: { partner_email: null } });
   hideLoader();
   const res = await db.auth.getUser();

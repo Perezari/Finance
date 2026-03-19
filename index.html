@@ -5,15 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <title>מעקב פיננסי</title>
   <link rel="manifest" href="manifest.json"/>
-  <link rel="icon" type="image/png" href="icon.png"/>
-  <link rel="shortcut icon" type="image/png" href="icon.png"/>
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"/>
   <meta name="theme-color" content="#0d0f14" media="(prefers-color-scheme: dark)"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Budgy"/>
-  <link rel="apple-touch-icon" href="icon.png"/>
+  <meta name="apple-mobile-web-app-title" content="פיננסים"/>
+  <link rel="apple-touch-icon" href="https://perezari.github.io/Finance/icon.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
@@ -54,13 +52,17 @@
     <div id="login-form" class="auth-form-ul">
       <div class="auth-field-ul">
         <label class="auth-field-label">כתובת אימייל</label>
-        <input type="email" id="login-email" class="auth-input-ul" autocomplete="email" placeholder=""/>
+        <input type="email" id="login-email" class="auth-input-ul" autocomplete="username email"
+          placeholder="" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()"/>
       </div>
       <div class="auth-field-ul">
         <label class="auth-field-label">סיסמה</label>
-        <input type="password" id="login-password" class="auth-input-ul" autocomplete="current-password" placeholder=""/>
+        <input type="password" id="login-password" class="auth-input-ul" autocomplete="current-password"
+          placeholder=""
+          onkeydown="if(event.key==='Enter'){window._loginPending=true;handleLogin();}"
+          onchange="if(!window._loginPending&&this.value&&document.getElementById('login-email').value){window._loginPending=true;handleLogin();}"/>
       </div>
-      <button onclick="handleLogin()" class="auth-btn-primary">כניסה לחשבון</button>
+      <button onclick="window._loginPending=true;handleLogin()" class="auth-btn-primary">כניסה לחשבון</button>
       <button onclick="handleMagicLink()" class="auth-btn-link">שכחתי סיסמה / שלח קישור כניסה</button>
     </div>
 

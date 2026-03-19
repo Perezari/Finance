@@ -2024,6 +2024,7 @@ function applyBlur() {
 const fmt = v => (v||0).toLocaleString('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0});
 
 function showScreen(n) {
+  if (n === 'auth') window._loginPending = false;
   document.getElementById('auth-screen').style.display=n==='auth'?'flex':'none';
   document.getElementById('app-screen').style.display =n==='app' ?'flex':'none';
 }

@@ -1402,19 +1402,25 @@ const RET_KEY='ret_settings_v1';
 
 function loadRetirementSettings() {
   try {
-    const s=JSON.parse(localStorage.getItem(RET_KEY)||'{}');
+    // Load from Supabase user_metadata first, fallback to localStorage
+    const meta = currentUser?.user_metadata?.retirement_settings;
+    const s = meta ? JSON.parse(meta) : JSON.parse(localStorage.getItem(RET_KEY)||'{}');
     ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
       const el=document.getElementById(id); if(el&&s[id]!==undefined) el.value=s[id];
     });
   } catch(e){}
 }
 
-function saveRetirementSettings() {
+async function saveRetirementSettings() {
   const s={};
   ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
     const el=document.getElementById(id); if(el) s[id]=el.value;
   });
   localStorage.setItem(RET_KEY,JSON.stringify(s));
+  // Also save to Supabase so it syncs across devices
+  if (currentUser) {
+    await db.auth.updateUser({ data: { retirement_settings: JSON.stringify(s) } });
+  }
 }
 
 function renderRetirement() {
@@ -1868,7 +1874,7 @@ function switchTab(name, btn) {
   const titles={current:'דוח נוכחי',history:'היסטוריה',retirement:'תכנון פרישה'};
   const te=document.getElementById('topbar-title'); if(te) te.textContent=titles[name]||'';
   if(name==='history')    renderHistoryTab();
-  if(name==='retirement') renderRetirement();
+  if(name==='retirement') { loadRetirementSettings(); renderRetirement(); }
 }
 
 function toggleAddForm() {

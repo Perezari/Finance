@@ -147,6 +147,26 @@ async function loadApp() {
   showScreen('app');
   hideLoader();
   checkOnboarding();
+  // Handle PWA shortcuts (?action=...)
+  handlePWAAction();
+}
+
+/* ══ PWA SHORTCUTS ═══════════════════════════════════ */
+function handlePWAAction() {
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  if (!action) return;
+  // Clean URL so refreshing doesn't re-trigger
+  history.replaceState(null, '', window.location.pathname);
+  if (action === 'add_month') {
+    // Switch to history tab and open wizard
+    setTimeout(() => {
+      switchTab('history', document.querySelector('[data-tab="history"]'));
+      setTimeout(() => openWizard(), 300);
+    }, 400);
+  } else if (action === 'current') {
+    switchTab('current', document.querySelector('[data-tab="current"]'));
+  }
 }
 
 /* ══════════════════════════════════════════════════════

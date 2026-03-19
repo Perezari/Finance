@@ -20,5 +20,33 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "הוסף חודש חדש",
+      "short_name": "הוסף חודש",
+      "description": "פתח את ה-Wizard להוספת חודש חדש",
+      "url": "./?action=add_month",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "דוח נוכחי",
+      "short_name": "דוח",
+      "description": "עבור לדוח הנוכחי",
+      "url": "./?action=current",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

@@ -353,10 +353,12 @@ async function handleLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw    = document.getElementById('login-password').value;
   if (!email || !pw) return showAuthMsg('יש למלא אימייל וסיסמה', false);
+  // Close keyboard
+  document.activeElement?.blur();
   showLoader('נכנס...');
   const { error } = await db.auth.signInWithPassword({ email, password: pw });
   hideLoader();
-  if (error) showAuthMsg(translateError(error.message), false);
+  if (error) { window._loginPending = false; showAuthMsg(translateError(error.message), false); }
 }
 
 async function handleGoogleLogin() {
@@ -2489,9 +2491,15 @@ function applyDarkMode(on) {
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = on;
   const themeColor = on ? '#0d0f14' : '#ffffff';
-  let meta = document.querySelector('meta[name="theme-color"]');
-  if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
-  meta.content = themeColor;
+  // Update all theme-color metas (including media-specific ones)
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = themeColor);
+  // If none exist, create one
+  if (!document.querySelector('meta[name="theme-color"]')) {
+    const meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.content = themeColor;
+    document.head.appendChild(meta);
+  }
 }
 
 async function toggleDarkMode(on) {

@@ -1575,62 +1575,143 @@ function chartOptions() {
 /* ── PDF EXPORT ─────────────────────────────────────── */
 function exportPDF() {
   if (!records.length) { showToast('אין נתונים להדפסה'); return; }
-  const latest    = records[records.length-1];
+
+  const latest    = records[records.length - 1];
   const calc      = calcRecord(latest);
-  const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
-  let growthRows='';
-  if (records.length>=2) {
-    const prev=calcRecord(records[records.length-2]);
-    const delta=calc.totalAssets-prev.totalAssets;
-    const pct=prev.totalAssets?(delta/prev.totalAssets*100).toFixed(2):'0.00';
-    const avg=(calc.totalAssets-calcRecord(records[0]).totalAssets)/(records.length-1);
-    const sign=delta>=0?'+':'';
-    growthRows=`<tr><td>צמיחה מחודש קודם</td><td style="color:${delta>=0?'#0e9e7e':'#ef4444'};font-weight:700">${sign}${fmt(delta)} (${sign}${pct}%)</td></tr>
-      <tr><td>צמיחה ממוצעת</td><td>${fmt(avg)}</td></tr>`;
+  const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
+  const userName  = currentUser?.user_metadata?.full_name || currentUser?.email || '';
+  const today     = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' });
+
+  let deltaAmt = 0, deltaPct = '0.0', avgGrowth = 0, growthSign = '+', growthColor = '#0e9e7e';
+  if (records.length >= 2) {
+    const prev = calcRecord(records[records.length - 2]);
+    deltaAmt   = calc.totalAssets - prev.totalAssets;
+    deltaPct   = prev.totalAssets ? Math.abs(deltaAmt / prev.totalAssets * 100).toFixed(1) : '0.0';
+    avgGrowth  = (calc.totalAssets - calcRecord(records[0]).totalAssets) / (records.length - 1);
+    growthSign = deltaAmt >= 0 ? '+' : '-';
+    growthColor= deltaAmt >= 0 ? '#0e9e7e' : '#ef4444';
   }
-  const mortRows=calc.mortgage>0?`<tr><td>יתרת משכנתא</td><td style="color:#ef4444">${fmt(calc.mortgage)}</td></tr>
-    <tr class="total"><td>שווי נקי</td><td>${fmt(calc.netWorth)}</td></tr>`:'';
-  const histRows=[...records].reverse().slice(0,12).map(r=>{
-    const c=calcRecord(r);
-    const d=new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
-    return `<tr><td>${d}</td><td>${fmt(c.totalAssets)}</td><td style="color:${c.mortgage>0?'#ef4444':'#9ca3af'}">${c.mortgage>0?fmt(c.mortgage):'—'}</td><td style="color:#0e9e7e">${fmt(c.netWorth)}</td></tr>`;
+
+  const mortInstId = localStorage.getItem('mortgage_inst_v1') || latest.values?._mortgage_inst;
+  const mortInst   = mortInstId ? getInstitution(mortInstId) : null;
+
+  const catRows = categories.map(cat => {
+    const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
+    const val  = calc[cat.key] || 0;
+    const pct  = calc.totalAssets ? (val / calc.totalAssets * 100).toFixed(1) : '0.0';
+    const bar  = Math.round(parseFloat(pct));
+    return '<tr><td><div style="font-weight:600;color:#111827">' + cat.label + '</div>'
+      + (inst ? '<div style="font-size:.72rem;color:#0e9e7e;margin-top:1px">' + inst.name + '</div>' : '')
+      + '</td><td style="text-align:left;font-family:\'Courier New\',monospace;font-weight:700">' + fmt(val) + '</td>'
+      + '<td style="width:130px"><div style="display:flex;align-items:center;gap:7px">'
+      + '<div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden">'
+      + '<div style="width:' + bar + '%;height:100%;background:#0e9e7e;border-radius:3px"></div></div>'
+      + '<span style="font-size:.72rem;color:#6b7280;min-width:32px;text-align:right">' + pct + '%</span>'
+      + '</div></td></tr>';
   }).join('');
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"/><title>דוח פיננסי – ${dateLabel}</title>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Heebo',sans-serif;color:#111827;padding:40px;direction:rtl}
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;padding-bottom:16px;border-bottom:3px solid #0e9e7e}
-.header h1{font-size:1.6rem;font-weight:800}.logo{width:44px;height:44px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;color:#fff}
-.hero-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-.hero-box{padding:18px 16px;border-radius:12px;border:1.5px solid #e5e9f0}.hero-box.main{background:#f0fdf9;border-color:#a7f3d0}
-.hero-box .label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:6px}
-.hero-box .val{font-size:1.4rem;font-weight:800;color:#111827}.hero-box.main .val{color:#0e9e7e}
-h2{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin:24px 0 10px}
-table{width:100%;border-collapse:collapse;font-size:.875rem}
-th{text-align:right;padding:10px 14px;background:#f9fafb;font-weight:600;color:#374151;border-bottom:1px solid #e5e9f0;font-size:.78rem;text-transform:uppercase}
-td{padding:11px 14px;border-bottom:1px solid #f3f4f6;color:#374151}tr.total td{font-weight:700;background:#f0fdf9;color:#0e9e7e}
-.footer{margin-top:36px;padding-top:14px;border-top:1px solid #e5e9f0;text-align:center;font-size:.78rem;color:#9ca3af}</style>
-</head><body>
-<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₪</div><div><h1>דוח פיננסי</h1><div style="font-size:.9rem;color:#6b7280">הופק ב-${new Date().toLocaleDateString('he-IL')}</div></div></div>
-<div style="font-size:.9rem;color:#6b7280">דוח אחרון: ${dateLabel}</div></div>
-<div class="hero-row">
-  <div class="hero-box main"><div class="label">סה"כ נכסים</div><div class="val">${fmt(calc.totalAssets)}</div></div>
-  ${calc.mortgage>0?`<div class="hero-box"><div class="label">משכנתא</div><div class="val" style="color:#ef4444">${fmt(calc.mortgage)}</div></div>
-  <div class="hero-box"><div class="label">שווי נקי</div><div class="val" style="color:#f59e0b">${fmt(calc.netWorth)}</div></div>`:
-  `<div class="hero-box"><div class="label">תאריך</div><div class="val" style="font-size:1rem">${dateLabel}</div></div><div class="hero-box"></div>`}
-</div>
-<h2>פירוט נכסים</h2>
-<table><thead><tr><th>קטגוריה</th><th>סכום</th></tr></thead><tbody>
-${categories.map(cat=>`<tr><td>${cat.label}</td><td>${fmt(calc[cat.key]||0)}</td></tr>`).join('')}
-<tr class="total"><td>סה"כ נכסים</td><td>${fmt(calc.totalAssets)}</td></tr>${mortRows}</tbody></table>
-${growthRows?`<h2>נתוני צמיחה</h2><table><tbody>${growthRows}</tbody></table>`:''}
-<h2>היסטוריה</h2>
-<table><thead><tr><th>חודש</th><th>סה"כ נכסים</th><th>משכנתא</th><th>שווי נקי</th></tr></thead><tbody>${histRows}</tbody></table>
-<div class="footer">מעקב פיננסי • ${new Date().toLocaleDateString('he-IL')}</div>
-<script>window.onload=()=>window.print();<\/script></body></html>`);
+
+  const histRows = [...records].reverse().slice(0, 12).map((r, i) => {
+    const c   = calcRecord(r);
+    const d   = new Date(r.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
+    const idx = records.length - 1 - i;
+    const prev = idx > 0 ? calcRecord(records[idx - 1]) : null;
+    let changeHtml = '\u2014';
+    if (prev) {
+      const chg = c.totalAssets - prev.totalAssets;
+      const pp  = prev.totalAssets ? (chg / prev.totalAssets * 100).toFixed(1) : null;
+      if (pp !== null) changeHtml = '<span style="color:' + (chg>=0?'#0e9e7e':'#ef4444') + ';font-weight:600">' + (chg>=0?'+':'') + pp + '%</span>';
+    }
+    return '<tr style="background:' + (i%2===0?'#ffffff':'#f9fafb') + '">'
+      + '<td style="text-align:right">' + d + '</td>'
+      + '<td style="text-align:right;font-family:\'Courier New\',monospace;font-weight:600">' + fmt(c.totalAssets) + '</td>'
+      + '<td style="text-align:right">' + (c.mortgage > 0 ? '<span style="color:#ef4444">' + fmt(c.mortgage) + '</span>' : '<span style="color:#d1d5db">\u2014</span>') + '</td>'
+      + '<td style="text-align:right">' + changeHtml + '</td></tr>';
+  }).join('');
+
+  const mortHeroHtml = calc.mortgage > 0
+    ? '<div class="hero-card danger"><div class="hc-label">\u05d9\u05ea\u05e8\u05ea \u05de\u05e9\u05db\u05e0\u05ea\u05d0' + (mortInst ? ' \u00b7 ' + mortInst.name : '') + '</div><div class="hc-val">' + fmt(calc.mortgage) + '</div></div>'
+    + '<div class="hero-card warning"><div class="hc-label">\u05e9\u05d5\u05d5\u05d9 \u05e0\u05e7\u05d9</div><div class="hc-val">' + fmt(calc.netWorth) + '</div></div>'
+    : '<div class="hero-card"><div class="hc-label">\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05de\u05ea\u05d5\u05e2\u05d3\u05d9\u05dd</div><div class="hc-val">' + records.length + '</div></div>'
+    + '<div class="hero-card"><div class="hc-label">\u05e6\u05de\u05d9\u05d7\u05d4 \u05de\u05de\u05d5\u05e6\u05e2\u05ea \u05dc\u05d7\u05d5\u05d3\u05e9</div><div class="hc-val">' + fmt(avgGrowth) + '</div></div>';
+
+  const growthStripHtml = records.length >= 2
+    ? '<div class="growth-strip">'
+    + '<div class="gs-item"><div class="gs-label">\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9</div><div class="gs-val" style="color:' + growthColor + '">' + growthSign + fmt(Math.abs(deltaAmt)) + '</div></div>'
+    + '<div class="gs-item"><div class="gs-label">\u05e9\u05d9\u05e0\u05d5\u05d9 %</div><div class="gs-val" style="color:' + growthColor + '">' + growthSign + deltaPct + '%</div></div>'
+    + '<div class="gs-item"><div class="gs-label">\u05de\u05de\u05d5\u05e6\u05e2 \u05d7\u05d5\u05d3\u05e9\u05d9</div><div class="gs-val">' + fmt(avgGrowth) + '</div></div>'
+    + '</div>' : '';
+
+  const deltaSubHtml = records.length >= 2
+    ? '<div class="hc-sub" style="color:' + growthColor + ';font-weight:700">' + growthSign + deltaPct + '% \u05de\u05d7\u05d5\u05d3\u05e9 \u05e7\u05d5\u05d3\u05dd</div>' : '';
+
+  const html = '<!DOCTYPE html>\n<html dir="rtl" lang="he">\n<head>\n<meta charset="UTF-8"/>\n'
+    + '<title>\u05d3\u05d5\u05d7 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9 \u2013 ' + dateLabel + '</title>\n'
+    + '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>\n'
+    + '<style>\n'
+    + '*{box-sizing:border-box;margin:0;padding:0}\n'
+    + 'body{font-family:\'Heebo\',sans-serif;color:#111827;background:#f8fafc;direction:rtl;padding:24px}\n'
+    + '.page{max-width:780px;margin:0 auto;background:#fff;border-radius:16px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,0,0,.08)}\n'
+    + '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;padding-bottom:24px;border-bottom:3px solid #0e9e7e}\n'
+    + '.brand{display:flex;align-items:center;gap:14px}\n'
+    + '.logo{width:48px;height:48px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;color:#fff}\n'
+    + '.brand-text h1{font-size:1.5rem;font-weight:900;color:#111827;letter-spacing:-.03em}\n'
+    + '.brand-text p{font-size:.8rem;color:#6b7280;margin-top:2px}\n'
+    + '.header-meta{text-align:left;font-size:.82rem;color:#6b7280;line-height:1.8}\n'
+    + '.header-meta strong{color:#111827;font-weight:700}\n'
+    + '.hero{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:36px}\n'
+    + '.hero-card{padding:20px 18px;border-radius:14px;border:1.5px solid #e5e9f0}\n'
+    + '.hero-card.primary{background:linear-gradient(135deg,#f0fdf9,#dcfdf5);border-color:#a7f3d0}\n'
+    + '.hero-card.danger{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-color:#fecaca}\n'
+    + '.hero-card.warning{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fde68a}\n'
+    + '.hc-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:8px}\n'
+    + '.hc-val{font-size:1.5rem;font-weight:900;color:#111827;letter-spacing:-.02em}\n'
+    + '.hero-card.primary .hc-val{color:#0e9e7e}.hero-card.danger .hc-val{color:#dc2626}.hero-card.warning .hc-val{color:#d97706}\n'
+    + '.hc-sub{font-size:.72rem;margin-top:5px;color:#6b7280}\n'
+    + '.growth-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:36px}\n'
+    + '.gs-item{padding:14px 16px;background:#f9fafb;border-radius:10px;border:1px solid #f3f4f6}\n'
+    + '.gs-label{font-size:.68rem;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}\n'
+    + '.gs-val{font-size:1rem;font-weight:800;color:#111827}\n'
+    + '.section-title{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:32px 0 12px;display:flex;align-items:center;gap:8px}\n'
+    + '.section-title::after{content:"";flex:1;height:1px;background:#f3f4f6}\n'
+    + 'table{width:100%;border-collapse:collapse}\n'
+    + 'th{text-align:right;padding:10px 14px;background:#f9fafb;font-weight:700;color:#374151;border-bottom:2px solid #e5e9f0;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}\n'
+    + 'td{padding:12px 14px;border-bottom:1px solid #f3f4f6;font-size:.875rem;color:#374151;vertical-align:middle}\n'
+    + '.total-row td{font-weight:800;background:#f0fdf9;color:#0e9e7e;border-top:2px solid #a7f3d0}\n'
+    + '.footer{margin-top:48px;padding-top:20px;border-top:2px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center}\n'
+    + '.footer-brand{display:flex;align-items:center;gap:8px;font-size:.78rem;color:#9ca3af}\n'
+    + '.footer-logo{width:22px;height:22px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:900;color:#fff}\n'
+    + '.footer-note{font-size:.72rem;color:#9ca3af}\n'
+    + '.action-bar{position:fixed;bottom:0;left:0;right:0;background:#111827;padding:14px 24px;display:flex;gap:12px;justify-content:center;align-items:center}\n'
+    + '.action-btn{padding:10px 28px;border:none;border-radius:8px;font-family:\'Heebo\',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;background:#0e9e7e;color:#fff}\n'
+    + '.action-hint{font-size:.75rem;color:#6b7280}\n'
+    + '@media print{body{background:#fff;padding:0}.page{box-shadow:none;border-radius:0;padding:20px}.action-bar{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}\n'
+    + '@page{margin:8mm;size:A4}\n'
+    + '</style></head><body>\n'
+    + '<div class="page">'
+    + '<div class="header"><div class="brand"><div class="logo">\u20aa</div><div class="brand-text"><h1>\u05d3\u05d5\u05d7 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9 \u05d0\u05d9\u05e9\u05d9</h1><p>\u05e1\u05d9\u05db\u05d5\u05dd \u05de\u05e6\u05d1 \u05e0\u05db\u05e1\u05d9\u05dd \u05d5\u05ea\u05d9\u05e7 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9</p></div></div>'
+    + '<div class="header-meta"><div><strong>\u05e9\u05dd:</strong> ' + userName + '</div><div><strong>\u05d3\u05d5\u05d7 \u05dc\u05ea\u05d0\u05e8\u05d9\u05da:</strong> ' + dateLabel + '</div><div><strong>\u05d4\u05d5\u05e4\u05e7:</strong> ' + today + '</div></div></div>'
+    + '<div class="hero"><div class="hero-card primary"><div class="hc-label">\u05e1\u05d4"\u05db \u05e0\u05db\u05e1\u05d9\u05dd</div><div class="hc-val">' + fmt(calc.totalAssets) + '</div>' + deltaSubHtml + '</div>' + mortHeroHtml + '</div>'
+    + growthStripHtml
+    + '<div class="section-title">\u05e4\u05d9\u05e8\u05d5\u05d8 \u05e0\u05db\u05e1\u05d9\u05dd</div>'
+    + '<table><thead><tr><th>\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 / \u05d2\u05d5\u05e3 \u05de\u05e0\u05d4\u05dc</th><th style="text-align:left">\u05d9\u05ea\u05e8\u05d4</th><th>\u05d7\u05dc\u05e7 \u05de\u05d4\u05ea\u05d9\u05e7</th></tr></thead>'
+    + '<tbody>' + catRows + '<tr class="total-row"><td>\u05e1\u05d4"\u05db \u05e0\u05db\u05e1\u05d9\u05dd</td><td style="text-align:left;font-family:\'Courier New\',monospace">' + fmt(calc.totalAssets) + '</td><td>100%</td></tr></tbody></table>'
+    + '<div class="section-title">\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4 \u2014 12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd</div>'
+    + '<table><thead><tr>'
+    + '<th style="text-align:right">חודש</th>'
+    + '<th style="text-align:right">סה"כ נכסים</th>'
+    + '<th style="text-align:right">משכנתא</th>'
+    + '<th style="text-align:right">שינוי</th>'
+    + '</tr></thead><tbody>' + histRows + '</tbody></table>'
+    + '<div class="footer"><div class="footer-brand"><div class="footer-logo">\u20aa</div>\u05de\u05e2\u05e7\u05d1 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9 \u2014 Budgy</div><div class="footer-note">\u05e1\u05d5\u05d3\u05d9 \u2014 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9 \u05d0\u05d9\u05e9\u05d9 \u05d5\u05d9\u05d5\u05e2\u05e6\u05d9\u05dd \u05de\u05d5\u05e8\u05e9\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3</div></div>'
+    + '</div>'
+    + '<div class="action-bar"><button class="action-btn" onclick="window.print()">🖨 שמור / הדפס</button><button class="action-btn" style="background:#374151" onclick="window.location.href=\'https://perezari.github.io/Finance/\'">← חזרה</button></div>'
+    + '</body></html>';
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
   win.document.close();
 }
- 
+
 const ONBOARDING_STEPS = [
   {
     emoji: '👋',
@@ -1974,6 +2055,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   const wasRecovery = await handleRecoveryIfNeeded();
   if (!wasRecovery) init();
 });
+
+/* ══ SWIPE NAVIGATION (PWA / mobile) ════════════════ */
+(function() {
+  const TABS = ['current', 'history', 'retirement'];
+  let touchStartX = 0, touchStartY = 0;
+
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    // Skip if any modal/overlay is open
+    const modals = ['wizard-modal','settings-modal','inst-modal','cat-history-panel','backup-modal'];
+    if (modals.some(id => {
+      const el = document.getElementById(id);
+      return el && el.style.display !== 'none' && el.style.display !== '';
+    })) return;
+
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+
+    // Only horizontal swipes (more horizontal than vertical, min 60px)
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+    const activeTab = TABS.find(t => {
+      const el = document.getElementById(`tab-${t}`);
+      return el && el.style.display !== 'none';
+    }) || 'current';
+    const idx = TABS.indexOf(activeTab);
+
+    // Swipe right → previous tab, swipe left → next tab
+    let nextIdx = dx > 0 ? idx - 1 : idx + 1;
+    if (nextIdx < 0 || nextIdx >= TABS.length) return;
+
+    const nextTab = TABS[nextIdx];
+    const btn = document.querySelector(`[data-tab="${nextTab}"]`);
+    switchTab(nextTab, btn);
+  }, { passive: true });
+})();
 
 /* ── KEYBOARD SHORTCUTS ─────────────────────────────── */
 document.addEventListener('keydown', e => {

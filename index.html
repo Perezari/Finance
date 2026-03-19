@@ -4,6 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
   <title>מעקב פיננסי</title>
+  <script>
+    // Apply dark mode theme-color IMMEDIATELY to prevent white notch flash
+    (function(){
+      var saved = localStorage.getItem('dark_mode_v1');
+      var dark = saved !== null ? saved === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var color = dark ? '#0d0f14' : '#ffffff';
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.content = color; });
+      if (dark) document.documentElement.setAttribute('data-theme','dark');
+    })();
+  </script>
   <link rel="manifest" href="manifest.json"/>
   <link rel="icon" type="image/png" href="icon.png"/>
   <link rel="shortcut icon" type="image/png" href="icon.png"/>

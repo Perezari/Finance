@@ -826,7 +826,7 @@ function renderCurrentReport() {
   }
 
   const mortgageHero = calc.mortgage>0 ? `
-    <div class="hero-tile danger" style="animation-delay:.1s;position:relative">
+    <div class="hero-tile danger" style="animation-delay:.1s;position:relative;cursor:pointer" onclick="openCatHistory('_mortgage','יתרת משכנתא')">
       <div class="ht-label" style="margin-bottom:4px">${SVG_MORTGAGE} יתרת משכנתא</div>
       ${mortInst ? `<span class="ct-inst" style="display:flex;align-items:center;gap:4px;margin-bottom:8px"><img src="${logoUrl(mortInst.domain)}" width="13" height="13" style="border-radius:3px;object-fit:contain" onerror="this.style.display='none'"/>${mortInst.name}</span>` : ''}
       <div class="ht-value blur-text" style="margin-bottom:6px" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
@@ -1717,7 +1717,9 @@ function openCatHistory(catKey, catLabel) {
 
   // Build last 12 month entries
   const sorted = [...records].sort((a,b) => new Date(a.record_date)-new Date(b.record_date));
-  const last12 = sorted.slice(-13); // up to 13 so we can compute delta for the oldest
+  const last12 = sorted.slice(-13);
+
+  const isMortgage = catKey === '_mortgage';
 
   if (last12.length < 2) {
     body.innerHTML = '<div style="text-align:center;color:var(--ink-4);font-size:.875rem;padding:24px 0">אין מספיק נתונים היסטוריים</div>';
@@ -1729,16 +1731,17 @@ function openCatHistory(catKey, catLabel) {
   for (let i = last12.length - 1; i >= 1; i--) {
     const cur  = last12[i];
     const prev = last12[i - 1];
-    const curVal  = (cur.values  || {})[catKey] || 0;
-    const prevVal = (prev.values || {})[catKey] || 0;
+    const curVal  = isMortgage ? (cur.mortgage_balance  || 0) : ((cur.values  || {})[catKey] || 0);
+    const prevVal = isMortgage ? (prev.mortgage_balance || 0) : ((prev.values || {})[catKey] || 0);
     const dateLabel = new Date(cur.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
 
     let deltaHtml = '';
     if (prevVal > 0) {
       const delta = curVal - prevVal;
       const pct   = (delta / prevVal * 100).toFixed(1);
-      const pos   = delta >= 0;
-      const sign  = pos ? '+' : '';
+      // For mortgage: decrease in balance is good (green), increase is bad (red)
+      const pos   = isMortgage ? delta <= 0 : delta >= 0;
+      const sign  = delta >= 0 ? '+' : '';
       const color = pos ? 'var(--green)' : 'var(--red)';
       deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:${color};font-family:var(--mono)">${sign}${pct}%</span>`;
     } else if (curVal > 0 && prevVal === 0) {

@@ -147,26 +147,6 @@ async function loadApp() {
   showScreen('app');
   hideLoader();
   checkOnboarding();
-  // Handle PWA shortcuts (?action=...)
-  handlePWAAction();
-}
-
-/* ══ PWA SHORTCUTS ═══════════════════════════════════ */
-function handlePWAAction() {
-  const params = new URLSearchParams(window.location.search);
-  const action = params.get('action');
-  if (!action) return;
-  // Clean URL so refreshing doesn't re-trigger
-  history.replaceState(null, '', window.location.pathname);
-  if (action === 'add_month') {
-    // Switch to history tab and open wizard
-    setTimeout(() => {
-      switchTab('history', document.querySelector('[data-tab="history"]'));
-      setTimeout(() => openWizard(), 300);
-    }, 400);
-  } else if (action === 'current') {
-    switchTab('current', document.querySelector('[data-tab="current"]'));
-  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -353,12 +333,10 @@ async function handleLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw    = document.getElementById('login-password').value;
   if (!email || !pw) return showAuthMsg('יש למלא אימייל וסיסמה', false);
-  // Close keyboard
-  document.activeElement?.blur();
   showLoader('נכנס...');
   const { error } = await db.auth.signInWithPassword({ email, password: pw });
   hideLoader();
-  if (error) { window._loginPending = false; showAuthMsg(translateError(error.message), false); }
+  if (error) showAuthMsg(translateError(error.message), false);
 }
 
 async function handleGoogleLogin() {
@@ -672,6 +650,199 @@ function closeWizard() {
   document.getElementById('wizard-modal').style.display = 'none';
 }
 
+/* ══ TOTAL ASSETS PIE BREAKDOWN ══════════════════════ */
+function showTotalAssetsBreakdown() {
+  if (!records.length) return;
+  const latest = records[records.length - 1];
+  const calc   = calcRecord(latest);
+  const colors = ['#0e9e7e','#4f8ef7','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#64748b','#22c55e'];
+
+  const items = categories
+    .map((cat, i) => ({ label: cat.label, val: calc[cat.key] || 0, color: colors[i % colors.length] }))
+    .filter(d => d.val > 0)
+    .sort((a, b) => b.val - a.val);
+
+  const total = items.reduce((s, d) => s + d.val, 0);
+
+  // Build SVG donut
+  const r = 70, cx = 90, cy = 90, stroke = 28;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const arcs = items.map(d => {
+    const pct  = d.val / total;
+    const dash = pct * circ;
+    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}"
+      stroke-width="${stroke}" stroke-dasharray="${dash} ${circ - dash}"
+      stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" opacity=".9"/>`;
+    offset += dash;
+    return arc;
+  }).join('');
+
+  const legend = items.map(d => {
+    const pct = (d.val / total * 100).toFixed(1);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <div style="width:10px;height:10px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
+        <span style="font-size:.82rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.label}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-family:var(--mono);font-size:.8rem;color:var(--ink)">${fmt(d.val)}</span>
+        <span style="font-size:.72rem;color:var(--ink-4);min-width:36px;text-align:left">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  openInfoModal('פירוט סה"כ נכסים', `
+    <div style="display:flex;justify-content:center;margin-bottom:16px">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
+        ${arcs}
+        <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-family="var(--mono)" font-size="13" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
+        <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-family="var(--font)" font-size="10" fill="var(--ink-4)">סה"כ</text>
+      </svg>
+    </div>
+    ${legend}
+  `);
+}
+
+/* ══ LIQUID ASSETS INFO ═══════════════════════════════ */
+function showLiquidInfo() {
+  if (!records.length) return;
+  const latest = records[records.length - 1];
+  const calc   = calcRecord(latest);
+  const liquidKeys = ['cash','currentAcc','savingsFund','deposit'];
+  const liquid = categories.filter(c => liquidKeys.includes(c.key)).reduce((s,c) => s + (calc[c.key]||0), 0);
+  const pct    = calc.totalAssets ? (liquid / calc.totalAssets * 100).toFixed(1) : '0';
+
+  const liqRows = categories.filter(c => liquidKeys.includes(c.key) && (calc[c.key]||0) > 0).map(c =>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${c.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(calc[c.key]||0)}</span>
+    </div>`
+  ).join('');
+
+  const nonLiqRows = categories.filter(c => !liquidKeys.includes(c.key) && (calc[c.key]||0) > 0).map(c =>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${c.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--ink-4)">${fmt(calc[c.key]||0)}</span>
+    </div>`
+  ).join('');
+
+  const statusColor = parseFloat(pct) >= 15 && parseFloat(pct) <= 40 ? 'var(--green)' : parseFloat(pct) < 15 ? 'var(--red)' : 'var(--amber)';
+  const statusText  = parseFloat(pct) >= 15 && parseFloat(pct) <= 40 ? 'יחס נזילות תקין ✅' : parseFloat(pct) < 15 ? 'נזילות נמוכה מדי ⚠️' : 'נזילות גבוהה — כסף לא עובד ⚠️';
+
+  openInfoModal('נכסים נזילים', `
+    <div style="padding:12px;background:rgba(14,158,126,.1);border-radius:var(--r-xs);border:1.5px solid ${statusColor};margin-bottom:16px">
+      <div style="font-size:1.1rem;font-weight:800;color:${statusColor};font-family:var(--font)">${pct}% נזיל</div>
+      <div style="font-size:.8rem;color:${statusColor};margin-top:2px">${statusText}</div>
+      <div style="font-size:.72rem;color:var(--ink-4);margin-top:4px">יחס אידיאלי: 15%–40% מהתיק</div>
+    </div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ניתן למשיכה מיידית)</div>
+    ${liqRows || '<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>'}
+    ${nonLiqRows ? `
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">נכסים לא נזילים (פנסיה, השקעות ארוכות טווח)</div>
+    ${nonLiqRows}` : ''}
+    <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס. פנסיה ופוליסות הן לא נזיל.</p>
+  `);
+}
+
+/* ══ GENERIC INFO MODAL ═══════════════════════════════ */
+function openInfoModal(title, bodyHtml) {
+  document.getElementById('info-modal-existing')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'info-modal-existing';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">${title}</span>
+        <button onclick="document.getElementById('info-modal-existing').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="padding:16px 20px 24px">${bodyHtml}</div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+function showTaxBreakdown() {
+  if (!records.length) return;
+  const latest = records[records.length - 1];
+  const calc   = calcRecord(latest);
+  const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
+
+  const modal = document.createElement('div');
+  modal.id = 'tax-breakdown-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
+
+  const nonPensionTotal = calc.totalAssets - pensionTotal;
+  const pensionAfterTax = pensionTotal - tax;
+
+  const pensionRows = categories.filter(isPensionCat).map(cat => {
+    const val = calc[cat.key] || 0;
+    if (!val) return '';
+    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${cat.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span>
+    </div>`;
+  }).join('');
+
+  const nonPensionRows = categories.filter(c => !isPensionCat(c)).map(cat => {
+    const val = calc[cat.key] || 0;
+    if (!val) return '';
+    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${cat.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span>
+    </div>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">פירוט שווי נקי אחרי מס</span>
+        <button onclick="document.getElementById('tax-breakdown-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="padding:16px 20px">
+
+        ${nonPensionRows ? `
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ללא מס)</div>
+        ${nonPensionRows}
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700;color:var(--ink)">
+          <span>סה"כ נכסים נזילים</span>
+          <span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span>
+        </div>` : ''}
+
+        ${pensionRows ? `
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">פנסיה (חייבת במס 35%)</div>
+        ${pensionRows}
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <span style="color:var(--ink-2)">סה"כ פנסיה (ברוטו)</span>
+          <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(pensionTotal)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <span style="color:var(--ink-2)">מס 35%</span>
+          <span style="font-family:var(--mono);font-weight:600;color:var(--red)">− ${fmt(tax)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700;color:var(--ink)">
+          <span>פנסיה נטו</span>
+          <span style="font-family:var(--mono);color:var(--ink)">${fmt(pensionAfterTax)}</span>
+        </div>` : ''}
+
+        ${calc.mortgage > 0 ? `` : ''}
+
+        <div style="margin-top:16px;padding:16px;background:var(--green-light,rgba(14,158,126,.12));border-radius:var(--r-xs);border:1.5px solid var(--green)">
+          <div style="font-size:.78rem;color:var(--ink-3);margin-bottom:6px">סה"כ נכסים אחרי מס פנסיה</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${netAfterTax >= 0 ? 'var(--green)' : 'var(--red)'};font-family:var(--mono)">${fmt(netAfterTax)}</div>
+          <div style="font-size:.72rem;color:var(--ink-3);margin-top:6px;line-height:1.6">
+            נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}
+          </div>
+        </div>
+
+        <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס לפני כל החלטה.</p>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
 function wizardSteps() {
   // Step 0: date
   // Steps 1..N: one per category
@@ -950,6 +1121,23 @@ function calcRecord(r) {
   return { totalAssets, mortgage, netWorth:totalAssets, ...v };
 }
 
+/* ── PENSION TAX (Israel 2025/2026 brackets) ─────────── */
+function isPensionCat(cat) {
+  return cat.key.toLowerCase().includes('pension') || cat.label.includes('פנסיה');
+}
+
+function calcPensionTax(amount) {
+  if (!amount || amount <= 0) return 0;
+  return Math.round(amount * 0.35);
+}
+
+function calcNetWorthAfterTax(calc) {
+  const pensionTotal = categories.filter(isPensionCat).reduce((s,c) => s + (calc[c.key] || 0), 0);
+  const tax          = calcPensionTax(pensionTotal);
+  const netAfterTax  = calc.totalAssets - tax;
+  return { pensionTotal, tax, netAfterTax };
+}
+
 /* ══════════════════════════════════════════════════════
    HEALTH SCORE
 ══════════════════════════════════════════════════════ */
@@ -1132,6 +1320,29 @@ function renderCurrentReport() {
           <span class="gc-row-val blur-text">${fmt(avg)}</span></div>
       </div>`;
   }
+
+  // Year-ago comparison
+  let yearAgoSub = '';
+  if (records.length >= 2) {
+    const latestDate = new Date(latest.record_date);
+    const yearAgoTarget = new Date(latestDate);
+    yearAgoTarget.setFullYear(yearAgoTarget.getFullYear() - 1);
+    // Find closest record to a year ago (within 45 days)
+    let yearAgoRec = null, minDiff = Infinity;
+    records.forEach(r => {
+      const d = Math.abs(new Date(r.record_date) - yearAgoTarget);
+      if (d < minDiff && d < 45 * 86400000) { minDiff = d; yearAgoRec = r; }
+    });
+    if (yearAgoRec) {
+      const yCalc = calcRecord(yearAgoRec);
+      const yDelta = calc.totalAssets - yCalc.totalAssets;
+      const yPct   = yCalc.totalAssets ? (yDelta / yCalc.totalAssets * 100).toFixed(1) : '0.0';
+      const ySign  = yDelta >= 0 ? '+' : '';
+      const yCls   = yDelta >= 0 ? 'pos' : 'neg';
+      const yLabel = new Date(yearAgoRec.record_date).toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+      yearAgoSub   = `<span class="ht-sub ${yCls}" style="font-size:.68rem;opacity:.85">${ySign}${yPct}% מ-${yLabel}</span>`;
+    }
+  }
  
   const liquidKeys = ['cash','currentAcc','savingsFund'];
   const liquid     = categories.filter(c=>liquidKeys.includes(c.key)).reduce((s,c)=>s+(calc[c.key]||0),0);
@@ -1157,6 +1368,9 @@ function renderCurrentReport() {
     }
   }
 
+  const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
+  const taxPct = pensionTotal > 0 ? Math.round(tax / pensionTotal * 100) : 0;
+
   const mortgageHero = calc.mortgage>0 ? `
     <div class="hero-tile danger" style="animation-delay:.1s;position:relative;cursor:pointer" onclick="openCatHistory('_mortgage','יתרת משכנתא')">
       <div class="ht-label" style="margin-bottom:4px">${SVG_MORTGAGE} יתרת משכנתא</div>
@@ -1164,9 +1378,10 @@ function renderCurrentReport() {
       <div class="ht-value blur-text" style="margin-bottom:6px" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
       ${mortDeltaHtml}
     </div>
-    <div class="hero-tile warning" style="animation-delay:.15s">
-      <div class="ht-label">${SVG_NETWORTH} שווי נקי</div>
-      <div class="ht-value blur-text" data-countup="${calc.netWorth}">${fmt(calc.netWorth)}</div>
+    <div class="hero-tile warning" style="animation-delay:.15s;cursor:pointer" onclick="showTaxBreakdown()" title="לחץ לפירוט מס פנסיה">
+      <div class="ht-label">${SVG_NETWORTH} שווי נקי אחרי מס</div>
+      <div class="ht-value blur-text" data-countup="${netAfterTax}">${fmt(netAfterTax)}</div>
+      ${tax > 0 ? `<div class="ct-growth neg" style="margin-top:4px;font-size:.7rem;font-family:var(--font)">מס פנסיה: ${fmt(tax)}</div>` : ''}
     </div>` : '';
  
 
@@ -1208,12 +1423,13 @@ function renderCurrentReport() {
  
   el.innerHTML = `
     <div class="hero-strip">
-      <div class="hero-tile accent">
+      <div class="hero-tile accent" style="cursor:pointer" onclick="showTotalAssetsBreakdown()">
         <div class="ht-label">${SVG_TOTAL} סה"כ נכסים</div>
         <div class="ht-value blur-text" data-countup="${calc.totalAssets}">${fmt(calc.totalAssets)}</div>
         ${growthSub}
+        ${yearAgoSub}
       </div>
-      <div class="hero-tile" style="animation-delay:.05s">
+      <div class="hero-tile" style="animation-delay:.05s;cursor:pointer" onclick="showLiquidInfo()">
         <div class="ht-label">${SVG_LIQUID} נכסים נזילים</div>
         <div class="ht-value blur-text" data-countup="${liquid}">${fmt(liquid)}</div>
         <span class="ht-sub">${liquidPct}% מהתיק</span>
@@ -1434,7 +1650,7 @@ function loadRetirementSettings() {
     // Load from Supabase user_metadata first, fallback to localStorage
     const meta = currentUser?.user_metadata?.retirement_settings;
     const s = meta ? JSON.parse(meta) : JSON.parse(localStorage.getItem(RET_KEY)||'{}');
-    ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
+    ['ret-current-age','ret-age','ret-return'].forEach(id=>{
       const el=document.getElementById(id); if(el&&s[id]!==undefined) el.value=s[id];
     });
   } catch(e){}
@@ -1442,7 +1658,7 @@ function loadRetirementSettings() {
 
 async function saveRetirementSettings() {
   const s={};
-  ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
+  ['ret-current-age','ret-age','ret-return'].forEach(id=>{
     const el=document.getElementById(id); if(el) s[id]=el.value;
   });
   localStorage.setItem(RET_KEY,JSON.stringify(s));
@@ -1457,7 +1673,7 @@ function renderRetirement() {
   const currentAge   = parseInt(document.getElementById('ret-current-age').value)||0;
   const retireAge    = parseInt(document.getElementById('ret-age').value)||0;
   const annualReturn = parseFloat(document.getElementById('ret-return').value)||0;
-  const monthlySave  = parseFloat(document.getElementById('ret-monthly').value)||0;
+  const monthlySave  = 0;
 
   const warnEl = document.getElementById('ret-warning');
   if (annualReturn>15) {
@@ -1509,6 +1725,18 @@ function renderRetirement() {
 function renderRetirementSummary(projected,yearsLeft,monthlySave,annualReturn,start) {
   const growth=projected-start;
   const mult=start>0?(projected/start).toFixed(1):'—';
+
+  // Current pension net after tax (for reference)
+  const latestCalc = records.length ? calcRecord(records[records.length-1]) : null;
+  const { pensionTotal, tax } = latestCalc ? calcNetWorthAfterTax(latestCalc) : { pensionTotal:0, tax:0 };
+  const pensionNet = pensionTotal - tax;
+  const pensionTileHtml = pensionTotal > 0 ? `
+      <div class="ret-tile" style="border-color:var(--amber);background:rgba(245,158,11,.06)">
+        <div class="rt-label" style="color:var(--amber)">פנסיה נטו (אחרי 35% מס)</div>
+        <div class="rt-value blur-text" style="color:var(--amber)">${fmt(pensionNet)}</div>
+        <div class="rt-sub">מס: ${fmt(tax)}</div>
+      </div>` : '';
+
   document.getElementById('ret-summary').innerHTML=`
     <div class="ret-tiles">
       <div class="ret-tile accent">
@@ -1526,11 +1754,7 @@ function renderRetirementSummary(projected,yearsLeft,monthlySave,annualReturn,st
         <div class="rt-value blur-text">${fmt(growth)}</div>
         <div class="rt-sub">בריבית ${annualReturn}% שנתי</div>
       </div>
-      <div class="ret-tile">
-        <div class="rt-label">${ICONS_JS.piggy} חיסכון חודשי</div>
-        <div class="rt-value blur-text">${fmt(monthlySave)}</div>
-        <div class="rt-sub">${fmt(monthlySave*yearsLeft*12)} סה"כ</div>
-      </div>
+      ${pensionTileHtml}
     </div>`;
   applyBlur();
 }
@@ -2026,7 +2250,6 @@ function applyBlur() {
 const fmt = v => (v||0).toLocaleString('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0});
 
 function showScreen(n) {
-  if (n === 'auth') window._loginPending = false;
   document.getElementById('auth-screen').style.display=n==='auth'?'flex':'none';
   document.getElementById('app-screen').style.display =n==='app' ?'flex':'none';
 }
@@ -2491,15 +2714,9 @@ function applyDarkMode(on) {
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = on;
   const themeColor = on ? '#0d0f14' : '#ffffff';
-  // Update all theme-color metas (including media-specific ones)
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.content = themeColor);
-  // If none exist, create one
-  if (!document.querySelector('meta[name="theme-color"]')) {
-    const meta = document.createElement('meta');
-    meta.name = 'theme-color';
-    meta.content = themeColor;
-    document.head.appendChild(meta);
-  }
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+  meta.content = themeColor;
 }
 
 async function toggleDarkMode(on) {

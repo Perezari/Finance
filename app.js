@@ -650,199 +650,6 @@ function closeWizard() {
   document.getElementById('wizard-modal').style.display = 'none';
 }
 
-/* ══ TOTAL ASSETS PIE BREAKDOWN ══════════════════════ */
-function showTotalAssetsBreakdown() {
-  if (!records.length) return;
-  const latest = records[records.length - 1];
-  const calc   = calcRecord(latest);
-  const colors = ['#0e9e7e','#4f8ef7','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#64748b','#22c55e'];
-
-  const items = categories
-    .map((cat, i) => ({ label: cat.label, val: calc[cat.key] || 0, color: colors[i % colors.length] }))
-    .filter(d => d.val > 0)
-    .sort((a, b) => b.val - a.val);
-
-  const total = items.reduce((s, d) => s + d.val, 0);
-
-  // Build SVG donut
-  const r = 70, cx = 90, cy = 90, stroke = 28;
-  const circ = 2 * Math.PI * r;
-  let offset = 0;
-  const arcs = items.map(d => {
-    const pct  = d.val / total;
-    const dash = pct * circ;
-    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}"
-      stroke-width="${stroke}" stroke-dasharray="${dash} ${circ - dash}"
-      stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" opacity=".9"/>`;
-    offset += dash;
-    return arc;
-  }).join('');
-
-  const legend = items.map(d => {
-    const pct = (d.val / total * 100).toFixed(1);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0">
-        <div style="width:10px;height:10px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
-        <span style="font-size:.82rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.label}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span style="font-family:var(--mono);font-size:.8rem;color:var(--ink)">${fmt(d.val)}</span>
-        <span style="font-size:.72rem;color:var(--ink-4);min-width:36px;text-align:left">${pct}%</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  openInfoModal('פירוט סה"כ נכסים', `
-    <div style="display:flex;justify-content:center;margin-bottom:16px">
-      <svg width="180" height="180" viewBox="0 0 180 180">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${stroke}"/>
-        ${arcs}
-        <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-family="var(--mono)" font-size="13" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
-        <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-family="var(--font)" font-size="10" fill="var(--ink-4)">סה"כ</text>
-      </svg>
-    </div>
-    ${legend}
-  `);
-}
-
-/* ══ LIQUID ASSETS INFO ═══════════════════════════════ */
-function showLiquidInfo() {
-  if (!records.length) return;
-  const latest = records[records.length - 1];
-  const calc   = calcRecord(latest);
-  const liquidKeys = ['cash','currentAcc','savingsFund','deposit'];
-  const liquid = categories.filter(c => liquidKeys.includes(c.key)).reduce((s,c) => s + (calc[c.key]||0), 0);
-  const pct    = calc.totalAssets ? (liquid / calc.totalAssets * 100).toFixed(1) : '0';
-
-  const liqRows = categories.filter(c => liquidKeys.includes(c.key) && (calc[c.key]||0) > 0).map(c =>
-    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${c.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(calc[c.key]||0)}</span>
-    </div>`
-  ).join('');
-
-  const nonLiqRows = categories.filter(c => !liquidKeys.includes(c.key) && (calc[c.key]||0) > 0).map(c =>
-    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${c.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--ink-4)">${fmt(calc[c.key]||0)}</span>
-    </div>`
-  ).join('');
-
-  const statusColor = parseFloat(pct) >= 15 && parseFloat(pct) <= 40 ? 'var(--green)' : parseFloat(pct) < 15 ? 'var(--red)' : 'var(--amber)';
-  const statusText  = parseFloat(pct) >= 15 && parseFloat(pct) <= 40 ? 'יחס נזילות תקין ✅' : parseFloat(pct) < 15 ? 'נזילות נמוכה מדי ⚠️' : 'נזילות גבוהה — כסף לא עובד ⚠️';
-
-  openInfoModal('נכסים נזילים', `
-    <div style="padding:12px;background:rgba(14,158,126,.1);border-radius:var(--r-xs);border:1.5px solid ${statusColor};margin-bottom:16px">
-      <div style="font-size:1.1rem;font-weight:800;color:${statusColor};font-family:var(--font)">${pct}% נזיל</div>
-      <div style="font-size:.8rem;color:${statusColor};margin-top:2px">${statusText}</div>
-      <div style="font-size:.72rem;color:var(--ink-4);margin-top:4px">יחס אידיאלי: 15%–40% מהתיק</div>
-    </div>
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ניתן למשיכה מיידית)</div>
-    ${liqRows || '<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>'}
-    ${nonLiqRows ? `
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">נכסים לא נזילים (פנסיה, השקעות ארוכות טווח)</div>
-    ${nonLiqRows}` : ''}
-    <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס. פנסיה ופוליסות הן לא נזיל.</p>
-  `);
-}
-
-/* ══ GENERIC INFO MODAL ═══════════════════════════════ */
-function openInfoModal(title, bodyHtml) {
-  document.getElementById('info-modal-existing')?.remove();
-  const modal = document.createElement('div');
-  modal.id = 'info-modal-existing';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
-  modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
-        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">${title}</span>
-        <button onclick="document.getElementById('info-modal-existing').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
-      </div>
-      <div style="padding:16px 20px 24px">${bodyHtml}</div>
-    </div>`;
-  modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  document.body.appendChild(modal);
-}
-function showTaxBreakdown() {
-  if (!records.length) return;
-  const latest = records[records.length - 1];
-  const calc   = calcRecord(latest);
-  const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
-
-  const modal = document.createElement('div');
-  modal.id = 'tax-breakdown-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
-
-  const nonPensionTotal = calc.totalAssets - pensionTotal;
-  const pensionAfterTax = pensionTotal - tax;
-
-  const pensionRows = categories.filter(isPensionCat).map(cat => {
-    const val = calc[cat.key] || 0;
-    if (!val) return '';
-    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${cat.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span>
-    </div>`;
-  }).join('');
-
-  const nonPensionRows = categories.filter(c => !isPensionCat(c)).map(cat => {
-    const val = calc[cat.key] || 0;
-    if (!val) return '';
-    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${cat.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span>
-    </div>`;
-  }).join('');
-
-  modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
-        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">פירוט שווי נקי אחרי מס</span>
-        <button onclick="document.getElementById('tax-breakdown-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
-      </div>
-      <div style="padding:16px 20px">
-
-        ${nonPensionRows ? `
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ללא מס)</div>
-        ${nonPensionRows}
-        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700;color:var(--ink)">
-          <span>סה"כ נכסים נזילים</span>
-          <span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span>
-        </div>` : ''}
-
-        ${pensionRows ? `
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">פנסיה (חייבת במס 35%)</div>
-        ${pensionRows}
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-          <span style="color:var(--ink-2)">סה"כ פנסיה (ברוטו)</span>
-          <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(pensionTotal)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-          <span style="color:var(--ink-2)">מס 35%</span>
-          <span style="font-family:var(--mono);font-weight:600;color:var(--red)">− ${fmt(tax)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700;color:var(--ink)">
-          <span>פנסיה נטו</span>
-          <span style="font-family:var(--mono);color:var(--ink)">${fmt(pensionAfterTax)}</span>
-        </div>` : ''}
-
-        ${calc.mortgage > 0 ? `` : ''}
-
-        <div style="margin-top:16px;padding:16px;background:var(--green-light,rgba(14,158,126,.12));border-radius:var(--r-xs);border:1.5px solid var(--green)">
-          <div style="font-size:.78rem;color:var(--ink-3);margin-bottom:6px">סה"כ נכסים אחרי מס פנסיה</div>
-          <div style="font-size:1.4rem;font-weight:800;color:${netAfterTax >= 0 ? 'var(--green)' : 'var(--red)'};font-family:var(--mono)">${fmt(netAfterTax)}</div>
-          <div style="font-size:.72rem;color:var(--ink-3);margin-top:6px;line-height:1.6">
-            נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}
-          </div>
-        </div>
-
-        <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס לפני כל החלטה.</p>
-      </div>
-    </div>`;
-  modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  document.body.appendChild(modal);
-}
-
 function wizardSteps() {
   // Step 0: date
   // Steps 1..N: one per category
@@ -1121,7 +928,7 @@ function calcRecord(r) {
   return { totalAssets, mortgage, netWorth:totalAssets, ...v };
 }
 
-/* ── PENSION TAX (Israel 2025/2026 brackets) ─────────── */
+/* ── PENSION TAX ─────────────────────────────────────── */
 function isPensionCat(cat) {
   return cat.key.toLowerCase().includes('pension') || cat.label.includes('פנסיה');
 }
@@ -1327,14 +1134,13 @@ function renderCurrentReport() {
     const latestDate = new Date(latest.record_date);
     const yearAgoTarget = new Date(latestDate);
     yearAgoTarget.setFullYear(yearAgoTarget.getFullYear() - 1);
-    // Find closest record to a year ago (within 45 days)
     let yearAgoRec = null, minDiff = Infinity;
     records.forEach(r => {
       const d = Math.abs(new Date(r.record_date) - yearAgoTarget);
       if (d < minDiff && d < 45 * 86400000) { minDiff = d; yearAgoRec = r; }
     });
     if (yearAgoRec) {
-      const yCalc = calcRecord(yearAgoRec);
+      const yCalc  = calcRecord(yearAgoRec);
       const yDelta = calc.totalAssets - yCalc.totalAssets;
       const yPct   = yCalc.totalAssets ? (yDelta / yCalc.totalAssets * 100).toFixed(1) : '0.0';
       const ySign  = yDelta >= 0 ? '+' : '';
@@ -1369,7 +1175,6 @@ function renderCurrentReport() {
   }
 
   const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
-  const taxPct = pensionTotal > 0 ? Math.round(tax / pensionTotal * 100) : 0;
 
   const mortgageHero = calc.mortgage>0 ? `
     <div class="hero-tile danger" style="animation-delay:.1s;position:relative;cursor:pointer" onclick="openCatHistory('_mortgage','יתרת משכנתא')">
@@ -1378,7 +1183,7 @@ function renderCurrentReport() {
       <div class="ht-value blur-text" style="margin-bottom:6px" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
       ${mortDeltaHtml}
     </div>
-    <div class="hero-tile warning" style="animation-delay:.15s;cursor:pointer" onclick="showTaxBreakdown()" title="לחץ לפירוט מס פנסיה">
+    <div class="hero-tile warning" style="animation-delay:.15s;cursor:pointer" onclick="showTaxBreakdown()">
       <div class="ht-label">${SVG_NETWORTH} שווי נקי אחרי מס</div>
       <div class="ht-value blur-text" data-countup="${netAfterTax}">${fmt(netAfterTax)}</div>
       ${tax > 0 ? `<div class="ct-growth neg" style="margin-top:4px;font-size:.7rem;font-family:var(--font)">מס פנסיה: ${fmt(tax)}</div>` : ''}
@@ -1650,7 +1455,7 @@ function loadRetirementSettings() {
     // Load from Supabase user_metadata first, fallback to localStorage
     const meta = currentUser?.user_metadata?.retirement_settings;
     const s = meta ? JSON.parse(meta) : JSON.parse(localStorage.getItem(RET_KEY)||'{}');
-    ['ret-current-age','ret-age','ret-return'].forEach(id=>{
+    ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
       const el=document.getElementById(id); if(el&&s[id]!==undefined) el.value=s[id];
     });
   } catch(e){}
@@ -1658,7 +1463,7 @@ function loadRetirementSettings() {
 
 async function saveRetirementSettings() {
   const s={};
-  ['ret-current-age','ret-age','ret-return'].forEach(id=>{
+  ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
     const el=document.getElementById(id); if(el) s[id]=el.value;
   });
   localStorage.setItem(RET_KEY,JSON.stringify(s));
@@ -1673,7 +1478,7 @@ function renderRetirement() {
   const currentAge   = parseInt(document.getElementById('ret-current-age').value)||0;
   const retireAge    = parseInt(document.getElementById('ret-age').value)||0;
   const annualReturn = parseFloat(document.getElementById('ret-return').value)||0;
-  const monthlySave  = 0;
+  const monthlySave  = parseFloat(document.getElementById('ret-monthly').value)||0;
 
   const warnEl = document.getElementById('ret-warning');
   if (annualReturn>15) {
@@ -1725,18 +1530,6 @@ function renderRetirement() {
 function renderRetirementSummary(projected,yearsLeft,monthlySave,annualReturn,start) {
   const growth=projected-start;
   const mult=start>0?(projected/start).toFixed(1):'—';
-
-  // Current pension net after tax (for reference)
-  const latestCalc = records.length ? calcRecord(records[records.length-1]) : null;
-  const { pensionTotal, tax } = latestCalc ? calcNetWorthAfterTax(latestCalc) : { pensionTotal:0, tax:0 };
-  const pensionNet = pensionTotal - tax;
-  const pensionTileHtml = pensionTotal > 0 ? `
-      <div class="ret-tile" style="border-color:var(--amber);background:rgba(245,158,11,.06)">
-        <div class="rt-label" style="color:var(--amber)">פנסיה נטו (אחרי 35% מס)</div>
-        <div class="rt-value blur-text" style="color:var(--amber)">${fmt(pensionNet)}</div>
-        <div class="rt-sub">מס: ${fmt(tax)}</div>
-      </div>` : '';
-
   document.getElementById('ret-summary').innerHTML=`
     <div class="ret-tiles">
       <div class="ret-tile accent">
@@ -1754,7 +1547,11 @@ function renderRetirementSummary(projected,yearsLeft,monthlySave,annualReturn,st
         <div class="rt-value blur-text">${fmt(growth)}</div>
         <div class="rt-sub">בריבית ${annualReturn}% שנתי</div>
       </div>
-      ${pensionTileHtml}
+      <div class="ret-tile">
+        <div class="rt-label">${ICONS_JS.piggy} חיסכון חודשי</div>
+        <div class="rt-value blur-text">${fmt(monthlySave)}</div>
+        <div class="rt-sub">${fmt(monthlySave*yearsLeft*12)} סה"כ</div>
+      </div>
     </div>`;
   applyBlur();
 }
@@ -2208,16 +2005,384 @@ async function saveCategoryOrder() {
 
 /* ── TAB SWITCH ─────────────────────────────────────── */
 function switchTab(name, btn) {
-  ['current','history','retirement'].forEach(t=>{
+  ['current','history','retirement','portfolio','annual'].forEach(t=>{
     const p=document.getElementById(`tab-${t}`); if(p) p.style.display=t===name?'block':'none';
   });
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll(`[data-tab="${name}"]`).forEach(b=>b.classList.add('active'));
-  const titles={current:'דוח נוכחי',history:'היסטוריה',retirement:'תכנון פרישה'};
+  const titles={current:'דוח נוכחי',history:'היסטוריה',retirement:'תכנון פרישה',portfolio:'תיק השקעות',annual:'סיכום שנתי'};
   const te=document.getElementById('topbar-title'); if(te) te.textContent=titles[name]||'';
   if(name==='history')    renderHistoryTab();
   if(name==='retirement') { loadRetirementSettings(); renderRetirement(); }
+  if(name==='portfolio')  renderPortfolioTab();
+  if(name==='annual')     renderAnnualTab();
 }
+
+
+/* ══ TOTAL ASSETS PIE BREAKDOWN ══════════════════════ */
+function showTotalAssetsBreakdown() {
+  if (!records.length) return;
+  const latest = records[records.length - 1];
+  const calc   = calcRecord(latest);
+  const colors = ['#0e9e7e','#4f8ef7','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#64748b','#22c55e'];
+  const items  = categories.map((cat,i) => ({ label:cat.label, val:calc[cat.key]||0, color:colors[i%colors.length] }))
+    .filter(d => d.val > 0).sort((a,b) => b.val - a.val);
+  const total  = items.reduce((s,d) => s+d.val, 0);
+  const r=70, cx=90, cy=90, sw=28, circ=2*Math.PI*r;
+  let off=0;
+  const arcs = items.map(d => {
+    const dash = (d.val/total)*circ;
+    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})" opacity=".9"/>`;
+    off += dash; return arc;
+  }).join('');
+  const legend = items.map(d => {
+    const pct = (d.val/total*100).toFixed(1);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0">
+        <div style="width:10px;height:10px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
+        <span style="font-size:.82rem;color:var(--ink-2)">${d.label}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-family:var(--mono);font-size:.8rem;color:var(--ink)">${fmt(d.val)}</span>
+        <span style="font-size:.72rem;color:var(--ink-4);min-width:36px;text-align:left">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+  openInfoModal('פירוט סה"כ נכסים', `
+    <div style="display:flex;justify-content:center;margin-bottom:16px">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${sw}"/>
+        ${arcs}
+        <text x="${cx}" y="${cy-6}" text-anchor="middle" font-family="var(--mono)" font-size="13" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
+        <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="var(--font)" font-size="10" fill="var(--ink-4)">סה"כ</text>
+      </svg>
+    </div>${legend}`);
+}
+
+/* ══ LIQUID ASSETS INFO ═══════════════════════════════ */
+function showLiquidInfo() {
+  if (!records.length) return;
+  const latest    = records[records.length - 1];
+  const calc      = calcRecord(latest);
+  const liquidKeys = ['cash','currentAcc','savingsFund','deposit'];
+  const liquid    = categories.filter(c => liquidKeys.includes(c.key)).reduce((s,c) => s+(calc[c.key]||0), 0);
+  const pct       = calc.totalAssets ? (liquid/calc.totalAssets*100).toFixed(1) : '0';
+  const liqRows   = categories.filter(c => liquidKeys.includes(c.key) && (calc[c.key]||0)>0).map(c =>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${c.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(calc[c.key]||0)}</span>
+    </div>`).join('');
+  const nonLiqRows = categories.filter(c => !liquidKeys.includes(c.key) && (calc[c.key]||0)>0).map(c =>
+    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${c.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--ink-4)">${fmt(calc[c.key]||0)}</span>
+    </div>`).join('');
+  const p         = parseFloat(pct);
+  const statusColor = p >= 15 && p <= 40 ? 'var(--green)' : p < 15 ? 'var(--red)' : 'var(--amber)';
+  const statusText  = p >= 15 && p <= 40 ? 'יחס נזילות תקין ✅' : p < 15 ? 'נזילות נמוכה מדי ⚠️' : 'נזילות גבוהה — כסף לא עובד ⚠️';
+  openInfoModal('נכסים נזילים', `
+    <div style="padding:12px;background:rgba(14,158,126,.1);border-radius:var(--r-xs);border:1.5px solid ${statusColor};margin-bottom:16px">
+      <div style="font-size:1.1rem;font-weight:800;color:${statusColor};font-family:var(--font)">${pct}% נזיל</div>
+      <div style="font-size:.8rem;color:${statusColor};margin-top:2px">${statusText}</div>
+      <div style="font-size:.72rem;color:var(--ink-4);margin-top:4px">יחס אידיאלי: 15%–40% מהתיק</div>
+    </div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ניתן למשיכה מיידית)</div>
+    ${liqRows||'<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>'}
+    ${nonLiqRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">נכסים לא נזילים</div>${nonLiqRows}`:''}
+    <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס.</p>`);
+}
+
+/* ══ GENERIC INFO MODAL ═══════════════════════════════ */
+function openInfoModal(title, bodyHtml) {
+  document.getElementById('info-modal-existing')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'info-modal-existing';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">${title}</span>
+        <button onclick="document.getElementById('info-modal-existing').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="padding:16px 20px 24px">${bodyHtml}</div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+/* ══ TAX BREAKDOWN MODAL ════════════════════════════ */
+function showTaxBreakdown() {
+  if (!records.length) return;
+  const latest = records[records.length - 1];
+  const calc   = calcRecord(latest);
+  const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
+  const nonPensionTotal = calc.totalAssets - pensionTotal;
+  const pensionAfterTax = pensionTotal - tax;
+  const pensionRows = categories.filter(isPensionCat).map(cat => {
+    const val = calc[cat.key] || 0; if (!val) return '';
+    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${cat.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span></div>`;
+  }).join('');
+  const nonPensionRows = categories.filter(c => !isPensionCat(c)).map(cat => {
+    const val = calc[cat.key] || 0; if (!val) return '';
+    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      <span style="color:var(--ink-2)">${cat.label}</span>
+      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span></div>`;
+  }).join('');
+  document.getElementById('tax-breakdown-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'tax-breakdown-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">פירוט שווי נקי אחרי מס</span>
+        <button onclick="document.getElementById('tax-breakdown-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="padding:16px 20px">
+        ${nonPensionRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ללא מס)</div>${nonPensionRows}
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700">
+          <span>סה"כ נכסים נזילים</span><span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span></div>`:''}
+        ${pensionRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">פנסיה (חייבת במס 35%)</div>${pensionRows}
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <span style="color:var(--ink-2)">סה"כ פנסיה (ברוטו)</span><span style="font-family:var(--mono);font-weight:600">${fmt(pensionTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <span style="color:var(--ink-2)">מס 35%</span><span style="font-family:var(--mono);font-weight:600;color:var(--red)">− ${fmt(tax)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700">
+          <span>פנסיה נטו</span><span style="font-family:var(--mono)">${fmt(pensionAfterTax)}</span></div>`:''}
+        <div style="margin-top:16px;padding:16px;background:var(--green-light,rgba(14,158,126,.12));border-radius:var(--r-xs);border:1.5px solid var(--green)">
+          <div style="font-size:.78rem;color:var(--ink-3);margin-bottom:6px">סה"כ נכסים אחרי מס פנסיה</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${netAfterTax>=0?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(netAfterTax)}</div>
+          <div style="font-size:.72rem;color:var(--ink-3);margin-top:6px">נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}</div>
+        </div>
+        <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס.</p>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+/* ══ PORTFOLIO TAB ════════════════════════════════════ */
+function renderPortfolioTab() {
+  const el = document.getElementById('portfolio-content');
+  if (!el) return;
+  if (!records.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-4)">אין נתונים</div>'; return; }
+
+  const latest = records[records.length - 1];
+  const calc   = calcRecord(latest);
+  const total  = calc.totalAssets;
+
+  // Assign each category to a bucket
+  const liquidKeys  = ['cash','currentAcc'];
+  const savingKeys  = ['deposit','savingsFund','hishtalmut'];
+  const buckets = { liquid:0, savings:0, pension:0, invest:0 };
+  const colors  = { liquid:'#0e9e7e', savings:'#4f8ef7', pension:'#f59e0b', invest:'#8b5cf6' };
+  const labels  = { liquid:'נזיל', savings:'חיסכון', pension:'פנסיוני', invest:'השקעות' };
+
+  categories.forEach(cat => {
+    const val = calc[cat.key] || 0;
+    if (!val) return;
+    if (isPensionCat(cat))           buckets.pension += val;
+    else if (liquidKeys.includes(cat.key))  buckets.liquid  += val;
+    else if (savingKeys.includes(cat.key))  buckets.savings += val;
+    else                                    buckets.invest  += val;
+  });
+
+  // Ideal allocation by age
+  const userAge     = parseInt(document.getElementById('ret-current-age')?.value) || 35;
+  const iPension    = Math.min(50, Math.max(20, userAge - 10));
+  const iLiquid     = 15;
+  const iSavings    = Math.min(30, Math.max(10, 60 - userAge));
+  const iInvest     = Math.max(0, 100 - iPension - iLiquid - iSavings);
+  const ideal       = { liquid:iLiquid, savings:iSavings, pension:iPension, invest:iInvest };
+
+  // Donut SVG
+  const r = 85, cx = 105, cy = 105, sw = 34, circ = 2*Math.PI*r;
+  let off = 0;
+  const arcs = Object.entries(buckets).map(([k,v]) => {
+    if (!v) return '';
+    const dash = (v/total) * circ;
+    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[k]}"
+      stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}"
+      stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off += dash;
+    return arc;
+  }).join('');
+
+  const catRows = Object.entries(buckets).map(([k,v]) => {
+    if (!v) return '';
+    const pct  = total ? (v/total*100).toFixed(1) : '0';
+    const diff = parseFloat(pct) - ideal[k];
+    const dClr = Math.abs(diff) <= 5 ? 'var(--green)' : 'var(--amber)';
+    const dTxt = `${diff>0?'+':''}${diff.toFixed(1)}% מהאידיאלי (${ideal[k]}%)`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="width:12px;height:12px;border-radius:50%;background:${colors[k]};flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${labels[k]}</div>
+        <div style="font-size:.72rem;color:${dClr};margin-top:2px">${dTxt}</div>
+      </div>
+      <div style="text-align:left;margin-left:8px">
+        <div style="font-family:var(--mono);font-weight:700;color:var(--ink)">${fmt(v)}</div>
+        <div style="font-size:.72rem;color:var(--ink-4)">${pct}%</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-header" style="margin-bottom:16px">פיזור תיק ההשקעות</div>
+      <div style="display:flex;justify-content:center;margin-bottom:8px">
+        <svg width="210" height="210" viewBox="0 0 210 210">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${sw}"/>
+          ${arcs}
+          <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
+          <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="10" fill="var(--ink-4)">סה"כ נכסים</text>
+        </svg>
+      </div>
+      ${catRows}
+    </div>
+    <div class="card" style="padding:16px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">פיזור אידיאלי לגיל ${userAge}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${Object.entries(ideal).map(([k,v])=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface2);border-radius:99px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${colors[k]}"></div>
+          <span style="font-size:.78rem;color:var(--ink-3)">${labels[k]}: </span>
+          <span style="font-size:.78rem;font-weight:700;color:var(--ink)">${v}%</span>
+        </div>`).join('')}
+      </div>
+      <p style="font-size:.72rem;color:var(--ink-4);margin-top:10px;line-height:1.6">* המלצה כללית בלבד — לא ייעוץ פיננסי. עדכן גילך בטאב תכנון פרישה לדיוק טוב יותר.</p>
+    </div>`;
+}
+
+/* ══ ANNUAL SUMMARY TAB ══════════════════════════════ */
+function renderAnnualTab() {
+  const el = document.getElementById('annual-content');
+  if (!el) return;
+  if (!records.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-4)">אין נתונים</div>'; return; }
+
+  const years = [...new Set(records.map(r => new Date(r.record_date).getFullYear()))].sort((a,b)=>b-a);
+  const selectedYear = parseInt(el.dataset.year) || years[0];
+  const yr = records.filter(r => new Date(r.record_date).getFullYear() === selectedYear)
+    .sort((a,b) => new Date(a.record_date) - new Date(b.record_date));
+
+  if (!yr.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink-4)">אין נתונים לשנה זו</div>'; return; }
+
+  const calcs   = yr.map(r => ({ r, c: calcRecord(r) }));
+  const first   = calcs[0].c.totalAssets;
+  const last    = calcs[calcs.length-1].c.totalAssets;
+  const growth  = last - first;
+  const gPct    = first ? (growth/first*100).toFixed(1) : '0';
+
+  let bestIdx = -1, worstIdx = -1, bestDelta = -Infinity, worstDelta = Infinity;
+  for (let i = 1; i < calcs.length; i++) {
+    const d = calcs[i].c.totalAssets - calcs[i-1].c.totalAssets;
+    if (d > bestDelta)  { bestDelta  = d; bestIdx  = i; }
+    if (d < worstDelta) { worstDelta = d; worstIdx = i; }
+  }
+
+  const mName = d => new Date(d).toLocaleDateString('he-IL',{month:'long'});
+  const monthAbbr = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
+
+  const monthGrid = monthAbbr.map((m,i) => {
+    const entry = calcs.find(({r}) => new Date(r.record_date).getMonth() === i);
+    if (!entry) return `<div style="padding:10px 6px;border-radius:8px;background:var(--surface2);opacity:.3;text-align:center">
+      <div style="font-size:.72rem;font-family:var(--font);color:var(--ink-4)">${m}</div>
+      <div style="font-size:.72rem;color:var(--ink-4);margin-top:2px">—</div></div>`;
+    const idx = calcs.indexOf(entry);
+    const isBest  = idx === bestIdx;
+    const isWorst = idx === worstIdx && worstDelta < 0;
+    let deltaHtml = '';
+    if (idx > 0) {
+      const d = calcs[idx].c.totalAssets - calcs[idx-1].c.totalAssets;
+      const p = calcs[idx-1].c.totalAssets ? (d/calcs[idx-1].c.totalAssets*100).toFixed(1) : null;
+      if (p) deltaHtml = `<div style="font-size:.62rem;color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${p}%</div>`;
+    }
+    const border = isBest ? '1.5px solid var(--green)' : isWorst ? '1.5px solid var(--red)' : '1px solid var(--border)';
+    return `<div style="padding:10px 6px;border-radius:8px;background:var(--surface2);border:${border};text-align:center">
+      <div style="font-size:.72rem;font-family:var(--font);color:var(--ink-4)">${m}${isBest?' ⭐':isWorst?' 📉':''}</div>
+      <div style="font-size:.72rem;font-family:var(--mono);font-weight:600;color:var(--ink);margin-top:3px">${(entry.c.totalAssets/1000).toFixed(0)}K</div>
+      ${deltaHtml}</div>`;
+  }).join('');
+
+  const insights = [];
+  if (growth > 0) insights.push(`📈 גדלת ב-${fmt(growth)} השנה — צמיחה של ${gPct}%`);
+  else insights.push(`📉 ירידה של ${fmt(Math.abs(growth))} השנה`);
+  if (bestIdx > 0)  insights.push(`⭐ החודש הטוב: ${mName(calcs[bestIdx].r.record_date)} (+${fmt(bestDelta)})`);
+  if (worstIdx > 0 && worstDelta < 0) insights.push(`⚠️ החודש הקשה: ${mName(calcs[worstIdx].r.record_date)} (${fmt(worstDelta)})`);
+  const avgM = calcs.length > 1 ? growth/(calcs.length-1) : 0;
+  if (avgM > 0) insights.push(`📊 ממוצע חודשי: +${fmt(avgM)}`);
+  if (yr.length < 6) insights.push(`💡 יש לך ${yr.length} חודשים מתועדים השנה בלבד`);
+
+  // 🚀 Fastest growing category this year
+  if (yr.length >= 2) {
+    const firstCalc = calcRecord(yr[0]);
+    const lastCalc  = calcRecord(yr[yr.length-1]);
+    let fastestCat = null, fastestPct = -Infinity;
+    let sleepyCat  = null, sleepyPct  = Infinity;
+    categories.forEach(cat => {
+      const vFirst = firstCalc[cat.key] || 0;
+      const vLast  = lastCalc[cat.key]  || 0;
+      if (vFirst <= 0 || vLast <= 0) return;
+      const pct = (vLast - vFirst) / vFirst * 100;
+      if (pct > fastestPct) { fastestPct = pct; fastestCat = cat; }
+      if (Math.abs(pct) < Math.abs(sleepyPct)) { sleepyPct = pct; sleepyCat = cat; }
+    });
+    if (fastestCat && fastestPct > 0)
+      insights.push(`🚀 הקטגוריה שצמחה הכי מהר: ${fastestCat.label} (+${fastestPct.toFixed(1)}%)`);
+    if (sleepyCat && Math.abs(sleepyPct) < 2)
+      insights.push(`😴 הקטגוריה הישנה ביותר: ${sleepyCat.label} — כמעט ללא שינוי (${sleepyPct >= 0 ? '+' : ''}${sleepyPct.toFixed(1)}%)`);
+  }
+
+  // 💰 Projection to milestone
+  if (avgM > 0 && last > 0) {
+    const milestones = [500000, 750000, 1000000, 1500000, 2000000, 3000000, 5000000];
+    const nextMilestone = milestones.find(m => m > last);
+    if (nextMilestone) {
+      const monthsNeeded = Math.ceil((nextMilestone - last) / avgM);
+      const targetDate   = new Date();
+      targetDate.setMonth(targetDate.getMonth() + monthsNeeded);
+      const targetYear   = targetDate.getFullYear();
+      const targetMonth  = targetDate.toLocaleDateString('he-IL', { month: 'long' });
+      const milLabel     = nextMilestone >= 1000000 ? `${nextMilestone/1000000}M₪` : `${nextMilestone/1000}K₪`;
+      insights.push(`💰 אם המגמה תמשך — תגיע ל-${milLabel} ב${targetMonth} ${targetYear} (${monthsNeeded} חודשים)`);
+    }
+  }
+
+  const yearBtns = years.map(y=>`<button onclick="document.getElementById('annual-content').dataset.year='${y}';renderAnnualTab()"
+    style="padding:6px 14px;border-radius:99px;border:1.5px solid ${y===selectedYear?'var(--green)':'var(--border)'};
+    background:${y===selectedYear?'rgba(14,158,126,.15)':'transparent'};
+    color:${y===selectedYear?'var(--green)':'var(--ink-3)'};
+    font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer">${y}</button>`).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${yearBtns}</div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-header" style="margin-bottom:16px">סיכום ${selectedYear}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center">
+          <div style="font-size:.65rem;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">פתיחה</div>
+          <div style="font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.875rem">${fmt(first)}</div>
+        </div>
+        <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center">
+          <div style="font-size:.65rem;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">סגירה</div>
+          <div style="font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.875rem">${fmt(last)}</div>
+        </div>
+        <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center;border:1.5px solid ${growth>=0?'var(--green)':'var(--red)'}">
+          <div style="font-size:.65rem;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">גידול</div>
+          <div style="font-family:var(--mono);font-weight:800;color:${growth>=0?'var(--green)':'var(--red)'};font-size:.875rem">${growth>=0?'+':''}${gPct}%</div>
+        </div>
+      </div>
+      <div class="section-header" style="margin-bottom:10px;font-size:.7rem">12 חודשים</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${monthGrid}</div>
+    </div>
+    <div class="card" style="padding:16px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">תובנות</div>
+      ${insights.map(i=>`<div style="padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem;color:var(--ink-2);line-height:1.5">${i}</div>`).join('')}
+    </div>`;
+}
+
 
 function toggleAddForm() {
   const f=document.getElementById('add-form');

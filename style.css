@@ -475,8 +475,9 @@ select option{background:var(--surface)}
   .app-content{padding-bottom:60px}
   .topbar{padding:0 16px}
   .app-main{padding:16px 14px 24px}
-  .bottom-nav{display:flex !important;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--surface);border-top:1px solid var(--border);z-index:50;align-items:stretch}
-  .bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:var(--ink-3);font-family:var(--font);font-size:.65rem;font-weight:600;cursor:pointer;transition:color .18s}
+  .bottom-nav{display:flex !important;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--surface);border-top:1px solid var(--border);z-index:50;align-items:stretch;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none}
+  .bottom-nav::-webkit-scrollbar{display:none}
+  .bottom-nav-item{flex:0 0 auto;min-width:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;color:var(--ink-3);font-family:var(--font);font-size:.65rem;font-weight:600;cursor:pointer;transition:color .18s;padding:0 4px}
   .bottom-nav-item .nav-icon{font-size:1.2rem}
   .bottom-nav-item.active{color:var(--green)}
   .hero-strip{grid-template-columns:1fr 1fr;gap:10px}

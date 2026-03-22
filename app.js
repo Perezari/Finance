@@ -1689,7 +1689,7 @@ function renderChart() {
   opts.plugins.tooltip.callbacks.label = function(ctx) {
     const base = ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
     if (ctx.datasetIndex===0 && ctx.dataIndex===bestIdx)
-      return [base, ` ⭐ החודש הטוב ביותר! (+${fmt(bestGrowth)})`];
+      return [base, ` · החודש הטוב ביותר! (+${fmt(bestGrowth)})`];
     return base;
   };
 
@@ -2688,19 +2688,29 @@ function renderAnnualTab() {
     }
     const border = isBest ? '1.5px solid var(--green)' : isWorst ? '1.5px solid var(--red)' : '1px solid var(--border)';
     return `<div style="padding:10px 6px;border-radius:8px;background:var(--surface2);border:${border};text-align:center">
-      <div style="font-size:.72rem;font-family:var(--font);color:var(--ink-4)">${m}${isBest?' ⭐':isWorst?' 📉':''}</div>
+      <div style="font-size:.72rem;font-family:var(--font);color:var(--ink-4);display:flex;align-items:center;justify-content:center;gap:3px">${m}${isBest?`<svg width="10" height="10" viewBox="0 0 24 24" fill="var(--green)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`:isWorst?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`:''}</div>
       <div style="font-size:.72rem;font-family:var(--mono);font-weight:600;color:var(--ink);margin-top:3px">${(entry.c.totalAssets/1000).toFixed(0)}K</div>
       ${deltaHtml}</div>`;
   }).join('');
 
+  const SVG_UP    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`;
+  const SVG_DOWN  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`;
+  const SVG_STAR  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green)" stroke="none" style="flex-shrink:0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  const SVG_WARN  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--yellow, #f59e0b)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+  const SVG_AVG   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`;
+  const SVG_INFO  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  const SVG_FAST  = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+  const SVG_SLEEP = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><line x1="8" y1="6" x2="16" y2="6"/><line x1="10" y1="12" x2="16" y2="12"/><line x1="12" y1="18" x2="16" y2="18"/></svg>`;
+  const SVG_TARGET= `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+
   const insights = [];
-  if (growth > 0) insights.push(`📈 גדלת ב-${fmt(growth)} השנה — צמיחה של ${gPct}%`);
-  else insights.push(`📉 ירידה של ${fmt(Math.abs(growth))} השנה`);
-  if (bestIdx > 0)  insights.push(`⭐ החודש הטוב: ${mName(calcs[bestIdx].r.record_date)} (+${fmt(bestDelta)})`);
-  if (worstIdx > 0 && worstDelta < 0) insights.push(`⚠️ החודש הקשה: ${mName(calcs[worstIdx].r.record_date)} (${fmt(worstDelta)})`);
+  if (growth > 0) insights.push([SVG_UP,   `גדלת ב-${fmt(growth)} השנה — צמיחה של ${gPct}%`]);
+  else            insights.push([SVG_DOWN,  `ירידה של ${fmt(Math.abs(growth))} השנה`]);
+  if (bestIdx > 0)  insights.push([SVG_STAR, `החודש הטוב: ${mName(calcs[bestIdx].r.record_date)} (+${fmt(bestDelta)})`]);
+  if (worstIdx > 0 && worstDelta < 0) insights.push([SVG_WARN, `החודש הקשה: ${mName(calcs[worstIdx].r.record_date)} (${fmt(worstDelta)})`]);
   const avgM = calcs.length > 1 ? growth/(calcs.length-1) : 0;
-  if (avgM > 0) insights.push(`📊 ממוצע חודשי: +${fmt(avgM)}`);
-  if (yr.length < 6) insights.push(`💡 יש לך ${yr.length} חודשים מתועדים השנה בלבד`);
+  if (avgM > 0) insights.push([SVG_AVG, `ממוצע חודשי: +${fmt(avgM)}`]);
+  if (yr.length < 6) insights.push([SVG_INFO, `יש לך ${yr.length} חודשים מתועדים השנה בלבד`]);
 
   // 🚀 Fastest growing category this year
   if (yr.length >= 2) {
@@ -2717,9 +2727,9 @@ function renderAnnualTab() {
       if (Math.abs(pct) < Math.abs(sleepyPct)) { sleepyPct = pct; sleepyCat = cat; }
     });
     if (fastestCat && fastestPct > 0)
-      insights.push(`🚀 הקטגוריה שצמחה הכי מהר: ${fastestCat.label} (+${fastestPct.toFixed(1)}%)`);
+      insights.push([SVG_FAST,  `הקטגוריה שצמחה הכי מהר: ${fastestCat.label} (+${fastestPct.toFixed(1)}%)`]);
     if (sleepyCat && Math.abs(sleepyPct) < 2)
-      insights.push(`😴 הקטגוריה הישנה ביותר: ${sleepyCat.label} — כמעט ללא שינוי (${sleepyPct >= 0 ? '+' : ''}${sleepyPct.toFixed(1)}%)`);
+      insights.push([SVG_SLEEP, `הקטגוריה הישנה ביותר: ${sleepyCat.label} — כמעט ללא שינוי (${sleepyPct >= 0 ? '+' : ''}${sleepyPct.toFixed(1)}%)`]);
   }
 
   // 💰 Projection to milestone
@@ -2733,7 +2743,7 @@ function renderAnnualTab() {
       const targetYear   = targetDate.getFullYear();
       const targetMonth  = targetDate.toLocaleDateString('he-IL', { month: 'long' });
       const milLabel     = nextMilestone >= 1000000 ? `${nextMilestone/1000000}M₪` : `${nextMilestone/1000}K₪`;
-      insights.push(`💰 אם המגמה תמשך — תגיע ל-${milLabel} ב${targetMonth} ${targetYear} (${monthsNeeded} חודשים)`);
+      insights.push([SVG_TARGET, `אם המגמה תמשך — תגיע ל-${milLabel} ב${targetMonth} ${targetYear} (${monthsNeeded} חודשים)`]);
     }
   }
 
@@ -2766,7 +2776,7 @@ function renderAnnualTab() {
     </div>
     <div class="card" style="padding:16px">
       <div style="font-size:.78rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">תובנות</div>
-      ${insights.map(i=>`<div style="padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem;color:var(--ink-2);line-height:1.5">${i}</div>`).join('')}
+      ${insights.map(([icon, text])=>`<div style="padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem;color:var(--ink-2);line-height:1.5;display:flex;align-items:center;gap:8px">${icon}<span>${text}</span></div>`).join('')}
     </div>`;
 }
 

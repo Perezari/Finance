@@ -310,18 +310,12 @@
         <h3>הוסף קטגוריה חדשה</h3>
         <div class="add-cat-form">
 
-          <!-- Category name dropdown -->
-          <div style="position:relative" id="cat-name-dropdown-wrap">
+          <!-- Category name picker (opens modal) -->
+          <div id="cat-name-dropdown-wrap">
             <button type="button" id="cat-name-dropdown-btn" onclick="toggleCatNameDropdown()" class="form-input" style="width:100%;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface2);text-align:right">
               <span id="cat-name-dropdown-label" style="color:var(--ink-4)">בחר סוג חשבון / נכס</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div id="cat-name-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xs);z-index:99;max-height:260px;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-md)">
-              <div style="padding:8px;border-bottom:1px solid var(--border)">
-                <input type="text" id="cat-name-search" placeholder="חפש קטגוריה..." class="form-input" style="width:100%;font-size:.82rem;direction:rtl;text-align:right" oninput="filterCatNameDropdown()"/>
-              </div>
-              <div id="cat-name-dropdown-list"></div>
-            </div>
           </div>
           <input type="hidden" id="new-cat-type" value=""/>
 
@@ -336,18 +330,12 @@
             <button type="button" class="cat-type-btn" data-type="invest"  onclick="selectCatType('invest')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:4px"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>השקעות</button>
           </div>
 
-          <!-- Institution dropdown -->
-          <div style="position:relative" id="inst-dropdown-wrap">
+          <!-- Institution picker (reuses inst-modal) -->
+          <div id="inst-dropdown-wrap">
             <button type="button" id="inst-dropdown-btn" onclick="toggleInstDropdown()" class="form-input" style="width:100%;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface2);text-align:right">
               <span id="inst-dropdown-label" style="color:var(--ink-4)">גוף מנהל (אופציונלי)</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div id="inst-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xs);z-index:99;max-height:220px;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-md)">
-              <div style="padding:8px;border-bottom:1px solid var(--border)">
-                <input type="text" id="inst-dropdown-search" placeholder="חפש גוף..." class="form-input" style="width:100%;font-size:.82rem;direction:rtl;text-align:right" oninput="filterInstDropdown()"/>
-              </div>
-              <div id="inst-dropdown-list"></div>
-            </div>
           </div>
           <input type="hidden" id="new-cat-institution" value=""/>
 

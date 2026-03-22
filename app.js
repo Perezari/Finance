@@ -502,7 +502,7 @@ function renderInstDropdownList(filter = '') {
 }
 
 function showAddCustomInst() {
-  document.getElementById('inst-dropdown-menu').style.display = 'none';
+  document.getElementById('inst-modal').style.display = 'none';
   document.getElementById('add-custom-inst-modal')?.remove();
 
   const modal = document.createElement('div');
@@ -603,33 +603,21 @@ function filterInstDropdown() {
 }
 
 function toggleInstDropdown() {
-  const menu = document.getElementById('inst-dropdown-menu');
-  if (!menu) return;
-  const isOpen = menu.style.display !== 'none';
-  menu.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) {
-    renderInstDropdownList('');
-    const search = document.getElementById('inst-dropdown-search');
-    if (search) search.value = '';
-    setTimeout(() => search?.focus(), 50);
-  }
+  instTargetMode  = 'new_cat';
+  instTargetCatId = null;
+  const customInsts = JSON.parse(currentUser?.user_metadata?.custom_institutions || '[]');
+  renderInstGrid([...INSTITUTIONS, ...customInsts]);
+  document.getElementById('inst-modal').style.display = 'flex';
+  document.getElementById('inst-search').value = '';
 }
 
 function selectInstDropdown(id, name) {
   document.getElementById('new-cat-institution').value = id;
   document.getElementById('inst-dropdown-label').textContent = name || 'גוף מנהל (אופציונלי)';
   document.getElementById('inst-dropdown-label').style.color = name ? 'var(--ink)' : 'var(--ink-4)';
-  document.getElementById('inst-dropdown-menu').style.display = 'none';
 }
 
-// Close dropdown on outside click
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('inst-dropdown-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    const menu = document.getElementById('inst-dropdown-menu');
-    if (menu) menu.style.display = 'none';
-  }
-});
+function filterInstDropdown() {} // kept for compat
 
 /* ══ CATEGORY PRESETS ════════════════════════════════ */
 const CAT_PRESETS = [
@@ -697,18 +685,54 @@ function filterCatNameDropdown() {
 }
 
 function toggleCatNameDropdown() {
-  const menu = document.getElementById('cat-name-dropdown-menu');
-  if (!menu) return;
-  const isOpen = menu.style.display !== 'none';
-  menu.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) {
-    renderCatNameDropdownList();
-    setTimeout(() => document.getElementById('cat-name-search')?.focus(), 50);
-  }
+  document.getElementById('cat-name-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'cat-name-modal';
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal-box" style="max-height:70vh;">
+      <div class="modal-header">
+        <h2>${ICONS_JS.note} בחר סוג חשבון / נכס</h2>
+        <button onclick="document.getElementById('cat-name-modal').remove()" class="modal-close">${ICONS_JS.x}</button>
+      </div>
+      <div class="modal-body" style="padding:12px 16px 32px;">
+        <input type="text" id="cat-name-search" placeholder="חפש קטגוריה..." class="form-input"
+          style="width:100%;margin-bottom:12px;direction:rtl;text-align:right"
+          oninput="filterCatNameModal(this.value)"/>
+        <div id="cat-name-modal-list"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  renderCatNameModalList('');
+  setTimeout(() => document.getElementById('cat-name-search')?.focus(), 80);
 }
 
+function renderCatNameModalList(filter) {
+  const list = document.getElementById('cat-name-modal-list');
+  if (!list) return;
+  const q = (filter || '').trim().toLowerCase();
+  let html = '';
+  CAT_PRESETS.forEach(group => {
+    const items = q ? group.items.filter(i => i.label.includes(filter) || i.label.toLowerCase().includes(q)) : group.items;
+    if (!items.length) return;
+    html += `<div style="padding:5px 14px;font-size:.68rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border)">${group.group}</div>`;
+    html += items.map(item => `
+      <div data-label="${item.label.replace(/"/g,'&quot;')}" data-type="${item.type}"
+        onclick="selectCatName(this.dataset.label,this.dataset.type)"
+        style="padding:12px 16px;font-size:.88rem;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border);direction:rtl"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        ${item.label}
+      </div>`).join('');
+  });
+  list.innerHTML = html || `<div style="padding:16px;text-align:center;color:var(--ink-4);font-size:.875rem">לא נמצאה קטגוריה</div>`;
+}
+
+function filterCatNameModal(q) { renderCatNameModalList(q); }
+
 function selectCatName(label, type) {
-  document.getElementById('cat-name-dropdown-menu').style.display = 'none';
+  document.getElementById('cat-name-modal')?.remove();
   document.getElementById('cat-name-dropdown-label').textContent = label;
   document.getElementById('cat-name-dropdown-label').style.color = 'var(--ink)';
   document.getElementById('new-cat-type').value = type === 'custom' ? '' : type;
@@ -718,7 +742,6 @@ function selectCatName(label, type) {
     customField.value = '';
     customField.focus();
     customField.dataset.customType = '';
-    // Show type picker for custom
     document.getElementById('cat-custom-type-wrap').style.display = 'grid';
   } else {
     customField.style.display = 'none';
@@ -730,10 +753,8 @@ function selectCatName(label, type) {
 document.addEventListener('click', e => {
   const wrap = document.getElementById('cat-name-dropdown-wrap');
   if (wrap && !wrap.contains(e.target)) {
-    const menu = document.getElementById('cat-name-dropdown-menu');
-    if (menu) menu.style.display = 'none';
     const search = document.getElementById('cat-name-search');
-    if (search) { search.value = ''; }
+    if (search) search.value = '';
   }
 });
 
@@ -825,6 +846,11 @@ function filterInstitutions() {
 }
 
 function renderInstGrid(list) {
+  const addBtn = instTargetMode === 'new_cat' ? `
+    <div class="inst-tile" onclick="closeInstModal();showAddCustomInst()" style="border:1.5px dashed var(--border);color:var(--green)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span class="inst-name" style="color:var(--green)">הוסף חדש</span>
+    </div>` : '';
   document.getElementById('inst-grid').innerHTML = `
     <div class="inst-none-btn" onclick="pickInstitution(null)">
       ${ICONS_JS.noInst}
@@ -836,10 +862,17 @@ function renderInstGrid(list) {
            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
       <div class="inst-logo-fallback" style="display:none">${i.name[0]}</div>
       <span class="inst-name">${i.name}</span>
-    </div>`).join('')}`;
+    </div>`).join('')}
+    ${addBtn}`;
 }
 
 async function pickInstitution(instId) {
+  if (instTargetMode === 'new_cat') {
+    closeInstModal();
+    const inst = instId ? getInstitution(instId) : null;
+    selectInstDropdown(instId || '', inst?.name || '');
+    return;
+  }
   if (instTargetMode === 'mortgage' || instTargetMode === 'mortgage_settings') {
     closeInstModal();
     if (instId) {
@@ -2674,8 +2707,8 @@ function renderAnnualTab() {
 
   const monthGrid = monthAbbr.map((m,i) => {
     const entry = calcs.find(({r}) => new Date(r.record_date).getMonth() === i);
-    if (!entry) return `<div style="padding:10px 6px;border-radius:8px;background:var(--surface2);opacity:.3;text-align:center">
-      <div style="font-size:.72rem;font-family:var(--font);color:var(--ink-4)">${m}</div>
+    if (!entry) return `<div style="padding:10px 6px;border-radius:8px;background:var(--surface2);border:1px dashed var(--border);text-align:center">
+      <div style="font-size:.78rem;font-family:var(--font);font-weight:600;color:var(--ink-3)">${m}</div>
       <div style="font-size:.72rem;color:var(--ink-4);margin-top:2px">—</div></div>`;
     const idx = calcs.indexOf(entry);
     const isBest  = idx === bestIdx;
@@ -2684,12 +2717,12 @@ function renderAnnualTab() {
     if (idx > 0) {
       const d = calcs[idx].c.totalAssets - calcs[idx-1].c.totalAssets;
       const p = calcs[idx-1].c.totalAssets ? (d/calcs[idx-1].c.totalAssets*100).toFixed(1) : null;
-      if (p) deltaHtml = `<div style="font-size:.62rem;color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${p}%</div>`;
+      if (p) deltaHtml = `<div style="font-size:.72rem;color:${d>=0?'var(--green)':'var(--red)'}">${d>=0?'+':''}${p}%</div>`;
     }
-    const border = isBest ? '1.5px solid var(--green)' : isWorst ? '1.5px solid var(--red)' : '1px solid var(--border)';
+    const border = isBest ? '1.5px dashed var(--green)' : isWorst ? '1.5px dashed var(--red)' : '1px dashed var(--border)';
     return `<div style="padding:10px 6px;border-radius:8px;background:var(--surface2);border:${border};text-align:center">
-      <div style="font-size:.72rem;font-family:var(--font);color:var(--ink-4);display:flex;align-items:center;justify-content:center;gap:3px">${m}${isBest?`<svg width="10" height="10" viewBox="0 0 24 24" fill="var(--green)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`:isWorst?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`:''}</div>
-      <div style="font-size:.72rem;font-family:var(--mono);font-weight:600;color:var(--ink);margin-top:3px">${(entry.c.totalAssets/1000).toFixed(0)}K</div>
+      <div style="font-size:.78rem;font-family:var(--font);font-weight:600;color:var(--ink-3);display:flex;align-items:center;justify-content:center;gap:3px">${m}${isBest?`<svg width="10" height="10" viewBox="0 0 24 24" fill="var(--green)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`:isWorst?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`:''}</div>
+      <div style="font-size:.82rem;font-family:var(--mono);font-weight:700;color:var(--ink);margin-top:3px">${(entry.c.totalAssets/1000).toFixed(0)}K</div>
       ${deltaHtml}</div>`;
   }).join('');
 
@@ -2759,16 +2792,16 @@ function renderAnnualTab() {
       <div class="section-header" style="margin-bottom:16px">סיכום ${selectedYear}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
         <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center">
-          <div style="font-size:.65rem;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">פתיחה</div>
-          <div style="font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.875rem">${fmt(first)}</div>
+          <div style="font-size:.75rem;font-family:var(--font);font-weight:600;color:var(--ink-3);margin-bottom:6px">פתיחה</div>
+          <div style="font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.9rem">${fmt(first)}</div>
         </div>
         <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center">
-          <div style="font-size:.65rem;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">סגירה</div>
-          <div style="font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.875rem">${fmt(last)}</div>
+          <div style="font-size:.75rem;font-family:var(--font);font-weight:600;color:var(--ink-3);margin-bottom:6px">סגירה</div>
+          <div style="font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.9rem">${fmt(last)}</div>
         </div>
-        <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center;border:1.5px solid ${growth>=0?'var(--green)':'var(--red)'}">
-          <div style="font-size:.65rem;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">גידול</div>
-          <div style="font-family:var(--mono);font-weight:800;color:${growth>=0?'var(--green)':'var(--red)'};font-size:.875rem">${growth>=0?'+':''}${gPct}%</div>
+        <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center;border:1.5px dashed ${growth>=0?'var(--green)':'var(--red)'}">
+          <div style="font-size:.75rem;font-family:var(--font);font-weight:600;color:var(--ink-3);margin-bottom:6px">גידול</div>
+          <div style="font-family:var(--mono);font-weight:800;color:${growth>=0?'var(--green)':'var(--red)'};font-size:.9rem">${growth>=0?'+':''}${gPct}%</div>
         </div>
       </div>
       <div class="section-header" style="margin-bottom:10px;font-size:.7rem">12 חודשים</div>

@@ -4,31 +4,35 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /* ── ISRAELI INSTITUTIONS ──────────────────────────── */
 const INSTITUTIONS = [
   /* Banks */
-  { id:'hapoalim',   name:'בנק הפועלים',       domain:'bankhapoalim.co.il',  type:'bank' },
-  { id:'leumi',      name:'בנק לאומי',          domain:'https://www.leumi.co.il/he',         type:'bank' },
-  { id:'discount',   name:'בנק דיסקונט',        domain:'https://www.discountbank.co.il/',      type:'bank' },
-  { id:'mizrahi',    name:'מזרחי-טפחות',        domain:'https://www.mizrahi-tefahot.co.il/',type:'bank'},
+  { id:'discount',   name:'בנק דיסקונט',        domain:'https://www.discountbank.co.il/',          type:'bank' },
+  { id:'hapoalim',   name:'בנק הפועלים',        domain:'bankhapoalim.co.il',                       type:'bank' },
+  { id:'igud',       name:'בנק יהב',            domain:'bank-yahav.co.il',                         type:'bank' },
+  { id:'jerusalem',  name:'בנק ירושלים',        domain:'https://www.bankjerusalem.co.il/',         type:'bank' },
+  { id:'leumi',      name:'בנק לאומי',          domain:'https://www.leumi.co.il/he',               type:'bank' },
+  { id:'onezero',    name:'ONE ZERO',           domain:'https://www.onezerobank.com/',             type:'bank' },
+  { id:'mizrahi',    name:'מזרחי טפחות',        domain:'https://www.mizrahi-tefahot.co.il/',       type:'bank'},
+  { id:'masad',      name:'בנק מסד',            domain:'https://www.bankmassad.co.il/',            type:'bank'},
+  { id:'marcantil',  name:'בנק מרכנטיל',        domain:'https://www.mercantile.co.il/',            type:'bank'},
   { id:'fibi',       name:'הבינלאומי',          domain:'https://www.fibi.co.il/private/',          type:'bank' },
-  { id:'igud',       name:'בנק יהב',            domain:'bank-yahav.co.il',    type:'bank' },
-  { id:'otzar',      name:'אוצר החייל',         domain:'https://www.bankotsar.co.il/private/',     type:'bank' },
+  { id:'esh',        name:'בנק אש',             domain:'https://esh.com/',                         type:'bank' },
   /* Insurance / Pension */
-  { id:'migdal',     name:'מגדל',               domain:'migdal.co.il',        type:'pension' },
-  { id:'harel',      name:'הראל',               domain:'harel.co.il',         type:'pension' },
-  { id:'menora',     name:'מנורה מבטחים',       domain:'https://www.menoramivt.co.il/',        type:'pension' },
-  { id:'phoenix',    name:'הפניקס',             domain:'fnx.co.il',           type:'pension' },
-  { id:'clal',       name:'כלל ביטוח',          domain:'https://www.clalbit.co.il/',       type:'pension' },
-  { id:'ayalon',     name:'איילון',             domain:'https://www.ayalon-ins.co.il/',        type:'pension' },
+  { id:'migdal',     name:'מגדל',               domain:'migdal.co.il',                             type:'pension' },
+  { id:'harel',      name:'הראל',               domain:'harel.co.il',                              type:'pension' },
+  { id:'menora',     name:'מנורה מבטחים',       domain:'https://www.menoramivt.co.il/',            type:'pension' },
+  { id:'phoenix',    name:'הפניקס',             domain:'fnx.co.il',                                type:'pension' },
+  { id:'clal',       name:'כלל ביטוח',          domain:'https://www.clalbit.co.il/',               type:'pension' },
+  { id:'ayalon',     name:'איילון',             domain:'https://www.ayalon-ins.co.il/',            type:'pension' },
   /* Investment / Savings */
-  { id:'meitav',     name:'מיטב',               domain:'meitav.co.il',        type:'invest' },
-  { id:'psagot',     name:'פסגות',              domain:'psagot.co.il',        type:'invest' },
-  { id:'altshuler',  name:'אלטשולר שחם',        domain:'https://www.as-invest.co.il',type:'invest'},
-  { id:'moreinfo',   name:'מור',                domain:'mor.co.il',           type:'invest' },
-  { id:'analyst',    name:'אנליסט',             domain:'https://www.analyst.co.il/',       type:'invest' },
-  { id:'ibi',        name:'IBI',                domain:'ibi.co.il',           type:'invest' },
-  { id:'iek',        name:'ילין לפידות',        domain:'https://www.yl-invest.co.il/',         type:'invest' },
-  { id:'interactive',        name:'אינטראקטיב ישראל',        domain:'https://www.inter-il.com/client-portal/',         type:'invest' },
+  { id:'meitav',     name:'מיטב',               domain:'meitav.co.il',                             type:'invest' },
+  { id:'psagot',     name:'פסגות',              domain:'psagot.co.il',                             type:'invest' },
+  { id:'altshuler',  name:'אלטשולר שחם',        domain:'https://www.as-invest.co.il',              type:'invest'},
+  { id:'moreinfo',   name:'מור',                domain:'mor.co.il',                                type:'invest' },
+  { id:'analyst',    name:'אנליסט',             domain:'https://www.analyst.co.il/',               type:'invest' },
+  { id:'ibi',        name:'IBI',                domain:'ibi.co.il',                                type:'invest' },
+  { id:'iek',        name:'ילין לפידות',        domain:'https://www.yl-invest.co.il/',             type:'invest' },
+  { id:'inter',      name:'אינטראקטיב ישראל',   domain:'https://www.inter-il.com/client-portal/',  type:'invest' },
   /* Savings funds */
-  { id:'worker',     name:'קרן הגמל לעובד',     domain:'hishtalmut.co.il',    type:'savings'},
+  { id:'worker',     name:'קרן הגמל לעובד',     domain:'hishtalmut.co.il',                         type:'savings'},
 ];
 
 
@@ -136,6 +140,7 @@ async function loadApp() {
   renderCurrentReport();
   updateUserUI();
   syncDarkModeFromCloud();
+  initColorTheme();
   checkAutoBackup();
   // Fix stale _share_invite row if owner name wasn't stored correctly
   const isOwner = !!(currentUser.user_metadata?.partner_email);
@@ -440,32 +445,337 @@ async function loadCategories() {
 function getInstitution(id) { return INSTITUTIONS.find(i => i.id === id) || null; }
 
 function populateInstitutionSelect() {
-  const sel = document.getElementById('new-cat-institution'); if (!sel) return;
+  // Legacy select (for other uses) - keep for compatibility
+  const sel = document.getElementById('new-cat-institution-legacy');
+  if (sel) {
+    const groups = { bank:'בנקים', pension:'פנסיה וביטוח', invest:'השקעות', savings:'חסכון' };
+    let html = '<option value="">גוף מנהל (אופציונלי)</option>';
+    Object.entries(groups).forEach(([type, label]) => {
+      const items = INSTITUTIONS.filter(i => i.type === type);
+      html += `<optgroup label="${label}">`;
+      items.forEach(i => { html += `<option value="${i.id}">${i.name}</option>`; });
+      html += '</optgroup>';
+    });
+    sel.innerHTML = html;
+  }
+  renderInstDropdownList();
+}
+
+function renderInstDropdownList(filter = '') {
+  const list = document.getElementById('inst-dropdown-list');
+  if (!list) return;
+
+  // Load custom institutions from Supabase user_metadata
+  const customInsts = JSON.parse(currentUser?.user_metadata?.custom_institutions || '[]');
+  const allInsts = [...INSTITUTIONS, ...customInsts];
+
   const groups = { bank:'בנקים', pension:'פנסיה וביטוח', invest:'השקעות', savings:'חסכון' };
-  let html = '<option value="">גוף מנהל (אופציונלי)</option>';
+  let html = `<div onclick="selectInstDropdown('','')" style="padding:9px 14px;font-size:.82rem;color:var(--ink-4);cursor:pointer;border-bottom:1px solid var(--border)"
+    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">ללא גוף מנהל</div>`;
+
   Object.entries(groups).forEach(([type, label]) => {
-    const items = INSTITUTIONS.filter(i => i.type === type);
-    html += `<optgroup label="${label}">`;
-    items.forEach(i => { html += `<option value="${i.id}">${i.name}</option>`; });
-    html += '</optgroup>';
+    const items = allInsts.filter(i => i.type === type && (!filter || i.name.includes(filter)));
+    if (!items.length) return;
+    html += `<div style="padding:5px 14px;font-size:.68rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border)">${label}</div>`;
+    items.forEach(inst => {
+      const isCustom = inst.id.startsWith('custom_');
+      const logo = `<img src="${logoUrl(inst.domain)}" width="16" height="16" style="border-radius:3px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>`;
+      const delBtn = isCustom ? `<button data-inst-id="${inst.id}" data-inst-name="${inst.name.replace(/"/g,'&quot;')}"
+        onclick="event.stopPropagation();deleteCustomInst(this.dataset.instId,this.dataset.instName)"
+        style="margin-right:auto;background:none;border:none;cursor:pointer;color:var(--ink-4);padding:2px;display:flex;flex-shrink:0"
+        title="מחק">${ICONS_JS.x}</button>` : '';
+      html += `<div data-inst-id="${inst.id}" data-inst-name="${inst.name.replace(/"/g,'&quot;')}"
+        onclick="selectInstDropdown(this.dataset.instId,this.dataset.instName)"
+        style="padding:9px 14px;font-size:.85rem;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${logo}${inst.name}${delBtn}</div>`;
+    });
   });
-  sel.innerHTML = html;
+
+  // Add custom institution button at bottom
+  html += `<div onclick="showAddCustomInst()" style="padding:11px 14px;font-size:.85rem;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1.5px solid var(--border)"
+    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    הוסף גוף מנהל חדש
+  </div>`;
+
+  list.innerHTML = html;
+}
+
+function showAddCustomInst() {
+  document.getElementById('inst-dropdown-menu').style.display = 'none';
+  document.getElementById('add-custom-inst-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'add-custom-inst-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:360px;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">הוסף גוף מנהל חדש</span>
+        <button onclick="document.getElementById('add-custom-inst-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:.78rem;color:var(--ink-3);font-weight:600;display:block;margin-bottom:5px">שם הגוף המנהל</label>
+          <input type="text" id="custom-inst-name" class="form-input" placeholder="למשל: בית השקעות XYZ" style="direction:rtl;text-align:right;width:100%"/>
+        </div>
+        <div>
+          <label style="font-size:.78rem;color:var(--ink-3);font-weight:600;display:block;margin-bottom:5px">קטגוריה</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <button type="button" class="cat-type-btn" data-insttype="bank"    onclick="selectInstType('bank')">בנקים</button>
+            <button type="button" class="cat-type-btn" data-insttype="pension" onclick="selectInstType('pension')">פנסיה וביטוח</button>
+            <button type="button" class="cat-type-btn" data-insttype="invest"  onclick="selectInstType('invest')">השקעות</button>
+            <button type="button" class="cat-type-btn" data-insttype="savings" onclick="selectInstType('savings')">חסכון</button>
+          </div>
+          <input type="hidden" id="custom-inst-type" value=""/>
+        </div>
+        <div>
+          <label style="font-size:.78rem;color:var(--ink-3);font-weight:600;display:block;margin-bottom:5px">כתובת אתר (לצורך לוגו)</label>
+          <input type="text" id="custom-inst-domain" class="form-input" placeholder="example.co.il" style="direction:ltr;text-align:left;width:100%" oninput="previewCustomInstLogo()"/>
+        </div>
+        <div id="custom-inst-logo-preview" style="display:none;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--r-xs)">
+          <img id="custom-inst-logo-img" width="32" height="32" style="border-radius:6px;object-fit:contain"/>
+          <span id="custom-inst-logo-label" style="font-size:.82rem;color:var(--ink-3)">תצוגה מקדימה</span>
+        </div>
+        <button onclick="saveCustomInst()" class="submit-btn" style="margin-top:4px">הוסף גוף מנהל</button>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('custom-inst-name')?.focus(), 50);
+}
+
+function selectInstType(type) {
+  document.getElementById('custom-inst-type').value = type;
+  document.querySelectorAll('[data-insttype]').forEach(b =>
+    b.classList.toggle('selected', b.dataset.insttype === type));
+}
+
+function previewCustomInstLogo() {
+  const domain = document.getElementById('custom-inst-domain')?.value.trim();
+  const preview = document.getElementById('custom-inst-logo-preview');
+  const img     = document.getElementById('custom-inst-logo-img');
+  const label   = document.getElementById('custom-inst-logo-label');
+  if (!domain) { preview.style.display = 'none'; return; }
+  const url = logoUrl(domain);
+  img.src = url;
+  img.onerror = () => { label.textContent = 'לוגו לא נמצא — האתר ישמר בכל זאת'; };
+  img.onload  = () => { label.textContent = 'לוגו נמצא ✅'; };
+  preview.style.display = 'flex';
+}
+
+async function saveCustomInst() {
+  const name   = document.getElementById('custom-inst-name')?.value.trim();
+  const type   = document.getElementById('custom-inst-type')?.value;
+  const domain = document.getElementById('custom-inst-domain')?.value.trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+  if (!name) { showToast('נא להזין שם'); return; }
+  if (!type) { showToast('נא לבחור קטגוריה'); return; }
+
+  const id = 'custom_' + Date.now().toString(36);
+  const existing = JSON.parse(currentUser?.user_metadata?.custom_institutions || '[]');
+  existing.push({ id, name, domain: domain || '', type });
+
+  const { data } = await db.auth.updateUser({ data: { custom_institutions: JSON.stringify(existing) } });
+  if (data?.user) currentUser = data.user;
+
+  document.getElementById('add-custom-inst-modal')?.remove();
+  selectInstDropdown(id, name);
+  showToast(`✅ ${name} נוסף`);
+}
+
+async function deleteCustomInst(id, name) {
+  if (!confirm(`למחוק את ${name}?`)) return;
+  const existing = JSON.parse(currentUser?.user_metadata?.custom_institutions || '[]');
+  const updated  = existing.filter(i => i.id !== id);
+  const { data } = await db.auth.updateUser({ data: { custom_institutions: JSON.stringify(updated) } });
+  if (data?.user) currentUser = data.user;
+  // Reset dropdown if this inst was selected
+  if (document.getElementById('new-cat-institution').value === id) {
+    selectInstDropdown('', '');
+  }
+  renderInstDropdownList(document.getElementById('inst-dropdown-search')?.value || '');
+  showToast(`🗑️ ${name} נמחק`);
+}
+
+function filterInstDropdown() {
+  const q = document.getElementById('inst-dropdown-search')?.value || '';
+  renderInstDropdownList(q);
+}
+
+function toggleInstDropdown() {
+  const menu = document.getElementById('inst-dropdown-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    renderInstDropdownList('');
+    const search = document.getElementById('inst-dropdown-search');
+    if (search) search.value = '';
+    setTimeout(() => search?.focus(), 50);
+  }
+}
+
+function selectInstDropdown(id, name) {
+  document.getElementById('new-cat-institution').value = id;
+  document.getElementById('inst-dropdown-label').textContent = name || 'גוף מנהל (אופציונלי)';
+  document.getElementById('inst-dropdown-label').style.color = name ? 'var(--ink)' : 'var(--ink-4)';
+  document.getElementById('inst-dropdown-menu').style.display = 'none';
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('inst-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('inst-dropdown-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+
+/* ══ CATEGORY PRESETS ════════════════════════════════ */
+const CAT_PRESETS = [
+  { group:'נזיל', items:[
+    { label:'עובר ושב',              type:'liquid'  },
+    { label:'מזומן',                 type:'liquid'  },
+    { label:'חשבון חיסכון',          type:'liquid'  },
+  ]},
+  { group:'בנק וחיסכון', items:[
+    { label:'פיקדון בנקאי',          type:'savings' },
+    { label:'קרן כספית',             type:'savings' },
+    { label:'תוכנית חיסכון',         type:'savings' },
+    { label:'פיקדון מובנה',          type:'savings' },
+  ]},
+  { group:'פנסיוני וגמל', items:[
+    { label:'קרן פנסיה',             type:'pension' },
+    { label:'קרן השתלמות',           type:'pension' },
+    { label:'קופת גמל לתגמולים',     type:'pension' },
+    { label:'קופת גמל להשקעה',       type:'pension' },
+    { label:'ביטוח מנהלים',          type:'pension' },
+    { label:'פוליסת חיסכון',         type:'pension' },
+    { label:'קופת גמל לפיצויים',     type:'pension' },
+    { label:'חיסכון לכל ילד',        type:'pension' },
+    { label:'קרן פנסיה ותיקה',       type:'pension' },
+  ]},
+  { group:'השקעות', items:[
+    { label:'תיק מניות',             type:'invest'  },
+    { label:'קרן נאמנות',            type:'invest'  },
+    { label:'תעודת סל',              type:'invest'  },
+    { label:'קרן נדלן',              type:'invest'  },
+    { label:'נדלן להשקעה',           type:'invest'  },
+    { label:'חשבון מסחר',            type:'invest'  },
+    { label:'קריפטו',                type:'invest'  },
+    { label:'אגח ומקמ',              type:'invest'  },
+    { label:'השקעה עסקית',           type:'invest'  },
+  ]},
+  { group:'אחר', items:[
+    { label:'קטגוריה מותאמת אישית',  type:'custom'  },
+  ]},
+];
+
+function renderCatNameDropdownList(filter = '') {
+  const list = document.getElementById('cat-name-dropdown-list');
+  if (!list) return;
+  const q = filter.trim().toLowerCase();
+  let html = '';
+  CAT_PRESETS.forEach(group => {
+    const items = q ? group.items.filter(i => i.label.includes(filter) || i.label.toLowerCase().includes(q)) : group.items;
+    if (!items.length) return;
+    html += `<div style="padding:5px 14px;font-size:.68rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-bottom:1px solid var(--border)">${group.group}</div>`;
+    html += items.map(item => `
+    <div data-label="${item.label.replace(/"/g,'&quot;')}" data-type="${item.type}"
+      onclick="selectCatName(this.dataset.label,this.dataset.type)"
+      style="padding:10px 16px;font-size:.875rem;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border);direction:rtl"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      ${item.label}
+    </div>`).join('');
+  });
+  list.innerHTML = html || `<div style="padding:16px;text-align:center;color:var(--ink-4);font-size:.875rem">לא נמצאה קטגוריה</div>`;
+}
+
+function filterCatNameDropdown() {
+  const q = document.getElementById('cat-name-search')?.value || '';
+  renderCatNameDropdownList(q);
+}
+
+function toggleCatNameDropdown() {
+  const menu = document.getElementById('cat-name-dropdown-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    renderCatNameDropdownList();
+    setTimeout(() => document.getElementById('cat-name-search')?.focus(), 50);
+  }
+}
+
+function selectCatName(label, type) {
+  document.getElementById('cat-name-dropdown-menu').style.display = 'none';
+  document.getElementById('cat-name-dropdown-label').textContent = label;
+  document.getElementById('cat-name-dropdown-label').style.color = 'var(--ink)';
+  document.getElementById('new-cat-type').value = type === 'custom' ? '' : type;
+  const customField = document.getElementById('new-cat-label');
+  if (type === 'custom') {
+    customField.style.display = 'block';
+    customField.value = '';
+    customField.focus();
+    customField.dataset.customType = '';
+    // Show type picker for custom
+    document.getElementById('cat-custom-type-wrap').style.display = 'grid';
+  } else {
+    customField.style.display = 'none';
+    customField.value = label;
+    document.getElementById('cat-custom-type-wrap') && (document.getElementById('cat-custom-type-wrap').style.display = 'none');
+  }
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('cat-name-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('cat-name-dropdown-menu');
+    if (menu) menu.style.display = 'none';
+    const search = document.getElementById('cat-name-search');
+    if (search) { search.value = ''; }
+  }
+});
+
+function selectCatType(type) {
+  document.getElementById('new-cat-type').value = type;
+  document.querySelectorAll('.cat-type-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.type === type);
+  });
 }
 
 async function addCategory() {
-  const key         = document.getElementById('new-cat-key').value.trim();
-  const label       = document.getElementById('new-cat-label').value.trim();
-  const instId      = document.getElementById('new-cat-institution').value || null;
-  if (!key || !label)                      return alert('נא למלא מזהה ושם');
-  if (!/^[a-zA-Z0-9_]+$/.test(key))       return alert('מזהה – אנגלית בלבד');
-  if (categories.find(c => c.key === key)) return alert('מזהה זה כבר קיים');
+  const labelField = document.getElementById('new-cat-label');
+  const isCustom   = labelField.style.display !== 'none';
+  const label      = isCustom ? labelField.value.trim() : document.getElementById('cat-name-dropdown-label').textContent.trim();
+  const type       = document.getElementById('new-cat-type').value;
+  const instId     = document.getElementById('new-cat-institution').value || null;
+
+  if (!label || label === 'בחר סוג חשבון / נכס') return showToast('נא לבחור קטגוריה');
+  if (!type) return showToast('נא לבחור סוג קטגוריה');
+
+  const prefixMap = { liquid:'liquid', savings:'savings', pension:'pension', invest:'invest' };
+  const base = prefixMap[type] + '_' + Date.now().toString(36);
+  let key = base, suffix = 1;
+  while (categories.find(c => c.key === key)) { key = base + '_' + suffix++; }
+
   showLoader('מוסיף...');
   await db.from('categories').insert({ user_id:currentUser.id, key, label, icon:'_svg', order_index:categories.length, institution_id:instId });
   await loadCategories(); hideLoader();
   renderCategoriesList(); renderDynamicFields();
   showToast('✅ קטגוריה נוספה');
-  ['new-cat-key','new-cat-label'].forEach(id => document.getElementById(id).value='');
+  // Reset
+  labelField.style.display = 'none';
+  labelField.value = '';
+  document.getElementById('new-cat-type').value = '';
   document.getElementById('new-cat-institution').value = '';
+  document.getElementById('cat-name-dropdown-label').textContent = 'בחר סוג חשבון / נכס';
+  document.getElementById('cat-name-dropdown-label').style.color = 'var(--ink-4)';
+  document.getElementById('inst-dropdown-label').textContent = 'גוף מנהל (אופציונלי)';
+  document.getElementById('inst-dropdown-label').style.color = 'var(--ink-4)';
+  const cw = document.getElementById('cat-custom-type-wrap');
+  if (cw) cw.style.display = 'none';
+  document.querySelectorAll('.cat-type-btn').forEach(b => b.classList.remove('selected'));
 }
 
 async function deleteCategory(id) {
@@ -930,7 +1240,11 @@ function calcRecord(r) {
 
 /* ── PENSION TAX ─────────────────────────────────────── */
 function isPensionCat(cat) {
-  return cat.key.toLowerCase().includes('pension') || cat.label.includes('פנסיה');
+  return cat.key.startsWith('pension_') ||
+         cat.key.toLowerCase().includes('pension') ||
+         cat.label.includes('פנסיה') ||
+         cat.label.includes('גמל') ||
+         cat.label.includes('ביטוח מנהלים');
 }
 
 function calcPensionTax(amount) {
@@ -1615,7 +1929,73 @@ function chartOptions() {
   };
 }
 
-/* ── PDF EXPORT ─────────────────────────────────────── */
+/* ══ EXPORT EXCEL ════════════════════════════════════ */
+function exportExcel() {
+  if (!records.length) { showToast('אין נתונים לייצוא'); return; }
+
+  const headers = ['תאריך', ...categories.map(c => c.label), 'משכנתא', 'סה"כ נכסים', 'שווי נקי (אחרי מס פנסיה)', 'הערות'];
+  const rows = [...records].sort((a,b) => new Date(a.record_date)-new Date(b.record_date)).map(r => {
+    const c   = calcRecord(r);
+    const { netAfterTax } = calcNetWorthAfterTax(c);
+    const d   = new Date(r.record_date).toLocaleDateString('he-IL', {year:'numeric', month:'long'});
+    const cats = categories.map(cat => c[cat.key] || 0);
+    return [d, ...cats, c.mortgage || 0, c.totalAssets, netAfterTax, r.notes || ''];
+  });
+
+  // Build CSV with BOM for Hebrew support in Excel
+  const bom = '\uFEFF';
+  const escape = v => typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))
+    ? `"${v.replace(/"/g,'""')}"` : v;
+  const csv = bom + [headers, ...rows].map(row => row.map(escape).join(',')).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `budgy-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('הקובץ הורד בהצלחה ✅');
+}
+
+/* ══ COLOR THEMES ════════════════════════════════════ */
+const COLOR_THEMES = [
+  { id:'green',  label:'ירוק',  primary:'#0e9e7e', dark:'#0a7a62', light:'rgba(14,158,126,.12)' },
+  { id:'blue',   label:'כחול',  primary:'#3b82f6', dark:'#1d4ed8', light:'rgba(59,130,246,.12)' },
+  { id:'purple', label:'סגול',  primary:'#8b5cf6', dark:'#6d28d9', light:'rgba(139,92,246,.12)' },
+  { id:'rose',   label:'ורוד',  primary:'#f43f5e', dark:'#be123c', light:'rgba(244,63,94,.12)'  },
+  { id:'amber',  label:'זהב',   primary:'#f59e0b', dark:'#b45309', light:'rgba(245,158,11,.12)' },
+];
+
+function applyColorTheme(themeId) {
+  const theme = COLOR_THEMES.find(t => t.id === themeId) || COLOR_THEMES[0];
+  const root  = document.documentElement;
+  root.style.setProperty('--green',       theme.primary);
+  root.style.setProperty('--green-dark',  theme.dark);
+  root.style.setProperty('--green-light', theme.light);
+  localStorage.setItem('color_theme_v1', themeId);
+  // Sync to Supabase
+  if (currentUser) db.auth.updateUser({ data: { color_theme: themeId } });
+  renderThemePicker();
+}
+
+function renderThemePicker() {
+  const el = document.getElementById('theme-picker');
+  if (!el) return;
+  const saved = localStorage.getItem('color_theme_v1') || 'green';
+  el.innerHTML = COLOR_THEMES.map(t => `
+    <button onclick="applyColorTheme('${t.id}')" title="${t.label}" style="
+      width:36px;height:36px;border-radius:50%;background:${t.primary};border:3px solid ${saved===t.id?'var(--ink)':'transparent'};
+      cursor:pointer;transition:transform .15s,border-color .15s;outline:none;
+      ${saved===t.id?'transform:scale(1.15)':''}
+    "></button>
+  `).join('');
+}
+
+function initColorTheme() {
+  const saved = currentUser?.user_metadata?.color_theme || localStorage.getItem('color_theme_v1') || 'green';
+  applyColorTheme(saved);
+}
 function exportPDF() {
   if (!records.length) { showToast('אין נתונים להדפסה'); return; }
 
@@ -1841,6 +2221,7 @@ function showSettings(tab) {
   setTimeout(renderPasswordSection, 0);
   setTimeout(renderPartnerSection, 0);
   setTimeout(renderMortgageInstSettings, 0);
+  setTimeout(renderThemePicker, 0);
 }
 function closeSettings() { document.getElementById('settings-modal').style.display='none'; }
 function closeSettingsOutside(e) { if(e.target.id==='settings-modal') closeSettings(); }
@@ -1873,7 +2254,7 @@ function renderCategoriesList() {
         ${logo}
         <div style="min-width:0;flex:1">
           <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${cat.label}</div>
-          <div style="font-size:.72rem;color:var(--ink-4)">${cat.key}${inst ? ` · <span style="color:var(--green)">${inst.name}</span>` : ''}</div>
+          <div style="font-size:.72rem;color:var(--green)">${inst ? inst.name : ''}</div>
         </div>
       </div>
       <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
@@ -2186,10 +2567,13 @@ function renderPortfolioTab() {
   categories.forEach(cat => {
     const val = calc[cat.key] || 0;
     if (!val) return;
-    if (isPensionCat(cat))           buckets.pension += val;
-    else if (liquidKeys.includes(cat.key))  buckets.liquid  += val;
-    else if (savingKeys.includes(cat.key))  buckets.savings += val;
-    else                                    buckets.invest  += val;
+    if (isPensionCat(cat))                         buckets.pension += val;
+    else if (cat.key.startsWith('liquid_'))         buckets.liquid  += val;
+    else if (cat.key.startsWith('savings_'))        buckets.savings += val;
+    else if (cat.key.startsWith('invest_'))         buckets.invest  += val;
+    else if (liquidKeys.includes(cat.key))          buckets.liquid  += val;
+    else if (savingKeys.includes(cat.key))          buckets.savings += val;
+    else                                            buckets.invest  += val;
   });
 
   // Ideal allocation by age

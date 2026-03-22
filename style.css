@@ -5,7 +5,7 @@
   --blue:        #4f8ef7; --blue-light:#eff6ff;
   --amber:       #f59e0b; --red:#ef4444; --red-light:#fef2f2;
   --bg:#ffffff; --surface:#ffffff; --surface2:#f8f9fb;
-  --border:#e5e9f0; --ink:#5e5e5f; --ink-2:#374151; --ink-3:#6b7280; --ink-4:#9ca3af;
+  --border:#e5e9f0; --ink:#111827; --ink-2:#374151; --ink-3:#6b7280; --ink-4:#9ca3af;
   --shadow-xs:0 1px 3px rgba(0,0,0,.06); --shadow-sm:0 2px 8px rgba(0,0,0,.07);
   --shadow-md:0 6px 20px rgba(0,0,0,.08); --shadow-lg:0 16px 48px rgba(0,0,0,.10);
   --shadow-green:0 6px 24px rgba(14,158,126,.25);
@@ -1579,3 +1579,23 @@ input[type="date"]::-webkit-date-and-time-value {
 .wz-step-icon svg { width: 40px; height: 40px; }
 .wz-summary-list::-webkit-scrollbar { display: none; }
 .wz-summary-list { scrollbar-width: none; }
+
+/* ── Category type picker buttons ── */
+.cat-type-btn {
+  padding: 8px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xs);
+  background: var(--surface2);
+  color: var(--ink-2);
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+  text-align: center;
+}
+.cat-type-btn.selected {
+  border-color: var(--green);
+  background: var(--green-light, rgba(14,158,126,.12));
+  color: var(--green);
+}

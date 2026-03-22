@@ -2016,6 +2016,9 @@ function switchTab(name, btn) {
   if(name==='retirement') { loadRetirementSettings(); renderRetirement(); }
   if(name==='portfolio')  renderPortfolioTab();
   if(name==='annual')     renderAnnualTab();
+  // Scroll active button into view in bottom nav
+  const activeBtn = document.querySelector(`.bottom-nav [data-tab="${name}"]`);
+  if (activeBtn) activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
 }
 
 
@@ -2466,46 +2469,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const wasRecovery = await handleRecoveryIfNeeded();
   if (!wasRecovery) init();
 });
-
-/* ══ SWIPE NAVIGATION (PWA / mobile) ════════════════ */
-(function() {
-  const TABS = ['current', 'history', 'retirement'];
-  let touchStartX = 0, touchStartY = 0;
-
-  document.addEventListener('touchstart', e => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
-
-  document.addEventListener('touchend', e => {
-    // Skip if any modal/overlay is open
-    const modals = ['wizard-modal','settings-modal','inst-modal','cat-history-panel','backup-modal'];
-    if (modals.some(id => {
-      const el = document.getElementById(id);
-      return el && el.style.display !== 'none' && el.style.display !== '';
-    })) return;
-
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-
-    // Only horizontal swipes (more horizontal than vertical, min 60px)
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-
-    const activeTab = TABS.find(t => {
-      const el = document.getElementById(`tab-${t}`);
-      return el && el.style.display !== 'none';
-    }) || 'current';
-    const idx = TABS.indexOf(activeTab);
-
-    // Swipe right → previous tab, swipe left → next tab
-    let nextIdx = dx > 0 ? idx - 1 : idx + 1;
-    if (nextIdx < 0 || nextIdx >= TABS.length) return;
-
-    const nextTab = TABS[nextIdx];
-    const btn = document.querySelector(`[data-tab="${nextTab}"]`);
-    switchTab(nextTab, btn);
-  }, { passive: true });
-})();
 
 /* ── KEYBOARD SHORTCUTS ─────────────────────────────── */
 document.addEventListener('keydown', e => {

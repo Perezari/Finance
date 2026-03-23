@@ -11,7 +11,6 @@ const INSTITUTIONS = [
   { id:'leumi',      name:'בנק לאומי',          domain:'https://www.leumi.co.il/he',               type:'bank' },
   { id:'onezero',    name:'ONE ZERO',           domain:'https://www.onezerobank.com/',             type:'bank' },
   { id:'mizrahi',    name:'מזרחי טפחות',        domain:'https://www.mizrahi-tefahot.co.il/',       type:'bank'},
-  { id:'masad',      name:'בנק מסד',            domain:'https://www.bankmassad.co.il/',            type:'bank'},
   { id:'marcantil',  name:'בנק מרכנטיל',        domain:'https://www.mercantile.co.il/',            type:'bank'},
   { id:'fibi',       name:'הבינלאומי',          domain:'https://www.fibi.co.il/private/',          type:'bank' },
   { id:'esh',        name:'בנק אש',             domain:'https://esh.com/',                         type:'bank' },
@@ -2564,14 +2563,14 @@ function showTaxBreakdown() {
   document.getElementById('tax-breakdown-modal')?.remove();
   const modal = document.createElement('div');
   modal.id = 'tax-breakdown-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
+  modal.className = 'info-modal-overlay';
   modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+    <div class="info-modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
         <span style="font-size:.95rem;font-weight:700;color:var(--ink)">פירוט שווי נקי אחרי מס</span>
         <button onclick="document.getElementById('tax-breakdown-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
       </div>
-      <div style="padding:16px 20px">
+      <div style="padding:16px 20px 32px;overflow-y:auto;-webkit-overflow-scrolling:touch">
         ${nonPensionRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ללא מס)</div>${nonPensionRows}
         <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700">
           <span>סה"כ נכסים נזילים</span><span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span></div>`:''}

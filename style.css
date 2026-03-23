@@ -1342,6 +1342,38 @@ select option{background:var(--surface)}
 }
 .shortcuts-overlay.open { display: flex; }
 
+/* Cat history card — desktop */
+.cat-history-box {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: fadeUp .22s ease;
+}
+.cat-history-box #cat-history-body { max-height: 60vh; }
+
+/* Cat history — mobile bottom sheet */
+@media (max-width: 640px) {
+  .cat-history-overlay {
+    align-items: flex-end;
+    justify-content: stretch;
+    padding: 0;
+  }
+  .cat-history-box {
+    max-width: 100%;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    max-height: 85vh;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: slideUp .28s ease;
+  }
+  .cat-history-box #cat-history-body { max-height: 65vh; }
+}
+
 /* ══ RESTORE BUTTON ══════════════════════════════════ */
 .restore-btn {
   display: flex;

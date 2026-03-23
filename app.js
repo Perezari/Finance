@@ -2967,66 +2967,150 @@ function closeShortcutsPanel() {
 }
 
 /* ══ CATEGORY HISTORY PANEL ══════════════════════════ */
+let catHistoryChart = null;
+
 function openCatHistory(catKey, catLabel) {
   const panel = document.getElementById('cat-history-panel');
   const title = document.getElementById('cat-history-title');
   const body  = document.getElementById('cat-history-body');
   if (!panel) return;
 
-  title.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> ${catLabel} — 12 חודשים אחרונים`;
+  const isMortgage = catKey === '_mortgage';
+  const cat = categories.find(c => c.key === catKey);
+  const inst = cat?.institution_id ? getInstitution(cat.institution_id) : null;
 
-  // Build last 12 month entries
+  const instHtml = inst
+    ? `<img src="${logoUrl(inst.domain)}" width="18" height="18" style="border-radius:4px;object-fit:contain;margin-right:4px" onerror="onInstLogoErr(this)"/> <span style="font-size:.78rem;color:var(--green);font-weight:600">${inst.name}</span>`
+    : '';
+
+  title.innerHTML = `${ICONS_JS.trending} <span>${catLabel}</span> ${instHtml}`;
+
   const sorted = [...records].sort((a,b) => new Date(a.record_date)-new Date(b.record_date));
   const last12 = sorted.slice(-13);
 
-  const isMortgage = catKey === '_mortgage';
-
   if (last12.length < 2) {
     body.innerHTML = '<div style="text-align:center;color:var(--ink-4);font-size:.875rem;padding:24px 0">אין מספיק נתונים היסטוריים</div>';
+    document.getElementById('cat-history-insights').innerHTML = '';
     panel.style.display = 'flex';
     return;
   }
 
+  const labels = [], values = [];
+  last12.forEach(r => {
+    labels.push(new Date(r.record_date).toLocaleDateString('he-IL', { month: 'short', year: '2-digit' }));
+    values.push(isMortgage ? (r.mortgage_balance || 0) : ((r.values || {})[catKey] || 0));
+  });
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+  const tickColor = isDark ? '#6b7280' : '#9ca3af';
+  const isPos = values[values.length-1] >= values[0];
+  const lineColor = isMortgage ? '#ef4444' : (isPos ? '#0e9e7e' : '#ef4444');
+
+  if (catHistoryChart) { catHistoryChart.destroy(); catHistoryChart = null; }
+  const ctx = document.getElementById('cat-history-chart')?.getContext('2d');
+  if (ctx) {
+    const grad = ctx.createLinearGradient(0, 0, 0, 180);
+    grad.addColorStop(0, lineColor + '33');
+    grad.addColorStop(1, lineColor + '00');
+    catHistoryChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          borderColor: lineColor,
+          backgroundColor: grad,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointBackgroundColor: lineColor,
+          pointBorderColor: isDark ? '#1f2937' : '#ffffff',
+          pointBorderWidth: 2,
+          borderWidth: 2.5,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            rtl: true, backgroundColor: isDark ? '#1f2937' : '#111827',
+            titleColor: '#f9fafb', bodyColor: '#9ca3af',
+            borderColor: '#374151', borderWidth: 1, padding: 10,
+            callbacks: { label: ctx => ` ${fmt(ctx.raw)}` }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10, family: "'Heebo',sans-serif" } } },
+          y: { grid: { color: gridColor }, border: { display: false },
+               ticks: { color: tickColor, font: { size: 10, family: "'JetBrains Mono',monospace" },
+                        callback: v => Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } }
+        }
+      }
+    });
+  }
+
+  const first = values[0], last = values[values.length-1];
+  const totalDelta = last - first;
+  const totalPct = first > 0 ? (totalDelta/first*100).toFixed(1) : null;
+  const maxVal = Math.max(...values);
+  const avgVal = values.reduce((s,v)=>s+v,0)/values.length;
+
+  const insightColor = (pos) => pos ? 'var(--green)' : 'var(--red)';
+  const SVG_UP   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`;
+  const SVG_DOWN = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`;
+  const SVG_AVG  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`;
+  const SVG_PEAK = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
+  const ins = [];
+  if (totalPct) {
+    const pos = !isMortgage ? totalDelta >= 0 : totalDelta <= 0;
+    ins.push([pos ? SVG_UP : SVG_DOWN,
+      `שינוי כולל: <strong style="color:${insightColor(pos)}">${totalDelta>=0?'+':''}${fmt(totalDelta)} (${totalDelta>=0?'+':''}${totalPct}%)</strong>`]);
+  }
+  ins.push([SVG_AVG, `ממוצע: <strong>${fmt(Math.round(avgVal))}</strong>`]);
+  if (maxVal > 0) ins.push([SVG_PEAK, `שיא: <strong>${fmt(maxVal)}</strong>`]);
+
+  document.getElementById('cat-history-insights').innerHTML = ins.map(([icon, text]) =>
+    `<div style="display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ink-3);padding:6px 0;border-bottom:1px solid var(--border)">${icon}<span>${text}</span></div>`
+  ).join('');
+
   let rows = '';
   for (let i = last12.length - 1; i >= 1; i--) {
-    const cur  = last12[i];
-    const prev = last12[i - 1];
-    const curVal  = isMortgage ? (cur.mortgage_balance  || 0) : ((cur.values  || {})[catKey] || 0);
-    const prevVal = isMortgage ? (prev.mortgage_balance || 0) : ((prev.values || {})[catKey] || 0);
+    const cur  = last12[i], prev = last12[i-1];
+    const curVal  = isMortgage ? (cur.mortgage_balance||0)  : ((cur.values||{})[catKey]||0);
+    const prevVal = isMortgage ? (prev.mortgage_balance||0) : ((prev.values||{})[catKey]||0);
     const dateLabel = new Date(cur.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
-
     let deltaHtml = '';
     if (prevVal > 0) {
       const delta = curVal - prevVal;
-      const pct   = (delta / prevVal * 100).toFixed(1);
-      // For mortgage: decrease in balance is good (green), increase is bad (red)
-      const pos   = isMortgage ? delta <= 0 : delta >= 0;
-      const sign  = delta >= 0 ? '+' : '';
-      const color = pos ? 'var(--green)' : 'var(--red)';
-      deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:${color};font-family:var(--mono)">${sign}${pct}%</span>`;
-    } else if (curVal > 0 && prevVal === 0) {
+      const pct   = (delta/prevVal*100).toFixed(1);
+      const pos   = isMortgage ? delta<=0 : delta>=0;
+      deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:${insightColor(pos)};font-family:var(--mono)">${delta>=0?'+':''}${pct}%</span>`;
+    } else if (curVal>0 && prevVal===0) {
       deltaHtml = `<span style="font-size:.78rem;font-weight:700;color:var(--green);font-family:var(--font)">חדש</span>`;
     } else {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
-
     rows += `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
       <span style="color:var(--ink-3)">${dateLabel}</span>
       <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-2)">${fmt(curVal)}</span>
+        <span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-2)" class="blur-text">${fmt(curVal)}</span>
         ${deltaHtml}
       </div>
     </div>`;
   }
-
   body.innerHTML = rows;
   panel.style.display = 'flex';
+  setTimeout(() => applyBlur(), 0);
 }
 
 function closeCatHistory() {
   const panel = document.getElementById('cat-history-panel');
   if (panel) panel.style.display = 'none';
+  if (catHistoryChart) { catHistoryChart.destroy(); catHistoryChart = null; }
 }
 
 

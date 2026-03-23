@@ -310,12 +310,18 @@
         <h3>הוסף קטגוריה חדשה</h3>
         <div class="add-cat-form">
 
-          <!-- Category name picker (opens modal) -->
-          <div id="cat-name-dropdown-wrap">
+          <!-- Category name dropdown -->
+          <div style="position:relative" id="cat-name-dropdown-wrap">
             <button type="button" id="cat-name-dropdown-btn" onclick="toggleCatNameDropdown()" class="form-input" style="width:100%;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface2);text-align:right">
               <span id="cat-name-dropdown-label" style="color:var(--ink-4)">בחר סוג חשבון / נכס</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
+            <div id="cat-name-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xs);z-index:99;max-height:260px;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-md)">
+              <div style="padding:8px;border-bottom:1px solid var(--border)">
+                <input type="text" id="cat-name-search" placeholder="חפש קטגוריה..." class="form-input" style="width:100%;font-size:.82rem;direction:rtl;text-align:right" oninput="filterCatNameDropdown()"/>
+              </div>
+              <div id="cat-name-dropdown-list"></div>
+            </div>
           </div>
           <input type="hidden" id="new-cat-type" value=""/>
 
@@ -330,12 +336,18 @@
             <button type="button" class="cat-type-btn" data-type="invest"  onclick="selectCatType('invest')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:4px"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>השקעות</button>
           </div>
 
-          <!-- Institution picker (reuses inst-modal) -->
-          <div id="inst-dropdown-wrap">
+          <!-- Institution dropdown -->
+          <div style="position:relative" id="inst-dropdown-wrap">
             <button type="button" id="inst-dropdown-btn" onclick="toggleInstDropdown()" class="form-input" style="width:100%;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface2);text-align:right">
               <span id="inst-dropdown-label" style="color:var(--ink-4)">גוף מנהל (אופציונלי)</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
+            <div id="inst-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xs);z-index:99;max-height:220px;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-md)">
+              <div style="padding:8px;border-bottom:1px solid var(--border)">
+                <input type="text" id="inst-dropdown-search" placeholder="חפש גוף..." class="form-input" style="width:100%;font-size:.82rem;direction:rtl;text-align:right" oninput="filterInstDropdown()"/>
+              </div>
+              <div id="inst-dropdown-list"></div>
+            </div>
           </div>
           <input type="hidden" id="new-cat-institution" value=""/>
 
@@ -520,13 +532,15 @@
 </div>
 
 <!-- ══ CATEGORY HISTORY PANEL ════════════════════════ -->
-<div id="cat-history-panel" class="shortcuts-overlay" style="display:none" onclick="if(event.target===this)closeCatHistory()">
-  <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;box-shadow:var(--shadow-lg);overflow:hidden;animation:fadeUp .22s ease">
+<div id="cat-history-panel" class="shortcuts-overlay cat-history-overlay" style="display:none" onclick="if(event.target===this)closeCatHistory()">
+  <div class="cat-history-box">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px 14px;border-bottom:1px solid var(--border)">
       <div id="cat-history-title" style="display:flex;align-items:center;gap:8px;font-size:.95rem;font-weight:700;color:var(--ink)"></div>
       <button onclick="closeCatHistory()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
-    <div id="cat-history-body" style="padding:16px 22px 24px;display:flex;flex-direction:column;gap:4px;max-height:60vh;overflow-y:auto"></div>
+    <div style="padding:16px 22px 0;height:180px;position:relative"><canvas id="cat-history-chart"></canvas></div>
+    <div id="cat-history-insights" style="padding:0 22px 4px"></div>
+    <div id="cat-history-body" style="padding:8px 22px 24px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
   </div>
 </div>
 

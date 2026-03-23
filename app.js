@@ -2582,7 +2582,7 @@ function showLiquidInfo() {
       </div>
 
       <!-- ── Scrollable Body ── -->
-      <div id="liquid-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 24px;direction:rtl;scrollbar-width:thin;scrollbar-color:var(--ink-2) transparent">
+      <div id="liquid-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 24px;direction:rtl">
 
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-4);margin-bottom:4px">
           נכסים נזילים (ניתן למשיכה מיידית)
@@ -2699,7 +2699,7 @@ function showTaxBreakdown() {
       </div>
 
       <!-- ── Scrollable Body ── -->
-      <div id="tax-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 28px;direction:rtl;scrollbar-width:thin;scrollbar-color:var(--border) transparent">
+      <div id="tax-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 28px;direction:rtl">
 
         ${nonPensionRows ? `
           <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:6px;margin-top:2px">

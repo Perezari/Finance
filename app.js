@@ -1279,6 +1279,16 @@ function isPensionCat(cat) {
          cat.label.includes('ביטוח מנהלים');
 }
 
+function isLiquidCat(cat) {
+  const legacyLiquid = ['cash','currentAcc','savingsFund','deposit','hishtalmut'];
+  if (legacyLiquid.includes(cat.key))  return true;
+  if (cat.key.startsWith('liquid_'))   return true;
+  if (cat.key.startsWith('savings_'))  return true;
+  if (cat.key.startsWith('invest_'))   return false;
+  if (cat.key.startsWith('pension_'))  return false;
+  return false;
+}
+
 function calcPensionTax(amount) {
   if (!amount || amount <= 0) return 0;
   return Math.round(amount * 0.35);
@@ -1300,8 +1310,7 @@ function calcHealthScore(calc, records) {
   const details = [];
 
   // 1. Liquidity ratio (liquid assets / total) – target 15-40%
-  const liquidKeys = ['cash','currentAcc','savingsFund','deposit'];
-  const liquid     = categories.filter(c=>liquidKeys.includes(c.key)).reduce((s,c)=>s+(calc[c.key]||0),0);
+  const liquid     = categories.filter(isLiquidCat).reduce((s,c)=>s+(calc[c.key]||0),0);
   const liquidRatio = calc.totalAssets ? liquid/calc.totalAssets : 0;
   if      (liquidRatio >= 0.15 && liquidRatio <= 0.40) { score+=30; details.push({ label:'נזילות', note:'אחוז נזילות תקין', ok:true }); }
   else if (liquidRatio >= 0.10 && liquidRatio <= 0.55) { score+=18; details.push({ label:'נזילות', note:'נזילות סבירה', ok:null }); }
@@ -1496,8 +1505,7 @@ function renderCurrentReport() {
     }
   }
  
-  const liquidKeys = ['cash','currentAcc','savingsFund'];
-  const liquid     = categories.filter(c=>liquidKeys.includes(c.key)).reduce((s,c)=>s+(calc[c.key]||0),0);
+  const liquid     = categories.filter(isLiquidCat).reduce((s,c)=>s+(calc[c.key]||0),0);
   const liquidPct  = calc.totalAssets ? ((liquid/calc.totalAssets)*100).toFixed(1) : '0';
  
   // Previous month calc (used for mortgage delta + cat badges)
@@ -2500,10 +2508,8 @@ function showLiquidInfo() {
   if (!records.length) return;
   const latest     = records[records.length - 1];
   const calc       = calcRecord(latest);
-  const liquidKeys = ['cash','currentAcc','savingsFund','deposit'];
-
-  const liqCats    = categories.filter(c => liquidKeys.includes(c.key) && (calc[c.key]||0) > 0);
-  const nonLiqCats = categories.filter(c => !liquidKeys.includes(c.key) && (calc[c.key]||0) > 0);
+  const liqCats    = categories.filter(c => isLiquidCat(c) && (calc[c.key]||0) > 0);
+  const nonLiqCats = categories.filter(c => !isLiquidCat(c) && (calc[c.key]||0) > 0);
   const liquid     = liqCats.reduce((s,c) => s + (calc[c.key]||0), 0);
   const nonLiquid  = nonLiqCats.reduce((s,c) => s + (calc[c.key]||0), 0);
   const pct        = calc.totalAssets ? (liquid / calc.totalAssets * 100).toFixed(1) : '0';
@@ -2743,7 +2749,6 @@ function renderPortfolioTab() {
   const total  = calc.totalAssets;
 
   // Assign each category to a bucket
-  const liquidKeys  = ['cash','currentAcc'];
   const savingKeys  = ['deposit','savingsFund','hishtalmut'];
   const buckets = { liquid:0, savings:0, pension:0, invest:0 };
   const colors  = { liquid:'#0e9e7e', savings:'#4f8ef7', pension:'#f59e0b', invest:'#8b5cf6' };
@@ -2753,11 +2758,11 @@ function renderPortfolioTab() {
     const val = calc[cat.key] || 0;
     if (!val) return;
     if (isPensionCat(cat))                         buckets.pension += val;
+    else if (cat.key.startsWith('invest_'))         buckets.invest  += val;
     else if (cat.key.startsWith('liquid_'))         buckets.liquid  += val;
     else if (cat.key.startsWith('savings_'))        buckets.savings += val;
-    else if (cat.key.startsWith('invest_'))         buckets.invest  += val;
-    else if (liquidKeys.includes(cat.key))          buckets.liquid  += val;
     else if (savingKeys.includes(cat.key))          buckets.savings += val;
+    else if (isLiquidCat(cat))                      buckets.liquid  += val;
     else                                            buckets.invest  += val;
   });
 

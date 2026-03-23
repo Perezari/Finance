@@ -1807,6 +1807,7 @@ function loadRetirementSettings() {
   } catch(e){}
 }
 
+let _retSaveTimer = null;						 
 async function saveRetirementSettings() {
   const s={};
   ['ret-current-age','ret-age','ret-return','ret-monthly'].forEach(id=>{
@@ -1815,7 +1816,12 @@ async function saveRetirementSettings() {
   localStorage.setItem(RET_KEY,JSON.stringify(s));
   // Also save to Supabase so it syncs across devices
   if (currentUser) {
-    await db.auth.updateUser({ data: { retirement_settings: JSON.stringify(s) } });
+    clearTimeout(_retSaveTimer);
+    _retSaveTimer = setTimeout(async () => {
+      try {
+        await db.auth.updateUser({ data: { retirement_settings: JSON.stringify(s) } });
+      } catch(e) { /* silent — localStorage already saved */ }
+    }, 500);
   }
 }
 

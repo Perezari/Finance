@@ -1378,6 +1378,46 @@ select option{background:var(--surface)}
   .cat-history-box #cat-history-body { max-height: 65vh; }
 }
 
+/* Info modal (סה"כ נכסים, נכסים נזילים, שווי נקי) — desktop */
+.info-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+}
+.info-modal-box {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  width: 100%;
+  max-width: 400px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: fadeUp .22s ease;
+}
+
+/* Info modal — mobile bottom sheet */
+@media (max-width: 640px) {
+  .info-modal-overlay {
+    align-items: flex-end;
+    justify-content: stretch;
+    padding: 0;
+  }
+  .info-modal-box {
+    max-width: 100%;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    max-height: 88vh;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: slideUp .28s ease;
+  }
+}
+
 /* ══ RESTORE BUTTON ══════════════════════════════════ */
 .restore-btn {
   display: flex;

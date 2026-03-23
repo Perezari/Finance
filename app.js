@@ -2528,14 +2528,14 @@ function openInfoModal(title, bodyHtml) {
   document.getElementById('info-modal-existing')?.remove();
   const modal = document.createElement('div');
   modal.id = 'info-modal-existing';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px';
+  modal.className = 'info-modal-overlay';
   modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:400px;max-height:85vh;overflow-y:auto;scrollbar-width:none;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1">
+    <div class="info-modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
         <span style="font-size:.95rem;font-weight:700;color:var(--ink)">${title}</span>
         <button onclick="document.getElementById('info-modal-existing').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
       </div>
-      <div style="padding:16px 20px 24px">${bodyHtml}</div>
+      <div style="padding:16px 20px 32px;overflow-y:auto;-webkit-overflow-scrolling:touch">${bodyHtml}</div>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);

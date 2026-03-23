@@ -3061,52 +3061,60 @@ function openCatHistory(catKey, catLabel) {
     </div>`;
   }
   body.innerHTML = rows;
+
+  // Show panel FIRST so canvas gets real dimensions, then draw chart
   panel.style.display = 'flex';
   setTimeout(() => {
     applyBlur();
-    const ctx = document.getElementById('cat-history-chart')?.getContext('2d');
-    if (ctx) {
-      const grad = ctx.createLinearGradient(0, 0, 0, 180);
-      grad.addColorStop(0, lineColor + '33');
-      grad.addColorStop(1, lineColor + '00');
-      catHistoryChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            data: values,
-            borderColor: lineColor,
-            backgroundColor: grad,
-            fill: true,
-            tension: 0.35,
-            pointRadius: 4,
-            pointBackgroundColor: lineColor,
-            pointBorderColor: isDark ? '#1f2937' : '#ffffff',
-            pointBorderWidth: 2,
-            borderWidth: 2.5,
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              rtl: true, backgroundColor: isDark ? '#1f2937' : '#111827',
-              titleColor: '#f9fafb', bodyColor: '#9ca3af',
-              borderColor: '#374151', borderWidth: 1, padding: 10,
-              callbacks: { label: ctx => ` ${fmt(ctx.raw)}` }
-            }
+    const canvasEl = document.getElementById('cat-history-chart');
+    if (canvasEl) {
+      // Force canvas dimensions explicitly for iOS Safari
+      canvasEl.width  = canvasEl.offsetWidth  || 400;
+      canvasEl.height = 180;
+      const ctx2 = canvasEl.getContext('2d');
+      if (ctx2) {
+        const grad = ctx2.createLinearGradient(0, 0, 0, 180);
+        grad.addColorStop(0, lineColor + '33');
+        grad.addColorStop(1, lineColor + '00');
+        catHistoryChart = new Chart(ctx2, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              borderColor: lineColor,
+              backgroundColor: grad,
+              fill: true,
+              tension: 0.35,
+              pointRadius: 4,
+              pointBackgroundColor: lineColor,
+              pointBorderColor: isDark ? '#1f2937' : '#ffffff',
+              pointBorderWidth: 2,
+              borderWidth: 2.5,
+            }]
           },
-          scales: {
-            x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10, family: "'Heebo',sans-serif" } } },
-            y: { grid: { color: gridColor }, border: { display: false },
-                 ticks: { color: tickColor, font: { size: 10, family: "'JetBrains Mono',monospace" },
-                          callback: v => Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } }
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                rtl: true, backgroundColor: isDark ? '#1f2937' : '#111827',
+                titleColor: '#f9fafb', bodyColor: '#9ca3af',
+                borderColor: '#374151', borderWidth: 1, padding: 10,
+                callbacks: { label: c => ` ${fmt(c.raw)}` }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10, family: "'Heebo',sans-serif" } } },
+              y: { grid: { color: gridColor }, border: { display: false },
+                   ticks: { color: tickColor, font: { size: 10, family: "'JetBrains Mono',monospace" },
+                            callback: v => Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } }
+            }
           }
-        }
-      });
+        });
+      }
     }
-  }, 50);
+  }, 80);
 }
 
 function closeCatHistory() {

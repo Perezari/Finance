@@ -899,27 +899,31 @@ select option{background:var(--surface)}
 #settings-panel-categories::-webkit-scrollbar,
 #settings-panel-account::-webkit-scrollbar,
 .modal-body::-webkit-scrollbar,
-#cat-history-body::-webkit-scrollbar {
+#cat-history-body::-webkit-scrollbar,
+#tax-modal-body::-webkit-scrollbar {
   width: 4px;
 }
 #settings-panel-categories::-webkit-scrollbar-track,
 #settings-panel-account::-webkit-scrollbar-track,
 .modal-body::-webkit-scrollbar-track,
-#cat-history-body::-webkit-scrollbar-track {
+#cat-history-body::-webkit-scrollbar-track,
+#tax-modal-body::-webkit-scrollbar-track {
   background: transparent;
 }
 #settings-panel-categories::-webkit-scrollbar-thumb,
 #settings-panel-account::-webkit-scrollbar-thumb,
 .modal-body::-webkit-scrollbar-thumb,
-#cat-history-body::-webkit-scrollbar-thumb {
-  background: var(--border);
+#cat-history-body::-webkit-scrollbar-thumb,
+#tax-modal-body::-webkit-scrollbar-thumb {
+  background: var(--ink-2);
   border-radius: 99px;
 }
 #settings-panel-categories::-webkit-scrollbar-thumb:hover,
 #settings-panel-account::-webkit-scrollbar-thumb:hover,
 .modal-body::-webkit-scrollbar-thumb:hover,
-#cat-history-body::-webkit-scrollbar-thumb:hover {
-  background: var(--ink-4);
+#cat-history-body::-webkit-scrollbar-thumb:hover,
+#tax-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--ink);
 }
 
 /* ══ CUSTOM SCROLLBAR — main app content ════════════ */

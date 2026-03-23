@@ -2554,45 +2554,103 @@ function showTaxBreakdown() {
   const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
   const nonPensionTotal = calc.totalAssets - pensionTotal;
   const pensionAfterTax = pensionTotal - tax;
-  const pensionRows = categories.filter(isPensionCat).map(cat => {
-    const val = calc[cat.key] || 0; if (!val) return '';
-    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${cat.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span></div>`;
-  }).join('');
-  const nonPensionRows = categories.filter(c => !isPensionCat(c)).map(cat => {
-    const val = calc[cat.key] || 0; if (!val) return '';
-    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${cat.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(val)}</span></div>`;
-  }).join('');
+
+  // Compute max value across all rows for proportional bar widths
+  const allVals = categories.map(c => calc[c.key] || 0);
+  const maxVal  = Math.max(...allVals, 1);
+
+  // Helper: mini progress bar row
+  function barRow(label, val, isAmber) {
+    if (!val) return '';
+    const pct = Math.round((val / maxVal) * 100);
+    const barColor = isAmber ? 'var(--amber,#f59e0b)' : 'var(--green)';
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;padding-left:12px">
+          <div style="font-size:.875rem;color:var(--ink-2);margin-bottom:4px">${label}</div>
+          <div style="height:3px;background:var(--border);border-radius:2px">
+            <div style="height:3px;border-radius:2px;background:${barColor};width:${pct}%;transition:width .4s ease"></div>
+          </div>
+        </div>
+        <span style="font-family:var(--mono);font-size:.875rem;font-weight:600;color:var(--ink);white-space:nowrap">${fmt(val)}</span>
+      </div>`;
+  }
+
+  const nonPensionRows = categories
+    .filter(c => !isPensionCat(c))
+    .map(cat => barRow(cat.label, calc[cat.key] || 0, false))
+    .join('');
+
+  const pensionRows = categories
+    .filter(isPensionCat)
+    .map(cat => barRow(cat.label, calc[cat.key] || 0, true))
+    .join('');
+
+  // Pills: liquid% and pension%
+  const totalForPills = nonPensionTotal + pensionAfterTax;
+  const liqPct     = totalForPills ? Math.round(nonPensionTotal  / totalForPills * 100) : 0;
+  const penPct     = totalForPills ? Math.round(pensionAfterTax  / totalForPills * 100) : 0;
+
   document.getElementById('tax-breakdown-modal')?.remove();
   const modal = document.createElement('div');
   modal.id = 'tax-breakdown-modal';
   modal.className = 'info-modal-overlay';
   modal.innerHTML = `
-    <div class="info-modal-box">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
-        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">פירוט שווי נקי אחרי מס</span>
-        <button onclick="document.getElementById('tax-breakdown-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
-      </div>
-      <div style="padding:16px 20px 32px;overflow-y:auto;-webkit-overflow-scrolling:touch">
-        ${nonPensionRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ללא מס)</div>${nonPensionRows}
-        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700">
-          <span>סה"כ נכסים נזילים</span><span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span></div>`:''}
-        ${pensionRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">פנסיה (חייבת במס 35%)</div>${pensionRows}
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-          <span style="color:var(--ink-2)">סה"כ פנסיה (ברוטו)</span><span style="font-family:var(--mono);font-weight:600">${fmt(pensionTotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-          <span style="color:var(--ink-2)">מס 35%</span><span style="font-family:var(--mono);font-weight:600;color:var(--red)">− ${fmt(tax)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:.875rem;font-weight:700">
-          <span>פנסיה נטו</span><span style="font-family:var(--mono)">${fmt(pensionAfterTax)}</span></div>`:''}
-        <div style="margin-top:16px;padding:16px;background:var(--green-light,rgba(14,158,126,.12));border-radius:var(--r-xs);border:1.5px solid var(--green)">
-          <div style="font-size:.78rem;color:var(--ink-3);margin-bottom:6px">סה"כ נכסים אחרי מס פנסיה</div>
-          <div style="font-size:1.4rem;font-weight:800;color:${netAfterTax>=0?'var(--green)':'var(--red)'};font-family:var(--mono)">${fmt(netAfterTax)}</div>
-          <div style="font-size:.72rem;color:var(--ink-3);margin-top:6px">נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}</div>
+    <div class="info-modal-box" style="overflow:hidden">
+
+      <!-- ── Green Header ── -->
+      <div style="background:linear-gradient(135deg,var(--green),var(--green-dark));padding:13px 18px 15px;flex-shrink:0;direction:rtl">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:.82rem;font-weight:600;color:rgba(255,255,255,.85)">פירוט שווי נקי אחרי מס</span>
+          <button onclick="document.getElementById('tax-breakdown-modal').remove()"
+            style="background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ICONS_JS.x}</button>
         </div>
-        <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס.</p>
+        <div style="font-family:var(--mono);font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1">
+          ${fmt(netAfterTax)}
+        </div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:4px">
+          נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">נזיל ${liqPct}%</span>
+          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">פנסיה ${penPct}%</span>
+        </div>
+      </div>
+
+      <!-- ── Scrollable Body ── -->
+      <div id="tax-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 28px;direction:rtl;scrollbar-width:thin;scrollbar-color:var(--border) transparent">
+
+        ${nonPensionRows ? `
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:6px;margin-top:2px">
+            נכסים נזילים (ללא מס)
+          </div>
+          ${nonPensionRows}
+          <div style="display:flex;justify-content:space-between;padding:10px 0 14px;font-size:.875rem;font-weight:700;border-bottom:2px solid var(--border)">
+            <span style="color:var(--ink)">סה"כ נזיל</span>
+            <span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span>
+          </div>` : ''}
+
+        ${pensionRows ? `
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:6px;margin-top:14px">
+            פנסיה (חייבת במס 35%)
+          </div>
+          ${pensionRows}
+          <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+            <span style="color:var(--ink-2)">סה"כ פנסיה (ברוטו)</span>
+            <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(pensionTotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+            <span style="color:var(--ink-2)">מס 35%</span>
+            <span style="font-family:var(--mono);font-weight:600;color:var(--red)">− ${fmt(tax)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0 14px;font-size:.875rem;font-weight:700;border-bottom:2px solid var(--border)">
+            <span style="color:var(--ink)">פנסיה נטו</span>
+            <span style="font-family:var(--mono);color:var(--green)">${fmt(pensionAfterTax)}</span>
+          </div>` : ''}
+
+        <p style="font-size:.7rem;color:var(--ink-4);margin-top:14px;line-height:1.6">
+          * 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס.
+        </p>
       </div>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };

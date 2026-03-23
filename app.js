@@ -1930,6 +1930,9 @@ function renderRetirementBreakdown(start,projected,years,monthly) {
     {label:'חיסכון עתידי', value:contributions,color:'#4f8ef7',pct:(contributions/projected*100).toFixed(1)},
     {label:'תשואה',         value:organic,color:'#f59e0b',pct:(organic/projected*100).toFixed(1)},
   ].filter(b=>b.value>0);
+
+  const monthlyPension = projected * 0.04 / 12;
+
   document.getElementById('ret-breakdown').innerHTML=`
     <div class="rbd-header"><span class="gc-title">${ICONS_JS.breakdown} פירוק צבירה</span></div>
     ${bars.map(b=>`
@@ -1940,7 +1943,18 @@ function renderRetirementBreakdown(start,projected,years,monthly) {
         <span class="rbd-val blur-text">${fmt(b.value)}</span>
         <span class="rbd-pct">${b.pct}%</span>
       </div>
-    </div>`).join('')}`;
+    </div>`).join('')}
+    <div class="rbd-row">
+      <div class="rbd-info">
+        <span class="rbd-dot" style="background:var(--green)"></span>
+        <span class="rbd-label">קצבה חודשית צפויה</span>
+      </div>
+      <div class="rbd-right">
+        <span style="font-size:.72rem;color:var(--ink-4);margin-left:6px">כלל 4% שנתי</span>
+        <span class="rbd-val blur-text">${fmt(monthlyPension)}</span>
+        <span class="rbd-pct">/ חודש</span>
+      </div>
+    </div>`;
   applyBlur();
 }
 

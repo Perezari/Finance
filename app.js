@@ -2498,34 +2498,109 @@ function showTotalAssetsBreakdown() {
 /* ══ LIQUID ASSETS INFO ═══════════════════════════════ */
 function showLiquidInfo() {
   if (!records.length) return;
-  const latest    = records[records.length - 1];
-  const calc      = calcRecord(latest);
+  const latest     = records[records.length - 1];
+  const calc       = calcRecord(latest);
   const liquidKeys = ['cash','currentAcc','savingsFund','deposit'];
-  const liquid    = categories.filter(c => liquidKeys.includes(c.key)).reduce((s,c) => s+(calc[c.key]||0), 0);
-  const pct       = calc.totalAssets ? (liquid/calc.totalAssets*100).toFixed(1) : '0';
-  const liqRows   = categories.filter(c => liquidKeys.includes(c.key) && (calc[c.key]||0)>0).map(c =>
-    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${c.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(calc[c.key]||0)}</span>
-    </div>`).join('');
-  const nonLiqRows = categories.filter(c => !liquidKeys.includes(c.key) && (calc[c.key]||0)>0).map(c =>
-    `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.875rem">
-      <span style="color:var(--ink-2)">${c.label}</span>
-      <span style="font-family:var(--mono);font-weight:600;color:var(--ink-4)">${fmt(calc[c.key]||0)}</span>
-    </div>`).join('');
-  const p         = parseFloat(pct);
-  const statusColor = p >= 15 && p <= 40 ? 'var(--green)' : p < 15 ? 'var(--red)' : 'var(--amber)';
-  const statusText  = p >= 15 && p <= 40 ? 'יחס נזילות תקין ✅' : p < 15 ? 'נזילות נמוכה מדי ⚠️' : 'נזילות גבוהה — כסף לא עובד ⚠️';
-  openInfoModal('נכסים נזילים', `
-    <div style="padding:12px;background:rgba(14,158,126,.1);border-radius:var(--r-xs);border:1.5px solid ${statusColor};margin-bottom:16px">
-      <div style="font-size:1.1rem;font-weight:800;color:${statusColor};font-family:var(--font)">${pct}% נזיל</div>
-      <div style="font-size:.8rem;color:${statusColor};margin-top:2px">${statusText}</div>
-      <div style="font-size:.72rem;color:var(--ink-4);margin-top:4px">יחס אידיאלי: 15%–40% מהתיק</div>
-    </div>
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:8px">נכסים נזילים (ניתן למשיכה מיידית)</div>
-    ${liqRows||'<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>'}
-    ${nonLiqRows?`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin:16px 0 8px">נכסים לא נזילים</div>${nonLiqRows}`:''}
-    <p style="font-size:.72rem;color:var(--ink-4);margin-top:12px;line-height:1.6">* נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס.</p>`);
+
+  const liqCats    = categories.filter(c => liquidKeys.includes(c.key) && (calc[c.key]||0) > 0);
+  const nonLiqCats = categories.filter(c => !liquidKeys.includes(c.key) && (calc[c.key]||0) > 0);
+  const liquid     = liqCats.reduce((s,c) => s + (calc[c.key]||0), 0);
+  const nonLiquid  = nonLiqCats.reduce((s,c) => s + (calc[c.key]||0), 0);
+  const pct        = calc.totalAssets ? (liquid / calc.totalAssets * 100).toFixed(1) : '0';
+  const p          = parseFloat(pct);
+
+  // Header gradient — same pattern as tax modal
+  const headerGradient = p >= 15 && p <= 40
+    ? 'linear-gradient(135deg,var(--green),var(--green-dark))'
+    : p < 15
+      ? 'linear-gradient(135deg,var(--red,#ef4444),#b91c1c)'
+      : 'linear-gradient(135deg,var(--amber,#f59e0b),#b45309)';
+  const statusBadge = p >= 15 && p <= 40
+    ? 'יחס נזילות תקין'
+    : p < 15
+      ? 'נזילות נמוכה מדי'
+      : 'נזילות גבוהה — כסף לא עובד';
+  const liqPct  = calc.totalAssets ? Math.round(liquid  / calc.totalAssets * 100) : 0;
+  const nliqPct = calc.totalAssets ? Math.round(nonLiquid / calc.totalAssets * 100) : 0;
+
+  // Max value for proportional bars
+  const allVals = [...liqCats, ...nonLiqCats].map(c => calc[c.key]||0);
+  const maxVal  = Math.max(...allVals, 1);
+
+  function barRow(cat, isLiquid) {
+    const val    = calc[cat.key] || 0;
+    const barPct = Math.round((val / maxVal) * 100);
+    const barColor = isLiquid ? 'var(--green)' : 'var(--amber,#f59e0b)';
+    const valColor = isLiquid ? 'var(--green)' : 'var(--ink-4)';
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;padding-left:12px">
+          <div style="font-size:.875rem;color:var(--ink-2);margin-bottom:4px">${cat.label}</div>
+          <div style="height:3px;background:var(--border);border-radius:2px">
+            <div style="height:3px;border-radius:2px;background:${barColor};width:${barPct}%;transition:width .4s ease"></div>
+          </div>
+        </div>
+        <span style="font-family:var(--mono);font-size:.875rem;font-weight:600;color:${valColor};white-space:nowrap">${fmt(val)}</span>
+      </div>`;
+  }
+
+  const liqRowsHtml    = liqCats.map(c => barRow(c, true)).join('') ||
+    `<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>`;
+  const nonLiqRowsHtml = nonLiqCats.map(c => barRow(c, false)).join('');
+
+  document.getElementById('liquid-info-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'liquid-info-modal';
+  modal.className = 'info-modal-overlay';
+  modal.innerHTML = `
+    <div class="info-modal-box" style="overflow:hidden">
+
+      <!-- ── Colored Header ── -->
+      <div style="background:${headerGradient};padding:13px 18px 15px;flex-shrink:0;direction:rtl">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:.82rem;font-weight:600;color:rgba(255,255,255,.85)">נכסים נזילים</span>
+          <button onclick="document.getElementById('liquid-info-modal').remove()"
+            style="background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ICONS_JS.x}</button>
+        </div>
+        <div style="font-family:var(--font);font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1">
+          ${pct}% נזיל
+        </div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:4px">
+          אידיאלי: 15%–40% מהתיק
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">${statusBadge}</span>
+          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">נזיל ${liqPct}%</span>
+          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">לא נזיל ${nliqPct}%</span>
+        </div>
+      </div>
+
+      <!-- ── Scrollable Body ── -->
+      <div id="liquid-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 24px;direction:rtl;scrollbar-width:thin;scrollbar-color:var(--ink-2) transparent">
+
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-4);margin-bottom:4px">
+          נכסים נזילים (ניתן למשיכה מיידית)
+        </div>
+        ${liqRowsHtml}
+
+        <div style="display:flex;justify-content:space-between;padding:10px 0 14px;font-size:.875rem;font-weight:700;border-bottom:2px solid var(--border)">
+          <span style="color:var(--ink)">סה"כ נזיל</span>
+          <span style="font-family:var(--mono);color:var(--green)">${fmt(liquid)}</span>
+        </div>
+
+        ${nonLiqRowsHtml ? `
+          <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-4);margin-top:14px;margin-bottom:4px">
+            נכסים לא נזילים
+          </div>
+          ${nonLiqRowsHtml}` : ''}
+
+        <p style="font-size:.68rem;color:var(--ink-4);margin-top:14px;line-height:1.6">
+          * נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס.
+        </p>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
 
 /* ══ GENERIC INFO MODAL ═══════════════════════════════ */
@@ -2605,7 +2680,7 @@ function showTaxBreakdown() {
           <button onclick="document.getElementById('tax-breakdown-modal').remove()"
             style="background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ICONS_JS.x}</button>
         </div>
-        <div style="font-family:var(--mono);font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1">
+        <div style="font-family:var(--font);font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1">
           ${fmt(netAfterTax)}
         </div>
         <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:4px">

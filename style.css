@@ -1036,7 +1036,7 @@ select option{background:var(--surface)}
   font-size: .82rem;
   font-weight: 700;
   color: var(--ink);
-  font-family: var(--mono);
+  font-family: var(--font);
   text-align: left;
 }
 .ch-cf-row.cf-row-warn {

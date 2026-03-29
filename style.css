@@ -890,7 +890,167 @@ select option{background:var(--surface)}
 }
 .cat-edit-cancel-btn:hover { background: var(--border); }
 
-/* Bottom nav — 5 items on mobile */
+/* ── CUSTOM FIELDS (category editor) ─────────────────── */
+.cf-section {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.cf-section-header {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 8px;
+  text-align: right;
+}
+.cf-empty {
+  font-size: .78rem;
+  color: var(--ink-3);
+  text-align: center;
+  padding: 6px 0;
+  opacity: .6;
+}
+.cf-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  direction: rtl;
+}
+.cf-field-type-icon {
+  font-size: .9rem;
+  flex-shrink: 0;
+}
+.cf-field-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.cf-field-value {
+  width: 120px !important;
+  font-size: .8rem !important;
+  padding: 5px 8px !important;
+  flex-shrink: 0;
+  direction: ltr;
+}
+.cf-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--red, #e74c3c);
+  padding: 3px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  opacity: .6;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+.cf-delete-btn:hover { opacity: 1; }
+.cf-add-form {
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-xs);
+  padding: 10px;
+  margin-bottom: 8px;
+  direction: rtl;
+}
+.cf-new-label-input {
+  width: 100% !important;
+  margin-bottom: 6px !important;
+}
+.cf-type-select {
+  width: 100% !important;
+  direction: rtl !important;
+  font-size: .82rem !important;
+}
+.cf-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: 1.5px dashed var(--green);
+  border-radius: var(--r-xs);
+  color: var(--green);
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.cf-add-btn:hover { background: var(--green-alpha, rgba(19,184,145,.08)); }
+
+/* ── CUSTOM FIELDS chips on cat-tile ─────────────────── */
+/* (chips removed — fields shown inside history panel instead) */
+
+/* ── cat-tile red border when date field expires this month ── */
+.cat-tile.cat-tile-alert {
+  border-color: var(--red, #ef4444) !important;
+  box-shadow: 0 0 0 1.5px var(--red, #ef4444), 0 2px 8px rgba(239,68,68,.15);
+}
+.cat-tile.cat-tile-alert:hover {
+  box-shadow: 0 0 0 2px var(--red, #ef4444), 0 4px 14px rgba(239,68,68,.22);
+}
+
+/* ── Custom fields block inside cat-history panel ────── */
+.ch-cf-block {
+  padding: 6px 22px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ch-cf-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  direction: rtl;
+  transition: background .12s;
+}
+.ch-cf-row:hover { background: var(--surface2); }
+.ch-cf-icon {
+  flex-shrink: 0;
+  color: var(--ink-4);
+  display: flex;
+  align-items: center;
+}
+.ch-cf-label {
+  flex: 1;
+  font-size: .8rem;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.ch-cf-value {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--mono);
+  text-align: left;
+}
+.ch-cf-row.cf-row-warn {
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.25);
+}
+.ch-cf-row.cf-row-warn .ch-cf-value { color: #ef4444; }
+.ch-cf-row.cf-row-warn .ch-cf-label { color: #ef4444; font-weight: 600; }
+.ch-cf-row.cf-row-expired {
+  background: rgba(251,146,60,.07);
+}
+.ch-cf-row.cf-row-expired .ch-cf-value { color: var(--ink-3); }
+
+
 @media (max-width:768px) {
   .bottom-nav-item { font-size: .6rem; }
 }

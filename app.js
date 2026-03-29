@@ -1567,8 +1567,16 @@ function renderCurrentReport() {
       }
     }
 
+    // Check if any date field expires this month → red border alert
+    const now = new Date();
+    const hasExpiringField = (cat.custom_fields || []).some(f => {
+      if (f.type !== 'date' || !f.value) return false;
+      const d = new Date(f.value);
+      return !isNaN(d) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+
     return `
-    <div class="cat-tile" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCatHistory('${cat.key}','${cat.label}')">
+    <div class="cat-tile${hasExpiringField ? ' cat-tile-alert' : ''}" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCatHistory('${cat.key}','${cat.label}')">
       ${logoHtml}
       <span class="ct-icon" ${inst?'style="display:none"':''}>${getCatSvg(cat)}</span>
       <div class="ct-label">${cat.label}${inst?`<span class="ct-inst">${inst.name}</span>`:''}</div>
@@ -2327,6 +2335,29 @@ function renderCategoriesList() {
       <div class="cat-edit-grid">
         <input type="text" id="cat-edit-label-${cat.id}" value="${cat.label}" placeholder="שם בעברית" class="form-input" style="direction:rtl;text-align:right"/>
       </div>
+
+      <div class="cf-section">
+        <div class="cf-section-header">שדות נוספים</div>
+        <div class="cf-fields-list" id="cf-list-${cat.id}">
+          ${renderCustomFieldItems(cat)}
+        </div>
+        <div class="cf-add-form" id="cf-add-form-${cat.id}" style="display:none;">
+          <input type="text" id="cf-new-label-${cat.id}" placeholder="שם השדה (למשל: דמי ניהול)" class="form-input cf-new-label-input" style="direction:rtl;text-align:right"/>
+          <select id="cf-new-type-${cat.id}" class="form-input cf-type-select">
+            <option value="number">🔢 מספר / אחוז</option>
+            <option value="date">📅 תאריך</option>
+            <option value="text">📝 טקסט חופשי</option>
+          </select>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="cat-edit-save-btn" style="flex:1" onclick="confirmAddCustomField('${cat.id}')">${ICONS_JS.check} הוסף</button>
+            <button class="cat-edit-cancel-btn" onclick="cancelAddCustomField('${cat.id}')">ביטול</button>
+          </div>
+        </div>
+        <button class="cf-add-btn" id="cf-add-btn-${cat.id}" onclick="showAddCustomFieldForm('${cat.id}')">
+          ${ICONS_JS.plus} הוסף שדה
+        </button>
+      </div>
+
       <div style="display:flex;gap:6px;margin-top:8px">
         <button class="cat-edit-save-btn" onclick="saveCatEdit('${cat.id}')">${ICONS_JS.check} שמור</button>
         <button class="cat-edit-cancel-btn" onclick="closeCatEdit('${cat.id}')">ביטול</button>
@@ -2349,8 +2380,17 @@ function closeCatEdit(id) {
 async function saveCatEdit(id) {
   const label = document.getElementById(`cat-edit-label-${id}`)?.value.trim();
   if (!label) return showToast('⚠️ שם לא יכול להיות ריק');
+
+  // Collect current custom fields from the DOM
+  const cat = categories.find(c => c.id === id);
+  const existingFields = cat?.custom_fields || [];
+  const updatedFields = existingFields.map(f => {
+    const valEl = document.getElementById(`cf-val-${id}-${f.id}`);
+    return valEl ? { ...f, value: valEl.value } : f;
+  });
+
   showLoader('שומר...');
-  await db.from('categories').update({ label }).eq('id',id).eq('user_id',currentUser.id);
+  await db.from('categories').update({ label, custom_fields: updatedFields }).eq('id',id).eq('user_id',currentUser.id);
   await loadCategories();
   hideLoader();
   renderCategoriesList();
@@ -2358,7 +2398,90 @@ async function saveCatEdit(id) {
   showToast('✅ קטגוריה עודכנה');
 }
 
-/* ── MORTGAGE INSTITUTION IN SETTINGS ───────────────── */
+/* ── CUSTOM FIELDS helpers ───────────────────────────── */
+
+function renderCustomFieldItems(cat) {
+  const fields = cat.custom_fields || [];
+  if (!fields.length) return `<div class="cf-empty">אין שדות עדיין</div>`;
+  return fields.map(f => {
+    const inputType = f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text';
+    const typeIcon  = f.type === 'date' ? '📅' : f.type === 'number' ? '🔢' : '📝';
+    return `
+    <div class="cf-field-row" id="cf-row-${cat.id}-${f.id}">
+      <span class="cf-field-type-icon" title="${f.type}">${typeIcon}</span>
+      <span class="cf-field-label">${f.label}</span>
+      <input type="${inputType}" id="cf-val-${cat.id}-${f.id}" value="${f.value || ''}"
+             class="form-input cf-field-value"
+             ${f.type === 'number' ? 'step="0.01"' : ''}
+             style="direction:ltr;text-align:right"/>
+      <button class="cf-delete-btn" onclick="deleteCustomField('${cat.id}','${f.id}')" title="מחק שדה">${ICONS_JS.trash}</button>
+    </div>`;
+  }).join('');
+}
+
+function showAddCustomFieldForm(catId) {
+  document.getElementById(`cf-add-form-${catId}`).style.display = 'block';
+  document.getElementById(`cf-add-btn-${catId}`).style.display  = 'none';
+  document.getElementById(`cf-new-label-${catId}`)?.focus();
+}
+
+function cancelAddCustomField(catId) {
+  document.getElementById(`cf-add-form-${catId}`).style.display = 'none';
+  document.getElementById(`cf-add-btn-${catId}`).style.display  = 'flex';
+  const labelEl = document.getElementById(`cf-new-label-${catId}`);
+  if (labelEl) labelEl.value = '';
+}
+
+async function confirmAddCustomField(catId) {
+  const labelEl = document.getElementById(`cf-new-label-${catId}`);
+  const typeEl  = document.getElementById(`cf-new-type-${catId}`);
+  const label   = labelEl?.value.trim();
+  const type    = typeEl?.value || 'text';
+  if (!label) return showToast('⚠️ יש להזין שם לשדה');
+
+  const cat = categories.find(c => c.id === catId);
+  if (!cat) return;
+
+  // Collect current values from DOM before mutating
+  const existingFields = cat.custom_fields || [];
+  const updatedExisting = existingFields.map(f => {
+    const valEl = document.getElementById(`cf-val-${catId}-${f.id}`);
+    return valEl ? { ...f, value: valEl.value } : f;
+  });
+
+  const newField = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), label, type, value: '' };
+  const newFields = [...updatedExisting, newField];
+
+  showLoader('שומר...');
+  await db.from('categories').update({ custom_fields: newFields }).eq('id', catId).eq('user_id', currentUser.id);
+  await loadCategories();
+  hideLoader();
+
+  // Re-render only the fields list (keep panel open)
+  const freshCat = categories.find(c => c.id === catId);
+  const listEl   = document.getElementById(`cf-list-${catId}`);
+  if (listEl && freshCat) listEl.innerHTML = renderCustomFieldItems(freshCat);
+
+  cancelAddCustomField(catId);
+  showToast('✅ שדה נוסף');
+}
+
+async function deleteCustomField(catId, fieldId) {
+  const cat = categories.find(c => c.id === catId);
+  if (!cat) return;
+
+  const updatedFields = (cat.custom_fields || []).filter(f => f.id !== fieldId);
+
+  showLoader('מוחק...');
+  await db.from('categories').update({ custom_fields: updatedFields }).eq('id', catId).eq('user_id', currentUser.id);
+  await loadCategories();
+  hideLoader();
+
+  const freshCat = categories.find(c => c.id === catId);
+  const listEl   = document.getElementById(`cf-list-${catId}`);
+  if (listEl && freshCat) listEl.innerHTML = renderCustomFieldItems(freshCat);
+  showToast('🗑️ שדה נמחק');
+}
 function renderMortgageInstSettings() {
   const section = document.getElementById('mortgage-inst-section');
   if (!section) return;
@@ -3176,6 +3299,47 @@ function openCatHistory(catKey, catLabel) {
   document.getElementById('cat-history-insights').innerHTML = ins.map(([icon, text]) =>
     `<div style="display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ink-3);padding:6px 0;border-bottom:1px solid var(--border)">${icon}<span>${text}</span></div>`
   ).join('');
+
+  // ── Custom fields block ─────────────────────────────
+  const customFields = cat?.custom_fields || [];
+  let cfHtml = '';
+  if (customFields.length) {
+    const now = new Date();
+    const rows = customFields.map(f => {
+      let display = f.value || '—';
+      let alertClass = '';
+      if (f.type === 'date' && f.value) {
+        const d = new Date(f.value);
+        if (!isNaN(d)) {
+          display = d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+          const sameMonth = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+          const pastMonth = d < now && !sameMonth;
+          if (sameMonth) alertClass = 'cf-row-warn';
+          else if (pastMonth) alertClass = 'cf-row-expired';
+        }
+      } else if (f.type === 'number' && f.value !== '' && f.value !== undefined) {
+        const n = parseFloat(f.value);
+        if (!isNaN(n)) display = n.toLocaleString('he-IL');
+      }
+      const icon = f.type === 'date' ? ICONS_JS.calendar : f.type === 'number' ? ICONS_JS.target : ICONS_JS.note;
+      return `
+      <div class="ch-cf-row ${alertClass}">
+        <span class="ch-cf-icon">${icon}</span>
+        <span class="ch-cf-label">${f.label}</span>
+        <span class="ch-cf-value">${display}${alertClass === 'cf-row-warn' ? ' ⚠️' : alertClass === 'cf-row-expired' ? ' ⏰' : ''}</span>
+      </div>`;
+    }).join('');
+    cfHtml = `<div class="ch-cf-block">${rows}</div>`;
+  }
+  // Insert cf block between insights and body
+  let cfContainer = document.getElementById('cat-history-custom-fields');
+  if (!cfContainer) {
+    cfContainer = document.createElement('div');
+    cfContainer.id = 'cat-history-custom-fields';
+    const insightsEl = document.getElementById('cat-history-insights');
+    insightsEl.insertAdjacentElement('afterend', cfContainer);
+  }
+  cfContainer.innerHTML = cfHtml;
 
   let rows = '';
   for (let i = last12.length - 1; i >= 1; i--) {

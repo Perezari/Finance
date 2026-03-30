@@ -1779,18 +1779,8 @@ select option{background:var(--surface)}
   z-index: 999;
   padding: 16px;
 }
-.info-modal-box {
-  background: var(--surface);
-  border-radius: var(--r-xl);
-  width: 100%;
-  max-width: 400px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  animation: fadeUp .22s ease;
-}
+
+.info-modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:380px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
 
 /* Info modal — mobile bottom sheet */
 @media (max-width: 640px) {

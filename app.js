@@ -2877,43 +2877,213 @@ function switchTab(name, btn) {
 
 
 /* ══ TOTAL ASSETS PIE BREAKDOWN ══════════════════════ */
+
+// Helper: polar coords → cartesian (0° = top, clockwise)
+function _abPolar(cx, cy, r, deg) {
+  const rad = (deg - 90) * Math.PI / 180;
+  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+}
+// Helper: build a donut ring segment as SVG <path>
+function _abSegPath(cx, cy, R, ri, sDeg, eDeg) {
+  // Clamp to avoid degenerate full-circle (360 → 359.99)
+  const e = Math.min(eDeg, sDeg + 359.99);
+  const large = (e - sDeg) > 180 ? 1 : 0;
+  const [x1,y1] = _abPolar(cx, cy, R,  sDeg);
+  const [x2,y2] = _abPolar(cx, cy, R,  e);
+  const [x3,y3] = _abPolar(cx, cy, ri, e);
+  const [x4,y4] = _abPolar(cx, cy, ri, sDeg);
+  return `M${x1},${y1} A${R},${R} 0 ${large},1 ${x2},${y2} L${x3},${y3} A${ri},${ri} 0 ${large},0 ${x4},${y4} Z`;
+}
+
+// State for the currently selected segment
+let _abSelIdx = -1;
+
+function abSelectSegment(idx) {
+  const seg = window._abSegData?.[idx];
+  if (!seg) return;
+
+  // Toggle off if already selected
+  if (_abSelIdx === idx) { abDeselectSegment(); return; }
+  _abSelIdx = idx;
+
+  // Dim all, highlight selected
+  (window._abSegData || []).forEach((s, i) => {
+    const path = document.getElementById(`ab-seg-${i}`);
+    if (!path) return;
+    if (i === idx) {
+      path.style.opacity = '1';
+      path.style.filter  = 'brightness(1.25) drop-shadow(0 0 6px ' + s.color + '88)';
+      path.style.transform = 'scale(1.04)';
+    } else {
+      path.style.opacity   = '0.35';
+      path.style.filter    = '';
+      path.style.transform = 'scale(1)';
+    }
+  });
+
+  // Update SVG center text
+  const pctVal = (seg.val / seg.total * 100).toFixed(1);
+  const ct = document.getElementById('ab-center-text');
+  if (ct) ct.innerHTML = `
+    <text x="100" y="92" text-anchor="middle" font-family="var(--mono)" font-size="13" font-weight="800" fill="${seg.color}">${fmt(seg.val)}</text>
+    <text x="100" y="110" text-anchor="middle" font-size="10" fill="var(--ink-4)">${pctVal}%</text>`;
+
+  // Highlight matching legend row
+  document.querySelectorAll('.ab-legend-row').forEach((row, i) => {
+    row.style.opacity    = i === idx ? '1' : '0.45';
+    row.style.background = i === idx ? 'var(--surface2)' : '';
+    row.style.borderRadius = i === idx ? '8px' : '';
+  });
+}
+
+function abDeselectSegment() {
+  _abSelIdx = -1;
+  (window._abSegData || []).forEach((s, i) => {
+    const path = document.getElementById(`ab-seg-${i}`);
+    if (!path) return;
+    path.style.opacity   = '0.92';
+    path.style.filter    = '';
+    path.style.transform = 'scale(1)';
+  });
+  // Restore center text
+  const ct = document.getElementById('ab-center-text');
+  const total = window._abSegData?.[0]?.total || 0;
+  if (ct && total) ct.innerHTML = `
+    <text x="100" y="92" text-anchor="middle" font-family="var(--mono)" font-size="14" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
+    <text x="100" y="111" text-anchor="middle" font-size="10" fill="var(--ink-4)">סה"כ</text>`;
+  const panel = document.getElementById('ab-info-panel');
+  if (panel) panel.style.display = 'none';
+  document.querySelectorAll('.ab-legend-row').forEach(row => {
+    row.style.opacity    = '1';
+    row.style.background = '';
+    row.style.borderRadius = '';
+  });
+}
+
 function showTotalAssetsBreakdown() {
   if (!records.length) return;
+  _abSelIdx = -1;
   const latest = records[records.length - 1];
   const calc   = calcRecord(latest);
-  const colors = ['#0e9e7e','#4f8ef7','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#64748b','#22c55e'];
+  const colors = ['#8b5cf6','#4f8ef7','#0e9e7e','#f59e0b','#ef4444','#ec4899','#14b8a6','#f97316','#64748b','#22c55e'];
   const items  = categories.map((cat,i) => ({ label:cat.label, val:calc[cat.key]||0, color:colors[i%colors.length] }))
     .filter(d => d.val > 0).sort((a,b) => b.val - a.val);
   const total  = items.reduce((s,d) => s+d.val, 0);
-  const r=70, cx=90, cy=90, sw=28, circ=2*Math.PI*r;
-  let off=0;
-  const arcs = items.map(d => {
-    const dash = (d.val/total)*circ;
-    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${d.color}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})" opacity=".9"/>`;
-    off += dash; return arc;
+
+  // ── Build interactive SVG donut with <path> segments ──
+  const CX=100, CY=100, R=82, RI=56; // outer radius, inner radius
+  const GAP_DEG = items.length > 1 ? 1.8 : 0;
+  let angleDeg = 0;
+  const segData = items.map((d, i) => {
+    const span   = (d.val / total) * 360;
+    const sDeg   = angleDeg + GAP_DEG / 2;
+    const eDeg   = angleDeg + span - GAP_DEG / 2;
+    const pathD  = _abSegPath(CX, CY, R, RI, sDeg, eDeg);
+    angleDeg += span;
+    return { ...d, pathD, index: i, total };
+  });
+  window._abSegData = segData;
+
+  const svgPaths = segData.map((seg, i) =>
+    `<path id="ab-seg-${i}" d="${seg.pathD}" fill="${seg.color}" opacity=".92"
+      style="cursor:pointer;transition:opacity .18s,transform .18s,filter .18s;transform-origin:${CX}px ${CY}px"
+      onclick="abSelectSegment(${i})"/>`
+  ).join('');
+
+  // ── Legend rows (clickable) ─────────────────────────
+  const maxVal = items[0]?.val || 1;
+  const legendRows = items.map((d, i) => {
+    const pct    = (d.val / total * 100).toFixed(1);
+    const barPct = Math.round((d.val / maxVal) * 100);
+    return `
+      <div class="ab-legend-row" onclick="abSelectSegment(${i})"
+        style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;cursor:pointer;transition:opacity .15s,background .15s;padding-right:4px;padding-left:4px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:7px">
+            <div style="width:9px;height:9px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
+            <span style="font-size:.83rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.label}</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <span style="font-family:var(--mono);font-size:.83rem;font-weight:700;color:var(--ink)">${fmt(d.val)}</span>
+          <span style="font-size:.75rem;font-weight:700;color:var(--ink-4);min-width:38px;text-align:left">${pct}%</span>
+        </div>
+      </div>`;
   }).join('');
-  const legend = items.map(d => {
-    const pct = (d.val/total*100).toFixed(1);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0">
-        <div style="width:10px;height:10px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
-        <span style="font-size:.82rem;color:var(--ink-2)">${d.label}</span>
+
+  // ── Ticker ──────────────────────────────────────────
+  const SVG_PIE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>`;
+  const tickerItems = [
+    `<span class="tkr-item">${SVG_PIE} <bdi dir="rtl" class="tkr-text">סה"כ: <strong>${fmt(total)}</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.barChart} <bdi dir="rtl" class="tkr-text">${items[0]?.label || ''}: <strong>${(items[0]?.val/total*100).toFixed(1)}%</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.breakdown} <bdi dir="rtl" class="tkr-text"><strong>${items.length}</strong> קטגוריות פעילות</bdi></span>`,
+  ];
+  const SEP = `<span class="tkr-sep">·</span>`;
+  const LOOP_SEP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
+  const tickerHtml = `<div class="tkr-track" id="ab-tkr-track">${tickerItems.join(SEP) + LOOP_SEP + tickerItems.join(SEP) + LOOP_SEP}</div>`;
+
+  // ── Build modal ─────────────────────────────────────
+  document.getElementById('assets-breakdown-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'assets-breakdown-modal';
+  modal.className = 'info-modal-overlay cat-history-overlay';
+  modal.innerHTML = `
+    <div class="modal-box">
+
+      <div class="chb-header">
+        <div class="chb-title">${ICONS_JS.barChart} פירוט סה"כ נכסים</div>
+        <button onclick="document.getElementById('assets-breakdown-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span style="font-family:var(--mono);font-size:.8rem;color:var(--ink)">${fmt(d.val)}</span>
-        <span style="font-size:.72rem;color:var(--ink-4);min-width:36px;text-align:left">${pct}%</span>
+
+      <div class="chb-ticker-row" id="ab-ticker-row">${tickerHtml}</div>
+
+      <!-- Interactive donut -->
+      <div class="chb-top" style="display:flex;justify-content:center;padding:18px 0 14px">
+        <svg width="200" height="200" viewBox="0 0 200 200" style="overflow:visible">
+          <circle cx="${CX}" cy="${CY}" r="${(R+RI)/2}" fill="none" stroke="var(--border)" stroke-width="${R-RI}"/>
+          ${svgPaths}
+          <g id="ab-center-text" style="pointer-events:none">
+            <text x="${CX}" y="92" text-anchor="middle" font-family="var(--mono)" font-size="14" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
+            <text x="${CX}" y="111" text-anchor="middle" font-size="10" fill="var(--ink-4)">סה"כ</text>
+          </g>
+        </svg>
       </div>
+
+      <!-- Selected segment info card (hidden by default) -->
+      <div id="ab-info-panel" style="display:none;margin:0 16px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;direction:rtl;animation:fadeUp .15s ease">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="ab-info-dot" style="width:10px;height:10px;border-radius:50%;flex-shrink:0"></div>
+            <span id="ab-info-label" style="font-size:.875rem;font-weight:700;color:var(--ink)"></span>
+          </div>
+          <button onclick="abDeselectSegment()" class="chb-close" style="padding:2px">${ICONS_JS.x}</button>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:7px">
+          <span id="ab-info-val" style="font-family:var(--mono);font-size:1.35rem;font-weight:800;color:var(--ink)"></span>
+          <span id="ab-info-pct" style="font-size:.82rem;font-weight:700;color:var(--ink-3)"></span>
+        </div>
+        <div style="margin-top:8px;height:4px;background:var(--border);border-radius:2px">
+          <div id="ab-info-bar" style="height:4px;border-radius:2px;width:0%;transition:width .4s ease"></div>
+        </div>
+      </div>
+
+      <div class="chb-history-header"><span>חלוקה לפי קטגוריה</span></div>
+      <div class="chb-body">${legendRows}</div>
+
     </div>`;
-  }).join('');
-  openInfoModal('פירוט סה"כ נכסים', `
-    <div style="display:flex;justify-content:center;margin-bottom:16px">
-      <svg width="180" height="180" viewBox="0 0 180 180">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${sw}"/>
-        ${arcs}
-        <text x="${cx}" y="${cy-6}" text-anchor="middle" font-family="var(--mono)" font-size="13" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
-        <text x="${cx}" y="${cy+12}" text-anchor="middle" font-family="var(--font)" font-size="10" fill="var(--ink-4)">סה"כ</text>
-      </svg>
-    </div>${legend}`);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+
+  // Animate ticker
+  setTimeout(() => {
+    const track = document.getElementById('ab-tkr-track');
+    if (!track) return;
+    const oneWidth = track.scrollWidth / 2;
+    if (oneWidth > 0) {
+      track.style.animationDuration = `${(oneWidth / 60).toFixed(2)}s`;
+      track.style.animationPlayState = 'running';
+    }
+  }, 60);
 }
 
 /* ══ LIQUID ASSETS INFO ═══════════════════════════════ */

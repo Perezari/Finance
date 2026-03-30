@@ -3577,89 +3577,74 @@ function openCatHistory(catKey, catLabel) {
   const SVG_AVG  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`;
   const SVG_PEAK = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
 
+  // LTR-safe currency format for ticker
+  const fmtT = v => '₪' + Math.round(Math.abs(v)).toLocaleString('he-IL');
+
   const ins = [];
   if (totalPct) {
     const pos = !isMortgage ? totalDelta >= 0 : totalDelta <= 0;
     ins.push([pos ? SVG_UP : SVG_DOWN,
-      `שינוי כולל: <strong style="color:${insightColor(pos)}">${totalDelta>=0?'+':''}${fmt(totalDelta)} (${totalDelta>=0?'+':''}${totalPct}%)</strong>`]);
+      `שינוי כולל: <strong style="color:${insightColor(pos)}">${totalDelta>=0?'+':''}${fmtT(totalDelta)} (${totalDelta>=0?'+':''}${totalPct}%)</strong>`]);
   }
-  ins.push([SVG_AVG, `ממוצע: <strong>${fmt(Math.round(avgVal))}</strong>`]);
-  if (maxVal > 0) ins.push([SVG_PEAK, `שיא: <strong>${fmt(maxVal)}</strong>`]);
+  ins.push([SVG_AVG, `ממוצע: <strong>${fmtT(Math.round(avgVal))}</strong>`]);
+  if (maxVal > 0) ins.push([SVG_PEAK, `שיא: <strong>${fmtT(maxVal)}</strong>`]);
 
-  document.getElementById('cat-history-insights').innerHTML = ins.map(([icon, text]) =>
-    `<div style="display:flex;align-items:center;gap:7px;font-size:.8rem;color:var(--ink-3);padding:6px 0;border-bottom:1px solid var(--border)">${icon}<span>${text}</span></div>`
-  ).join('');
+  // ── Build unified plain-text ticker (insights + custom fields) ──
+  const tickerItems = ins.map(([icon, text]) =>
+    `<span class="tkr-item">${icon} <bdi dir="rtl" class="tkr-text">${text}</bdi></span>`
+  );
 
-  // ── Custom fields block ─────────────────────────────
+  // Append custom fields as plain items
   const customFields = cat?.custom_fields || [];
-  let cfHtml = '';
   if (customFields.length) {
-    const now = new Date();
-    const nowYear = now.getFullYear(), nowMonth = now.getMonth();
-
-    const rows = customFields.map(f => {
-      let display = f.value || '—';
-      let status  = 'normal';
-      let daysMsg = '';
-
+    const now2 = new Date();
+    customFields.forEach(f => {
+      if (f.value === '' || f.value === null || f.value === undefined) return;
+      let display = f.value;
+      let statusCls = '';
       if (f.type === 'date' && f.value) {
         const d = new Date(f.value);
         if (!isNaN(d)) {
-          display = d.toLocaleDateString('he-IL', { day:'numeric', month:'long', year:'numeric' });
-          const diffDays  = Math.ceil((d - now) / 86400000);
-          const sameMonth = d.getFullYear() === nowYear && d.getMonth() === nowMonth;
-          if (diffDays < 0) {
-            status  = 'expired';
-            daysMsg = `פג לפני ${Math.abs(diffDays)} ימים`;
-          } else if (sameMonth || diffDays <= 45) {
-            status  = 'warn';
-            daysMsg = diffDays === 0 ? 'היום!' : `עוד ${diffDays} יום`;
-          }
+          display = d.toLocaleDateString('he-IL', { day:'numeric', month:'short', year:'numeric' });
+          const diff = Math.ceil((d - now2) / 86400000);
+          if (diff < 0)        statusCls = 'tkr-expired';
+          else if (diff <= 45) statusCls = 'tkr-warn';
         }
-      } else if (f.type === 'number' && f.value !== '' && f.value !== undefined) {
+      } else if (f.type === 'number') {
         const n = parseFloat(f.value);
-        if (!isNaN(n)) display = n.toLocaleString('he-IL');
+        if (!isNaN(n)) display = n.toLocaleString('he-IL'); // no ₪ for management fees etc.
       }
-
-      const typeIcon = f.type === 'date' ? ICONS_JS.calendar
-                     : f.type === 'number' ? ICONS_JS.target
-                     : ICONS_JS.note;
-
-      const badge = status === 'expired'
-        ? `<span class="cf-badge cf-badge-expired">פג תוקף</span>`
-        : status === 'warn'
-        ? `<span class="cf-badge cf-badge-warn">⚠ ${daysMsg}</span>`
-        : '';
-
-      const valueClass = status === 'expired' ? 'cf-val-expired'
-                       : status === 'warn'    ? 'cf-val-warn'
-                       : 'cf-val-normal';
-
-      return `
-        <div class="cf-row cf-row-${status}">
-          <div class="cf-row-left">
-            <span class="cf-row-icon">${typeIcon}</span>
-            <span class="cf-row-label">${f.label}</span>
-            ${badge}
-          </div>
-          <span class="cf-row-value ${valueClass}">${display}</span>
-        </div>`
-    }).join('');
-
-    cfHtml = `<div class="ch-cf-block">
-      <div class="cf-section-title">פרטים נוספים</div>
-      ${rows}
-    </div>`;
+      const color = statusCls === 'tkr-expired' ? '#dc2626'
+                  : statusCls === 'tkr-warn'    ? '#d97706' : '';
+      const valHtml = color
+        ? `<strong style="color:${color}">${display}</strong>`
+        : `<strong>${display}</strong>`;
+      tickerItems.push(`<span class="tkr-item"><bdi dir="rtl" class="tkr-text">${f.label}: ${valHtml}</bdi></span>`);
+    });
   }
-  // Insert cf block between insights and body
-  let cfContainer = document.getElementById('cat-history-custom-fields');
-  if (!cfContainer) {
-    cfContainer = document.createElement('div');
-    cfContainer.id = 'cat-history-custom-fields';
-    const insightsEl = document.getElementById('cat-history-insights');
-    insightsEl.insertAdjacentElement('afterend', cfContainer);
+
+  // Separator between items + between the two copies
+  const SEP = `<span class="tkr-sep">·</span>`;
+  const oneLoop = tickerItems.join(SEP);
+  const LOOP_SEP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
+  const tickerHtml = oneLoop + LOOP_SEP + oneLoop + LOOP_SEP;
+
+  const tickerEl = document.getElementById('cat-history-ticker');
+  if (tickerEl) {
+    tickerEl.innerHTML = `<div class="tkr-track" id="tkr-track-inner">${tickerHtml}</div>`;
+    // Use setTimeout so DOM is fully painted before measuring
+    setTimeout(() => {
+      const track = document.getElementById('tkr-track-inner');
+      if (!track) return;
+      const oneWidth = track.scrollWidth / 2;   // exact width of one copy
+      if (oneWidth <= 0) return;
+      const duration = oneWidth / 60;           // 80px/sec → seconds
+      // translateX(-50%) = -oneWidth (relative to element, not container)
+      // direction:ltr on both container+track ensures left=start, right=end
+      track.style.animationDuration = `${duration.toFixed(2)}s`;
+      track.style.animationPlayState = 'running';
+    }, 60);
   }
-  cfContainer.innerHTML = cfHtml;
 
   let rows = '';
   for (let i = last12.length - 1; i >= 1; i--) {

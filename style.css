@@ -437,7 +437,7 @@ select option{background:var(--surface)}
 
 /* ══ SETTINGS MODAL ════════════════════════════════════ */
 .modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.35);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
-.modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
+.modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:420px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
 .modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
 .modal-header h2{font-size:1rem;font-weight:700;color:var(--ink)}
 .modal-close{width:32px;height:32px;background:var(--bg);border:1.5px solid var(--border);border-radius:50%;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-3);transition:all .15s}
@@ -1561,15 +1561,194 @@ select option{background:var(--surface)}
   background: var(--surface);
   border-radius: var(--r-xl);
   width: 100%;
-  max-width: 400px;
-  max-height: 80vh;
+  max-width: 420px;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: fadeUp .22s ease;
 }
-.cat-history-box #cat-history-body { max-height: 60vh; }
+
+/* Header */
+.chb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chb-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.chb-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background .12s;
+}
+.chb-close:hover { background: var(--surface2); }
+
+/* Fixed top zone: chart + stats + cf chips */
+.chb-top {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.chb-chart-wrap {
+  padding: 14px 18px 0;
+  height: 160px;
+}
+
+/* Stats chips — horizontal scrollable row (all devices) */
+/* ── Unified plain-text ticker ────────────────────────── */
+@keyframes tkr-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }   /* -50% of element = exactly oneWidth */
+}
+
+.chb-ticker-row {
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  height: 28px;
+  display: flex;
+  align-items: center;
+  direction: ltr;                          /* ← critical: LTR on container too */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image:         linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.tkr-track {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: max-content;
+  direction: ltr;
+  animation: tkr-scroll linear infinite;
+  animation-play-state: paused;            /* ← starts paused; JS sets duration + running */
+  will-change: transform;
+}
+.chb-ticker-row:hover .tkr-track { animation-play-state: paused !important; }
+
+.tkr-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: .78rem;
+  color: var(--ink-3);
+  padding: 0 4px;
+}
+.tkr-item svg { flex-shrink: 0; }
+.tkr-label {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.tkr-text {
+  font-size: .78rem;
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.tkr-text strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.tkr-text.tkr-warn    { color: #d97706; }
+.tkr-text.tkr-expired { color: #dc2626; }
+
+.tkr-sep {
+  color: var(--ink-4);
+  font-size: .7rem;
+  padding: 0 8px;
+  opacity: .5;
+}
+.tkr-loop-sep {
+  padding: 0 18px;
+  opacity: .25;
+}
+
+/* Remove old chip rows — no longer used */
+.chb-insights-row, .ch-cf-chips { display: none; }
+
+
+/* Individual chips — same look as before */
+.chb-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: .76rem;
+  color: var(--ink-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chb-chip strong { color: var(--ink); }
+
+.cf-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: .75rem;
+  flex-shrink: 0;
+}
+.cf-chip-label { color: var(--ink-3); font-weight: 500; }
+.cf-chip-val   { color: var(--ink);   font-weight: 700; }
+.cf-chip-alert {
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+.cf-chip-alert.warn    { background: rgba(245,158,11,.18); color: #b45309; }
+.cf-chip-alert.expired { background: rgba(239,68,68,.14);  color: #dc2626; }
+.cf-chip.cf-chip-warn    { border-color: rgba(245,158,11,.5); background: rgba(245,158,11,.07); }
+.cf-chip.cf-chip-expired { border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.07);  }
+.cf-chip.cf-chip-warn .cf-chip-val    { color: #b45309; }
+.cf-chip.cf-chip-expired .cf-chip-val { color: #dc2626; }
+
+
+/* History header */
+.chb-history-header {
+  display: flex;
+  align-items: center;
+  padding: 9px 20px 5px;
+  font-size: .66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--ink-4);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Scrollable body */
+.chb-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 /* Cat history — mobile bottom sheet */
 @media (max-width: 640px) {
@@ -1581,11 +1760,10 @@ select option{background:var(--surface)}
   .cat-history-box {
     max-width: 100%;
     border-radius: var(--r-xl) var(--r-xl) 0 0;
-    max-height: 85vh;
+    max-height: 88vh;
     padding-bottom: env(safe-area-inset-bottom);
     animation: slideUp .28s ease;
   }
-  .cat-history-box #cat-history-body { max-height: 65vh; }
 }
 
 /* Info modal (סה"כ נכסים, נכסים נזילים, שווי נקי) — desktop */

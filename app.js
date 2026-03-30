@@ -1568,16 +1568,20 @@ function renderCurrentReport() {
       }
     }
 
-    // Check if any date field expires this month → red border alert
+    // Date field alerts: expired=red, expiring within 45 days=orange
     const now = new Date();
-    const hasExpiringField = (cat.custom_fields || []).some(f => {
-      if (f.type !== 'date' || !f.value) return false;
+    let tileAlertClass = '';
+    for (const f of (cat.custom_fields || [])) {
+      if (f.type !== 'date' || !f.value) continue;
       const d = new Date(f.value);
-      return !isNaN(d) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    });
+      if (isNaN(d)) continue;
+      const diffDays = Math.ceil((d - now) / 86400000);
+      if (diffDays < 0) { tileAlertClass = 'cat-tile-expired'; break; }
+      if (diffDays <= 45 && !tileAlertClass) tileAlertClass = 'cat-tile-warn';
+    }
 
     return `
-    <div class="cat-tile${hasExpiringField ? ' cat-tile-alert' : ''}" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCatHistory('${cat.key}','${cat.label}')">
+    <div class="cat-tile${tileAlertClass ? ' ' + tileAlertClass : ''}" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCatHistory('${cat.key}','${cat.label}')">
       ${logoHtml}
       <span class="ct-icon" ${inst?'style="display:none"':''}>${getCatSvg(cat)}</span>
       <div class="ct-label">${cat.label}${inst?`<span class="ct-inst">${inst.name}</span>`:''}</div>
@@ -3591,31 +3595,61 @@ function openCatHistory(catKey, catLabel) {
   let cfHtml = '';
   if (customFields.length) {
     const now = new Date();
+    const nowYear = now.getFullYear(), nowMonth = now.getMonth();
+
     const rows = customFields.map(f => {
       let display = f.value || '—';
-      let alertClass = '';
+      let status  = 'normal';
+      let daysMsg = '';
+
       if (f.type === 'date' && f.value) {
         const d = new Date(f.value);
         if (!isNaN(d)) {
-          display = d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-          const sameMonth = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-          const pastMonth = d < now && !sameMonth;
-          if (sameMonth) alertClass = 'cf-row-warn';
-          else if (pastMonth) alertClass = 'cf-row-expired';
+          display = d.toLocaleDateString('he-IL', { day:'numeric', month:'long', year:'numeric' });
+          const diffDays  = Math.ceil((d - now) / 86400000);
+          const sameMonth = d.getFullYear() === nowYear && d.getMonth() === nowMonth;
+          if (diffDays < 0) {
+            status  = 'expired';
+            daysMsg = `פג לפני ${Math.abs(diffDays)} ימים`;
+          } else if (sameMonth || diffDays <= 45) {
+            status  = 'warn';
+            daysMsg = diffDays === 0 ? 'היום!' : `עוד ${diffDays} יום`;
+          }
         }
       } else if (f.type === 'number' && f.value !== '' && f.value !== undefined) {
         const n = parseFloat(f.value);
         if (!isNaN(n)) display = n.toLocaleString('he-IL');
       }
-      const icon = f.type === 'date' ? ICONS_JS.calendar : f.type === 'number' ? ICONS_JS.target : ICONS_JS.note;
+
+      const typeIcon = f.type === 'date' ? ICONS_JS.calendar
+                     : f.type === 'number' ? ICONS_JS.target
+                     : ICONS_JS.note;
+
+      const badge = status === 'expired'
+        ? `<span class="cf-badge cf-badge-expired">פג תוקף</span>`
+        : status === 'warn'
+        ? `<span class="cf-badge cf-badge-warn">⚠ ${daysMsg}</span>`
+        : '';
+
+      const valueClass = status === 'expired' ? 'cf-val-expired'
+                       : status === 'warn'    ? 'cf-val-warn'
+                       : 'cf-val-normal';
+
       return `
-      <div class="ch-cf-row ${alertClass}">
-        <span class="ch-cf-icon">${icon}</span>
-        <span class="ch-cf-label">${f.label}</span>
-        <span class="ch-cf-value">${display}${alertClass === 'cf-row-warn' ? ' ⚠️' : alertClass === 'cf-row-expired' ? ' ⏰' : ''}</span>
-      </div>`;
+        <div class="cf-row cf-row-${status}">
+          <div class="cf-row-left">
+            <span class="cf-row-icon">${typeIcon}</span>
+            <span class="cf-row-label">${f.label}</span>
+            ${badge}
+          </div>
+          <span class="cf-row-value ${valueClass}">${display}</span>
+        </div>`
     }).join('');
-    cfHtml = `<div class="ch-cf-block">${rows}</div>`;
+
+    cfHtml = `<div class="ch-cf-block">
+      <div class="cf-section-title">פרטים נוספים</div>
+      ${rows}
+    </div>`;
   }
   // Insert cf block between insights and body
   let cfContainer = document.getElementById('cat-history-custom-fields');

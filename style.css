@@ -993,62 +993,104 @@ select option{background:var(--surface)}
 /* ── CUSTOM FIELDS chips on cat-tile ─────────────────── */
 /* (chips removed — fields shown inside history panel instead) */
 
-/* ── cat-tile red border when date field expires this month ── */
-.cat-tile.cat-tile-alert {
-  border-color: var(--red, #ef4444) !important;
-  box-shadow: 0 0 0 1.5px var(--red, #ef4444), 0 2px 8px rgba(239,68,68,.15);
+
+/* ── cat-tile border alerts for date fields ── */
+.cat-tile.cat-tile-expired {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1.5px #ef4444, 0 2px 8px rgba(239,68,68,.15);
 }
-.cat-tile.cat-tile-alert:hover {
-  box-shadow: 0 0 0 2px var(--red, #ef4444), 0 4px 14px rgba(239,68,68,.22);
+.cat-tile.cat-tile-expired:hover {
+  box-shadow: 0 0 0 2px #ef4444, 0 4px 14px rgba(239,68,68,.22);
+}
+.cat-tile.cat-tile-warn {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 1.5px #f59e0b, 0 2px 8px rgba(245,158,11,.15);
+}
+.cat-tile.cat-tile-warn:hover {
+  box-shadow: 0 0 0 2px #f59e0b, 0 4px 14px rgba(245,158,11,.22);
 }
 
 /* ── Custom fields block inside cat-history panel ────── */
+/* ── Custom fields block inside cat-history panel ────── */
 .ch-cf-block {
-  padding: 6px 22px 10px;
+  padding: 0 22px 4px;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
-.ch-cf-row {
+.cf-section-title {
+  font-size: .66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-4);
+  padding: 10px 0 6px;
+}
+.cf-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 3px;
   direction: rtl;
   transition: background .12s;
 }
-.ch-cf-row:hover { background: var(--surface2); }
-.ch-cf-icon {
+.cf-row:hover { background: var(--surface2); }
+.cf-row-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+.cf-row-icon {
   flex-shrink: 0;
   color: var(--ink-4);
   display: flex;
   align-items: center;
 }
-.ch-cf-label {
-  flex: 1;
+.cf-row-label {
   font-size: .8rem;
   color: var(--ink-3);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.ch-cf-value {
-  font-size: .82rem;
+.cf-row-value {
+  font-size: .84rem;
   font-weight: 700;
   color: var(--ink);
+  white-space: nowrap;
   font-family: var(--font);
-  text-align: left;
+  flex-shrink: 0;
 }
-.ch-cf-row.cf-row-warn {
-  background: rgba(239,68,68,.08);
-  border: 1px solid rgba(239,68,68,.25);
+.cf-val-warn    { color: #d97706; }
+.cf-val-expired { color: #dc2626; }
+.cf-val-normal  { color: var(--ink); }
+
+/* Badge — small pill, never wraps */
+.cf-badge {
+  font-size: .62rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.ch-cf-row.cf-row-warn .ch-cf-value { color: #ef4444; }
-.ch-cf-row.cf-row-warn .ch-cf-label { color: #ef4444; font-weight: 600; }
-.ch-cf-row.cf-row-expired {
-  background: rgba(251,146,60,.07);
-}
-.ch-cf-row.cf-row-expired .ch-cf-value { color: var(--ink-3); }
+.cf-badge-warn    { background: rgba(245,158,11,.15); color: #b45309; }
+.cf-badge-expired { background: rgba(239,68,68,.12);  color: #dc2626; }
+
+/* Row tint by status */
+.cf-row-warn    { background: rgba(245,158,11,.07); }
+.cf-row-expired { background: rgba(239,68,68,.07);  }
+.cf-row-warn:hover    { background: rgba(245,158,11,.13); }
+.cf-row-expired:hover { background: rgba(239,68,68,.12);  }
+
+/* Dark mode */
+[data-theme="dark"] .cf-row-warn    { background: rgba(245,158,11,.1); }
+[data-theme="dark"] .cf-row-expired { background: rgba(239,68,68,.1);  }
+
 
 
 @media (max-width:768px) {

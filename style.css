@@ -1770,7 +1770,9 @@ select option{background:var(--surface)}
 .info-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.55);
+  background: rgba(17,24,39,.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;

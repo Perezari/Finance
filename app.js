@@ -1284,9 +1284,10 @@ function isLiquidCat(cat) {
   if (legacyLiquid.includes(cat.key))  return true;
   if (cat.key.startsWith('liquid_'))   return true;
   if (cat.key.startsWith('savings_'))  return true;
-  if (cat.key.startsWith('invest_'))   return false;
-  if (cat.key.startsWith('pension_'))  return false;
-  return false;
+  if (cat.key.startsWith('invest_'))   return true;   // חשבון מסחר / תיק השקעות — נזיל
+  if (cat.key.startsWith('pension_'))  return false;  // פנסיה בלבד — לא נזיל
+  if (isPensionCat(cat))               return false;
+  return true;
 }
 
 function calcPensionTax(amount) {
@@ -2064,9 +2065,13 @@ function initColorTheme() {
   const saved = currentUser?.user_metadata?.color_theme || localStorage.getItem('color_theme_v1') || 'green';
   applyColorTheme(saved);
 }
-function exportPDF() {
+async function exportPDF() {
   if (!records.length) { showToast('אין נתונים להדפסה'); return; }
+  showLoader('מכין דוח...');
+  await new Promise(r => setTimeout(r, 60));
+  hideLoader();
 
+  // ── Data prep ──────────────────────────────────────────────
   const latest    = records[records.length - 1];
   const calc      = calcRecord(latest);
   const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
@@ -2074,131 +2079,412 @@ function exportPDF() {
   const today     = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' });
 
   let deltaAmt = 0, deltaPct = '0.0', avgGrowth = 0, growthSign = '+', growthColor = '#0e9e7e';
+  let bestCat = null, bestDelta = 0;
   if (records.length >= 2) {
-    const prev = calcRecord(records[records.length - 2]);
-    deltaAmt   = calc.totalAssets - prev.totalAssets;
-    deltaPct   = prev.totalAssets ? Math.abs(deltaAmt / prev.totalAssets * 100).toFixed(1) : '0.0';
-    avgGrowth  = (calc.totalAssets - calcRecord(records[0]).totalAssets) / (records.length - 1);
-    growthSign = deltaAmt >= 0 ? '+' : '-';
-    growthColor= deltaAmt >= 0 ? '#0e9e7e' : '#ef4444';
+    const prev  = calcRecord(records[records.length - 2]);
+    deltaAmt    = calc.totalAssets - prev.totalAssets;
+    deltaPct    = prev.totalAssets ? Math.abs(deltaAmt / prev.totalAssets * 100).toFixed(1) : '0.0';
+    avgGrowth   = (calc.totalAssets - calcRecord(records[0]).totalAssets) / (records.length - 1);
+    growthSign  = deltaAmt >= 0 ? '+' : '-';
+    growthColor = deltaAmt >= 0 ? '#0e9e7e' : '#ef4444';
+    // Best-performing category this month
+    categories.forEach(c => {
+      const d = (calc[c.key] || 0) - (prev[c.key] || 0);
+      if (d > bestDelta) { bestDelta = d; bestCat = c; }
+    });
   }
 
   const mortInstId = localStorage.getItem('mortgage_inst_v1') || latest.values?._mortgage_inst;
   const mortInst   = mortInstId ? getInstitution(mortInstId) : null;
+  const liquid     = categories.filter(c => isLiquidCat(c)).reduce((s,c) => s + (calc[c.key]||0), 0);
+  const nonLiquid  = calc.totalAssets - liquid;
+  const liquidPct  = calc.totalAssets ? Math.round(liquid / calc.totalAssets * 100) : 0;
 
-  const catRows = categories.map(cat => {
-    const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
-    const val  = calc[cat.key] || 0;
-    const pct  = calc.totalAssets ? (val / calc.totalAssets * 100).toFixed(1) : '0.0';
-    const bar  = Math.round(parseFloat(pct));
-    return '<tr><td><div style="font-weight:600;color:#111827">' + cat.label + '</div>'
-      + (inst ? '<div style="font-size:.72rem;color:#0e9e7e;margin-top:1px">' + inst.name + '</div>' : '')
-      + '</td><td style="text-align:left;font-family:\'Courier New\',monospace;font-weight:700">' + fmt(val) + '</td>'
-      + '<td style="width:130px"><div style="display:flex;align-items:center;gap:7px">'
-      + '<div style="flex:1;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden">'
-      + '<div style="width:' + bar + '%;height:100%;background:#0e9e7e;border-radius:3px"></div></div>'
-      + '<span style="font-size:.72rem;color:#6b7280;min-width:32px;text-align:right">' + pct + '%</span>'
-      + '</div></td></tr>';
+  // ── Sparkline SVG for each category (last 6 months) ───────
+  function sparkline(catKey) {
+    const vals = records.slice(-6).map(r => (r.values||{})[catKey] || 0);
+    if (vals.every(v => v === 0)) return '';
+    const max = Math.max(...vals); if (!max) return '';
+    const W = 52, H = 20;
+    const pts = vals.map((v, i) => {
+      const x = (i / (vals.length - 1)) * W;
+      const y = H - (v / max) * H;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const isPos = vals[vals.length-1] >= vals[0];
+    const col   = isPos ? '#0e9e7e' : '#ef4444';
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:inline-block;vertical-align:middle;margin-right:4px"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+
+  // ── Category rows with custom fields ──────────────────────
+  const catRows = categories.map((cat, i) => {
+    const inst   = cat.institution_id ? getInstitution(cat.institution_id) : null;
+    const val    = calc[cat.key] || 0;
+    const pct    = calc.totalAssets ? (val / calc.totalAssets * 100).toFixed(1) : '0.0';
+    const bar    = Math.round(parseFloat(pct));
+    const liq    = isLiquidCat(cat);
+    const spark  = sparkline(cat.key);
+    const fields = cat.custom_fields || [];
+    // Only render custom fields that have a non-empty value
+    const filledFields = fields.filter(f => f.value !== '' && f.value !== null && f.value !== undefined);
+    const cfHtml = filledFields.length
+      ? '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #f3f4f6;display:flex;flex-wrap:wrap;gap:5px">'
+        + filledFields.map(f => {
+          let dv = f.value;
+          if (f.type === 'date') {
+            const d = new Date(f.value); if (!isNaN(d)) dv = d.toLocaleDateString('he-IL', { month:'long', year:'numeric' });
+          } else if (f.type === 'number') {
+            dv = parseFloat(f.value).toLocaleString('he-IL');
+          }
+          return `<span style="font-size:.67rem;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:4px;border:1px solid #e5e7eb;white-space:nowrap">${f.label}: <strong style="color:#374151">${dv}</strong></span>`;
+        }).join('')
+        + '</div>'
+      : '';
+
+    // Logo — institution favicon, or default ₪ icon
+    const logoHtml = inst
+      ? `<img src="https://www.google.com/s2/favicons?domain=${inst.domain}&sz=32"
+             width="22" height="22"
+             style="border-radius:5px;object-fit:contain;flex-shrink:0;margin-top:1px"
+             onerror="this.style.display='none'"/>`
+      : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;background:#f3f4f6;border-radius:5px;padding:3px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+
+    return `<tr style="page-break-inside:avoid">
+      <td style="padding:11px 14px">
+        <div style="display:flex;align-items:flex-start;gap:9px">
+          ${logoHtml}
+          <div style="min-width:0">
+            <div style="font-weight:700;color:#111827;font-size:.875rem">${cat.label}</div>
+            ${inst ? `<div style="font-size:.7rem;color:#0e9e7e;margin-top:1px;font-weight:500">${inst.name}</div>` : ''}
+            ${cfHtml}
+          </div>
+        </div>
+      </td>
+      <td style="text-align:left;font-family:'Courier New',monospace;font-weight:700;font-size:.9rem;white-space:nowrap;padding:11px 14px">${fmt(val)}</td>
+      <td style="width:140px;padding:11px 14px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:5px;background:#f3f4f6;border-radius:3px;overflow:hidden">
+            <div style="width:${bar}%;height:100%;background:${liq?'#0e9e7e':'#f59e0b'};border-radius:3px"></div>
+          </div>
+          <span style="font-size:.7rem;color:#6b7280;min-width:34px;text-align:right">${pct}%</span>
+        </div>
+      </td>
+      <td style="padding:11px 14px">${spark}</td>
+    </tr>`;
   }).join('');
 
+  // ── History rows ───────────────────────────────────────────
   const histRows = [...records].reverse().slice(0, 12).map((r, i) => {
-    const c   = calcRecord(r);
-    const d   = new Date(r.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
-    const idx = records.length - 1 - i;
+    const c    = calcRecord(r);
+    const d    = new Date(r.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
+    const idx  = records.length - 1 - i;
     const prev = idx > 0 ? calcRecord(records[idx - 1]) : null;
-    let changeHtml = '\u2014';
+    let chgHtml = '—';
     if (prev) {
       const chg = c.totalAssets - prev.totalAssets;
       const pp  = prev.totalAssets ? (chg / prev.totalAssets * 100).toFixed(1) : null;
-      if (pp !== null) changeHtml = '<span style="color:' + (chg>=0?'#0e9e7e':'#ef4444') + ';font-weight:600">' + (chg>=0?'+':'') + pp + '%</span>';
+      if (pp !== null) chgHtml = `<span style="color:${chg>=0?'#0e9e7e':'#ef4444'};font-weight:700">${chg>=0?'+':''}${pp}%</span>`;
     }
-    return '<tr style="background:' + (i%2===0?'#ffffff':'#f9fafb') + '">'
-      + '<td style="text-align:right">' + d + '</td>'
-      + '<td style="text-align:right;font-family:\'Courier New\',monospace;font-weight:600">' + fmt(c.totalAssets) + '</td>'
-      + '<td style="text-align:right">' + (c.mortgage > 0 ? '<span style="color:#ef4444">' + fmt(c.mortgage) + '</span>' : '<span style="color:#d1d5db">\u2014</span>') + '</td>'
-      + '<td style="text-align:right">' + changeHtml + '</td></tr>';
+    return `<tr style="background:${i%2===0?'#ffffff':'#fafafa'};page-break-inside:avoid">
+      <td style="text-align:right;padding:9px 14px">${d}</td>
+      <td style="text-align:right;font-family:'Courier New',monospace;font-weight:600;padding:9px 14px">${fmt(c.totalAssets)}</td>
+      <td style="text-align:right;padding:9px 14px">${c.mortgage > 0 ? `<span style="color:#ef4444">${fmt(c.mortgage)}</span>` : '<span style="color:#d1d5db">—</span>'}</td>
+      <td style="text-align:right;padding:9px 14px">${chgHtml}</td>
+    </tr>`;
   }).join('');
 
-  const mortHeroHtml = calc.mortgage > 0
-    ? '<div class="hero-card danger"><div class="hc-label">\u05d9\u05ea\u05e8\u05ea \u05de\u05e9\u05db\u05e0\u05ea\u05d0' + (mortInst ? ' \u00b7 ' + mortInst.name : '') + '</div><div class="hc-val">' + fmt(calc.mortgage) + '</div></div>'
-    + '<div class="hero-card warning"><div class="hc-label">\u05e9\u05d5\u05d5\u05d9 \u05e0\u05e7\u05d9</div><div class="hc-val">' + fmt(calc.netWorth) + '</div></div>'
-    : '<div class="hero-card"><div class="hc-label">\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05de\u05ea\u05d5\u05e2\u05d3\u05d9\u05dd</div><div class="hc-val">' + records.length + '</div></div>'
-    + '<div class="hero-card"><div class="hc-label">\u05e6\u05de\u05d9\u05d7\u05d4 \u05de\u05de\u05d5\u05e6\u05e2\u05ea \u05dc\u05d7\u05d5\u05d3\u05e9</div><div class="hc-val">' + fmt(avgGrowth) + '</div></div>';
-
-  const growthStripHtml = records.length >= 2
-    ? '<div class="growth-strip">'
-    + '<div class="gs-item"><div class="gs-label">\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9</div><div class="gs-val" style="color:' + growthColor + '">' + growthSign + fmt(Math.abs(deltaAmt)) + '</div></div>'
-    + '<div class="gs-item"><div class="gs-label">\u05e9\u05d9\u05e0\u05d5\u05d9 %</div><div class="gs-val" style="color:' + growthColor + '">' + growthSign + deltaPct + '%</div></div>'
-    + '<div class="gs-item"><div class="gs-label">\u05de\u05de\u05d5\u05e6\u05e2 \u05d7\u05d5\u05d3\u05e9\u05d9</div><div class="gs-val">' + fmt(avgGrowth) + '</div></div>'
-    + '</div>' : '';
-
+  // ── Hero cards ─────────────────────────────────────────────
   const deltaSubHtml = records.length >= 2
-    ? '<div class="hc-sub" style="color:' + growthColor + ';font-weight:700">' + growthSign + deltaPct + '% \u05de\u05d7\u05d5\u05d3\u05e9 \u05e7\u05d5\u05d3\u05dd</div>' : '';
+    ? `<div style="font-size:.72rem;margin-top:5px;color:${growthColor};font-weight:700">${growthSign}${deltaPct}% מחודש קודם</div>` : '';
 
-  const html = '<!DOCTYPE html>\n<html dir="rtl" lang="he">\n<head>\n<meta charset="UTF-8"/>\n'
-    + '<title>\u05d3\u05d5\u05d7 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9 \u2013 ' + dateLabel + '</title>\n'
-    + '<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>\n'
-    + '<style>\n'
-    + '*{box-sizing:border-box;margin:0;padding:0}\n'
-    + 'body{font-family:\'Heebo\',sans-serif;color:#111827;background:#f8fafc;direction:rtl;padding:24px}\n'
-    + '.page{max-width:780px;margin:0 auto;background:#fff;border-radius:16px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,0,0,.08)}\n'
-    + '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;padding-bottom:24px;border-bottom:3px solid #0e9e7e}\n'
-    + '.brand{display:flex;align-items:center;gap:14px}\n'
-    + '.logo{width:48px;height:48px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;color:#fff}\n'
-    + '.brand-text h1{font-size:1.5rem;font-weight:900;color:#111827;letter-spacing:-.03em}\n'
-    + '.brand-text p{font-size:.8rem;color:#6b7280;margin-top:2px}\n'
-    + '.header-meta{text-align:left;font-size:.82rem;color:#6b7280;line-height:1.8}\n'
-    + '.header-meta strong{color:#111827;font-weight:700}\n'
-    + '.hero{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:36px}\n'
-    + '.hero-card{padding:20px 18px;border-radius:14px;border:1.5px solid #e5e9f0}\n'
-    + '.hero-card.primary{background:linear-gradient(135deg,#f0fdf9,#dcfdf5);border-color:#a7f3d0}\n'
-    + '.hero-card.danger{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-color:#fecaca}\n'
-    + '.hero-card.warning{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fde68a}\n'
-    + '.hc-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:8px}\n'
-    + '.hc-val{font-size:1.5rem;font-weight:900;color:#111827;letter-spacing:-.02em}\n'
-    + '.hero-card.primary .hc-val{color:#0e9e7e}.hero-card.danger .hc-val{color:#dc2626}.hero-card.warning .hc-val{color:#d97706}\n'
-    + '.hc-sub{font-size:.72rem;margin-top:5px;color:#6b7280}\n'
-    + '.growth-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:36px}\n'
-    + '.gs-item{padding:14px 16px;background:#f9fafb;border-radius:10px;border:1px solid #f3f4f6}\n'
-    + '.gs-label{font-size:.68rem;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}\n'
-    + '.gs-val{font-size:1rem;font-weight:800;color:#111827}\n'
-    + '.section-title{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin:32px 0 12px;display:flex;align-items:center;gap:8px}\n'
-    + '.section-title::after{content:"";flex:1;height:1px;background:#f3f4f6}\n'
-    + 'table{width:100%;border-collapse:collapse}\n'
-    + 'th{text-align:right;padding:10px 14px;background:#f9fafb;font-weight:700;color:#374151;border-bottom:2px solid #e5e9f0;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}\n'
-    + 'td{padding:12px 14px;border-bottom:1px solid #f3f4f6;font-size:.875rem;color:#374151;vertical-align:middle}\n'
-    + '.total-row td{font-weight:800;background:#f0fdf9;color:#0e9e7e;border-top:2px solid #a7f3d0}\n'
-    + '.footer{margin-top:48px;padding-top:20px;border-top:2px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center}\n'
-    + '.footer-brand{display:flex;align-items:center;gap:8px;font-size:.78rem;color:#9ca3af}\n'
-    + '.footer-logo{width:22px;height:22px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:900;color:#fff}\n'
-    + '.footer-note{font-size:.72rem;color:#9ca3af}\n'
-    + '.action-bar{position:fixed;bottom:0;left:0;right:0;background:#111827;padding:14px 24px;display:flex;gap:12px;justify-content:center;align-items:center}\n'
-    + '.action-btn{padding:10px 28px;border:none;border-radius:8px;font-family:\'Heebo\',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;background:#0e9e7e;color:#fff}\n'
-    + '.action-hint{font-size:.75rem;color:#6b7280}\n'
-    + '@media print{body{background:#fff;padding:0}.page{box-shadow:none;border-radius:0;padding:20px}.action-bar{display:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}\n'
-    + '@page{margin:8mm;size:A4}\n'
-    + '</style></head><body>\n'
-    + '<div class="page">'
-    + '<div class="header"><div class="brand"><div class="logo">\u20aa</div><div class="brand-text"><h1>\u05d3\u05d5\u05d7 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9 \u05d0\u05d9\u05e9\u05d9</h1><p>\u05e1\u05d9\u05db\u05d5\u05dd \u05de\u05e6\u05d1 \u05e0\u05db\u05e1\u05d9\u05dd \u05d5\u05ea\u05d9\u05e7 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9</p></div></div>'
-    + '<div class="header-meta"><div><strong>\u05e9\u05dd:</strong> ' + userName + '</div><div><strong>\u05d3\u05d5\u05d7 \u05dc\u05ea\u05d0\u05e8\u05d9\u05da:</strong> ' + dateLabel + '</div><div><strong>\u05d4\u05d5\u05e4\u05e7:</strong> ' + today + '</div></div></div>'
-    + '<div class="hero"><div class="hero-card primary"><div class="hc-label">\u05e1\u05d4"\u05db \u05e0\u05db\u05e1\u05d9\u05dd</div><div class="hc-val">' + fmt(calc.totalAssets) + '</div>' + deltaSubHtml + '</div>' + mortHeroHtml + '</div>'
-    + growthStripHtml
-    + '<div class="section-title">\u05e4\u05d9\u05e8\u05d5\u05d8 \u05e0\u05db\u05e1\u05d9\u05dd</div>'
-    + '<table><thead><tr><th>\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 / \u05d2\u05d5\u05e3 \u05de\u05e0\u05d4\u05dc</th><th style="text-align:left">\u05d9\u05ea\u05e8\u05d4</th><th>\u05d7\u05dc\u05e7 \u05de\u05d4\u05ea\u05d9\u05e7</th></tr></thead>'
-    + '<tbody>' + catRows + '<tr class="total-row"><td>\u05e1\u05d4"\u05db \u05e0\u05db\u05e1\u05d9\u05dd</td><td style="text-align:left;font-family:\'Courier New\',monospace">' + fmt(calc.totalAssets) + '</td><td>100%</td></tr></tbody></table>'
-    + '<div class="section-title">\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4 \u2014 12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd</div>'
-    + '<table><thead><tr>'
-    + '<th style="text-align:right">חודש</th>'
-    + '<th style="text-align:right">סה"כ נכסים</th>'
-    + '<th style="text-align:right">משכנתא</th>'
-    + '<th style="text-align:right">שינוי</th>'
-    + '</tr></thead><tbody>' + histRows + '</tbody></table>'
-    + '<div class="footer"><div class="footer-brand"><div class="footer-logo">\u20aa</div>\u05de\u05e2\u05e7\u05d1 \u05e4\u05d9\u05e0\u05e0\u05e1\u05d9 \u2014 Budgy</div><div class="footer-note">\u05e1\u05d5\u05d3\u05d9 \u2014 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9 \u05d0\u05d9\u05e9\u05d9 \u05d5\u05d9\u05d5\u05e2\u05e6\u05d9\u05dd \u05de\u05d5\u05e8\u05e9\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3</div></div>'
-    + '</div>'
-    + '<div class="action-bar"><button class="action-btn" onclick="window.print()">🖨 שמור / הדפס</button><button class="action-btn" style="background:#374151" onclick="window.location.href=\'https://perezari.github.io/Finance/\'">← חזרה</button></div>'
-    + '</body></html>';
+  const card2Html = calc.mortgage > 0
+    ? `<div class="hero-card danger"><div class="hc-label">יתרת משכנתא${mortInst?' · '+mortInst.name:''}</div><div class="hc-val">${fmt(calc.mortgage)}</div></div>
+       <div class="hero-card warning"><div class="hc-label">שווי נקי</div><div class="hc-val">${fmt(calc.netWorth)}</div></div>`
+    : `<div class="hero-card liq"><div class="hc-label">נכסים נזילים</div><div class="hc-val">${fmt(liquid)}</div><div style="font-size:.72rem;margin-top:5px;color:#0e9e7e;font-weight:600">${liquidPct}% מהתיק</div></div>
+       <div class="hero-card neutral"><div class="hc-label">חודשים מתועדים</div><div class="hc-val" style="font-size:2rem">${records.length}</div><div style="font-size:.72rem;margin-top:5px;color:#6b7280">צמיחה ממוצעת ${fmt(Math.round(avgGrowth))}/חודש</div></div>`;
+
+  // ── Donut-style liquidity bar SVG ──────────────────────────
+  const liqBarHtml = `
+    <div style="margin-top:8px;margin-bottom:4px">
+      <div style="display:flex;height:10px;border-radius:5px;overflow:hidden">
+        <div style="width:${liquidPct}%;background:#0e9e7e"></div>
+        <div style="flex:1;background:#f59e0b"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:.72rem;color:#6b7280">
+        <span style="color:#0e9e7e;font-weight:600">נזיל ${liquidPct}% — ${fmt(liquid)}</span>
+        <span style="color:#f59e0b;font-weight:600">לא נזיל ${100-liquidPct}% — ${fmt(nonLiquid)}</span>
+      </div>
+    </div>`;
+
+  // ── Best category badge ────────────────────────────────────
+  const bestBadge = bestCat && bestDelta > 0
+    ? `<div style="margin-top:4px;font-size:.72rem;color:#0e9e7e;font-weight:600">📈 ${bestCat.label} +${fmt(bestDelta)} החודש</div>` : '';
+
+  // ── Inline SVG line chart from raw data (avoids CORS/canvas issues) ──
+  function buildSvgChart() {
+    const pts = records.slice(-18);
+    if (pts.length < 2) return '';
+    const vals   = pts.map(r => calcRecord(r).totalAssets);
+    const labels = pts.map(r => new Date(r.record_date).toLocaleDateString('he-IL', { month:'short', year:'2-digit' }));
+
+    // Generous padding: top for value labels, right so last dot+label don't clip
+    const W = 700, H = 200, padL = 14, padR = 20, padT = 36, padB = 38;
+    const minV = Math.min(...vals), maxV = Math.max(...vals);
+    const range = maxV - minV || 1;
+    const xStep = (W - padL - padR) / (vals.length - 1);
+    const toX = i => padL + i * xStep;
+    const toY = v => padT + (1 - (v - minV) / range) * (H - padT - padB);
+
+    const fmtShort = v => v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1000 ? Math.round(v/1000)+'K' : Math.round(v);
+
+    // Polyline & area
+    const linePoints = vals.map((v,i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+    const areaPath   = `M${toX(0).toFixed(1)},${toY(vals[0]).toFixed(1)} `
+      + vals.map((v,i) => `L${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ')
+      + ` L${toX(vals.length-1).toFixed(1)},${(H-padB).toFixed(1)} L${toX(0).toFixed(1)},${(H-padB).toFixed(1)} Z`;
+
+    // Y axis gridlines — lines only, no value labels (values shown on dots)
+    const gridLines = [0, 0.5, 1].map(t => {
+      const y = (padT + (1-t)*(H-padT-padB)).toFixed(1);
+      return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#f0f2f5" stroke-width="1"/>`;
+    }).join('');
+
+    // X axis labels
+    const step = Math.ceil(labels.length / 8);
+    const xLabels = labels.map((l,i) => {
+      if (i % step !== 0 && i !== labels.length-1) return '';
+      return `<text x="${toX(i).toFixed(1)}" y="${(H-padB+16).toFixed(0)}" font-size="9" fill="#9ca3af" font-family="'Heebo',sans-serif" text-anchor="middle">${l}</text>`;
+    }).join('');
+
+    // Best month index (highest MoM growth)
+    const bestIdx = vals.reduce((bi,v,i,a) => i>0 && (v-a[i-1])>(a[bi]-a[bi-1]) ? i : bi, 1);
+
+    // Dots, value labels above each dot
+    // Decide which dots get a label: always first, last, best; every ~3rd for others if crowded
+    const showLabel = i => i===0 || i===vals.length-1 || i===bestIdx || (vals.length<=8) || (i % Math.ceil(vals.length/6) === 0);
+
+    const dotsAndLabels = vals.map((v,i) => {
+      const cx  = toX(i).toFixed(1);
+      const cy  = toY(v).toFixed(1);
+      const isB = i === bestIdx;
+      const isL = i === vals.length-1;
+
+      // Dot
+      let dot = '';
+      if (isB)      dot = `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#f59e0b" stroke="#fff" stroke-width="2"/>`;
+      else if (isL) dot = `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#0e9e7e" stroke="#fff" stroke-width="2"/>`;
+      else          dot = `<circle cx="${cx}" cy="${cy}" r="2.8" fill="#0e9e7e" stroke="#fff" stroke-width="1.5" opacity="0.75"/>`;
+
+      // Value label above dot
+      let lbl = '';
+      if (showLabel(i)) {
+        const lyFixed = (parseFloat(cy) - 9).toFixed(1);
+        const col     = isB ? '#f59e0b' : '#0e9e7e';
+        const fw      = (isB || isL) ? 'bold' : 'normal';
+        // White background pill for readability
+        const txt     = fmtShort(v);
+        // Estimate text width to draw background rect
+        const tw      = txt.length * 6 + 8;
+        const rx      = (parseFloat(cx) - tw/2).toFixed(1);
+        const ry      = (parseFloat(lyFixed) - 11).toFixed(1);
+        lbl = `<rect x="${rx}" y="${ry}" width="${tw}" height="14" rx="4" fill="white" opacity="0.88"/>
+               <text x="${cx}" y="${lyFixed}" font-size="9.5" fill="${col}" font-family="monospace" font-weight="${fw}" text-anchor="middle">${txt}</text>`;
+      }
+      return lbl + dot;
+    }).join('');
+
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0e9e7e" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#0e9e7e" stop-opacity="0.01"/>
+        </linearGradient>
+      </defs>
+      ${gridLines}
+      <path d="${areaPath}" fill="url(#chartGrad)"/>
+      <polyline points="${linePoints}" fill="none" stroke="#0e9e7e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dotsAndLabels}
+      ${xLabels}
+    </svg>`;
+  }
+
+  const chartHtml = `<div class="section-title">גרף היסטורי</div>
+    <div style="background:#f9fafb;border-radius:12px;padding:16px 10px 8px;margin-bottom:28px;border:1px solid #f0f2f5;page-break-inside:avoid">
+      ${buildSvgChart()}
+    </div>`;
+
+  // ── Assemble HTML ──────────────────────────────────────────
+  const css = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Heebo',sans-serif;color:#111827;background:#f1f5f9;direction:rtl;padding:20px 16px 60px}
+    .page{max-width:800px;margin:0 auto;background:#fff;border-radius:20px;padding:44px 40px 52px;box-shadow:0 8px 40px rgba(0,0,0,.10)}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:24px;border-bottom:3px solid #0e9e7e}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{width:52px;height:52px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:#fff;flex-shrink:0}
+    .brand-text h1{font-size:1.4rem;font-weight:900;color:#111827;letter-spacing:-.03em}
+    .brand-text p{font-size:.75rem;color:#6b7280;margin-top:2px}
+    .header-meta{text-align:left;font-size:.78rem;color:#6b7280;line-height:2}
+    .header-meta strong{color:#111827;font-weight:700}
+    .hero{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;page-break-inside:avoid}
+    .hero-card{padding:18px 16px;border-radius:14px;border:1.5px solid #e5e9f0}
+    .hero-card.primary{background:linear-gradient(135deg,#f0fdf9,#dcfdf5);border-color:#6ee7b7}
+    .hero-card.danger{background:linear-gradient(135deg,#fff5f5,#fee2e2);border-color:#fca5a5}
+    .hero-card.warning{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fde68a}
+    .hero-card.liq{background:linear-gradient(135deg,#f0fdf9,#ecfdf5);border-color:#a7f3d0}
+    .hero-card.neutral{background:#f9fafb;border-color:#e5e9f0}
+    .hc-label{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:7px}
+    .hc-val{font-size:1.45rem;font-weight:900;color:#111827;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+    .hero-card.primary .hc-val{color:#0e9e7e}.hero-card.danger .hc-val{color:#dc2626}.hero-card.warning .hc-val{color:#d97706}
+    .stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:30px;page-break-inside:avoid}
+    .ss-item{padding:12px 14px;background:#f8fafc;border-radius:10px;border:1px solid #f0f2f5}
+    .ss-label{font-size:.65rem;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+    .ss-val{font-size:.95rem;font-weight:800;color:#111827}
+    .section-title{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af;margin:28px 0 10px;display:flex;align-items:center;gap:10px}
+    .section-title::after{content:"";flex:1;height:1px;background:#f0f2f5}
+    table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden}
+    th{text-align:right;padding:9px 14px;background:#f8fafc;font-weight:700;color:#374151;border-bottom:2px solid #e5e9f0;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em}
+    td{padding:10px 14px;border-bottom:1px solid #f5f6f8;font-size:.84rem;color:#374151;vertical-align:middle}
+    tr{page-break-inside:avoid}
+    .total-row td{font-weight:800;background:linear-gradient(135deg,#f0fdf9,#ecfdf5);color:#0e9e7e;font-size:.9rem;border-top:2px solid #a7f3d0}
+    .liq-section{background:#f9fafb;border-radius:12px;padding:16px 18px;margin-bottom:28px;border:1px solid #f0f2f5;page-break-inside:avoid}
+    .section-title{page-break-after:avoid}
+    .liq-title{font-size:.72rem;font-weight:700;color:#374151;margin-bottom:8px}
+    .footer{margin-top:44px;padding-top:18px;border-top:2px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center}
+    .footer-brand{display:flex;align-items:center;gap:8px;font-size:.75rem;color:#9ca3af;font-weight:600}
+    .footer-logo{width:20px;height:20px;background:linear-gradient(135deg,#0e9e7e,#13b891);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:900;color:#fff}
+    .footer-note{font-size:.7rem;color:#d1d5db}
+    .action-bar{position:fixed;bottom:0;left:0;right:0;background:#111827;padding:12px 24px;display:flex;gap:10px;justify-content:center;align-items:center;z-index:99}
+    .action-btn{padding:9px 26px;border:none;border-radius:8px;font-family:'Heebo',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;background:#0e9e7e;color:#fff;transition:opacity .15s}
+    .action-btn:hover{opacity:.88}
+    .action-btn.sec{background:#374151}
+    @media print{
+      body{background:#fff;padding:0}
+      .page{box-shadow:none;border-radius:0;padding:24px 28px}
+      .action-bar{display:none}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+    @page{margin:6mm;size:A4}
+  `;
+
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8"/>
+<title>דוח פיננסי – ${dateLabel}</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>${css}</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand">
+      <div class="logo">₪</div>
+      <div class="brand-text">
+        <h1>דוח פיננסי אישי</h1>
+        <p>סיכום מצב נכסים ותיק פיננסי · Budgy</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div><strong>שם:</strong> ${userName}</div>
+      <div><strong>דוח לתאריך:</strong> ${dateLabel}</div>
+      <div><strong>הופק:</strong> ${today}</div>
+    </div>
+  </div>
+
+  <!-- HERO CARDS -->
+  <div class="hero">
+    <div class="hero-card primary">
+      <div class="hc-label">סה"כ נכסים</div>
+      <div class="hc-val">${fmt(calc.totalAssets)}</div>
+      ${deltaSubHtml}${bestBadge}
+    </div>
+    ${card2Html}
+  </div>
+
+  <!-- STATS STRIP -->
+  ${records.length >= 2 ? `
+  <div class="stats-strip">
+    <div class="ss-item">
+      <div class="ss-label">שינוי החודש</div>
+      <div class="ss-val" style="color:${growthColor}">${growthSign}${fmt(Math.abs(deltaAmt))}</div>
+    </div>
+    <div class="ss-item">
+      <div class="ss-label">שינוי %</div>
+      <div class="ss-val" style="color:${growthColor}">${growthSign}${deltaPct}%</div>
+    </div>
+    <div class="ss-item">
+      <div class="ss-label">ממוצע חודשי</div>
+      <div class="ss-val">${fmt(Math.round(avgGrowth))}</div>
+    </div>
+  </div>` : ''}
+
+  <!-- LIQUIDITY SECTION -->
+  <div class="liq-section">
+    <div class="liq-title">ניתוח נזילות</div>
+    ${liqBarHtml}
+  </div>
+
+  <!-- CHART -->
+  ${chartHtml}
+
+  <!-- ASSETS TABLE — starts on new page -->
+  <div class="section-title" style="page-break-before:always;padding-top:8px">פירוט נכסים</div>
+  <table>
+    <thead>
+      <tr>
+        <th>קטגוריה / גוף מנהל</th>
+        <th style="text-align:left">יתרה</th>
+        <th>חלק מהתיק</th>
+        <th>6 חודשים</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${catRows}
+      <tr class="total-row" style="page-break-inside:avoid">
+        <td>סה"כ נכסים</td>
+        <td style="text-align:left;font-family:'Courier New',monospace">${fmt(calc.totalAssets)}</td>
+        <td>100%</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- HISTORY TABLE — starts on new page -->
+  <div class="section-title" style="page-break-before:always;padding-top:8px">היסטוריה — 12 חודשים אחרונים</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:right">חודש</th>
+        <th style="text-align:right">סה"כ נכסים</th>
+        <th style="text-align:right">משכנתא</th>
+        <th style="text-align:right">שינוי</th>
+      </tr>
+    </thead>
+    <tbody>${histRows}</tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-brand">
+      <div class="footer-logo">₪</div>
+      מעקב פיננסי — Budgy
+    </div>
+    <div class="footer-note">סודי — לשימוש אישי ויועצים מורשים בלבד</div>
+  </div>
+
+</div><!-- /page -->
+
+<div class="action-bar">
+  <button class="action-btn" onclick="window.print()">🖨️ &nbsp;הדפס / שמור PDF</button>
+  <button class="action-btn sec" onclick="window.close()">← סגור</button>
+</div>
+</body>
+</html>`;
 
   const win = window.open('', '_blank');
+  if (!win) { showToast('⚠️ אפשר חלונות קופצים בדפדפן'); return; }
   win.document.write(html);
   win.document.close();
 }

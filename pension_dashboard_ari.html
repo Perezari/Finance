@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח מחוונים פנסיוני — ארי פרץ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2330;
+  --border: #30363d;
+  --border2: #21262d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --text3: #6e7681;
+  --blue: #1f6feb;
+  --blue-light: #388bfd;
+  --blue-dim: #1f6feb22;
+  --green: #3fb950;
+  --green-dim: #3fb95022;
+  --amber: #d29922;
+  --amber-dim: #d2992222;
+  --red: #f85149;
+  --red-dim: #f8514922;
+  --meitav: #388bfd;
+  --meitav-dim: #388bfd18;
+  --alt: #d29922;
+  --alt-dim: #d2992218;
+  --r: 8px;
+  --r2: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+
+/* Layout */
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); border-bottom: 1px solid var(--border); padding: 2rem 0 1.5rem; margin-bottom: 2rem; position: sticky; top: 0; z-index: 100; }
+.header-inner { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.header-title { display: flex; align-items: center; gap: 1rem; }
+.logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(0.85)} }
+.header h1 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+.header-sub { font-size: 0.8rem; color: var(--text2); }
+.data-tag { font-size: 11px; background: var(--green-dim); color: var(--green); border: 1px solid var(--green); border-radius: 20px; padding: 3px 10px; }
+
+/* Section */
+.section-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin: 2rem 0 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Cards grid */
+.cards4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+.cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+.cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; }
+@media(max-width:700px){ .cards4{grid-template-columns:1fr 1fr;} .cards2{grid-template-columns:1fr;} .cards3{grid-template-columns:1fr 1fr;} }
+
+/* Stat card */
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1rem 1.1rem; }
+.stat-label { font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+.stat-val { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1; }
+.stat-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* Fund cards */
+.fund-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); overflow: hidden; }
+.fund-card.meitav { border-top: 3px solid var(--meitav); }
+.fund-card.alt { border-top: 3px solid var(--alt); }
+.fund-header { padding: 1rem 1.2rem 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
+.fund-name { font-size: 0.95rem; font-weight: 700; }
+.fund-name.meitav { color: var(--meitav); }
+.fund-name.alt { color: var(--alt); }
+.fund-code { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.fund-badge { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+.badge-active { background: var(--green-dim); color: var(--green); border: 1px solid #3fb95033; }
+.badge-moved { background: var(--amber-dim); color: var(--amber); border: 1px solid #d2992233; }
+.fund-metrics { padding: 0 1.2rem 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric { padding: 0.6rem 0.75rem; background: var(--surface2); border-radius: var(--r); }
+.metric-label { font-size: 10px; color: var(--text3); margin-bottom: 2px; }
+.metric-val { font-size: 0.9rem; font-weight: 600; }
+.metric-val.green { color: var(--green); }
+.metric-val.amber { color: var(--amber); }
+.metric-val.red { color: var(--red); }
+.metric-val.blue { color: var(--blue-light); }
+
+/* Chart container */
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
+.chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text2); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+.chart-legend { display: flex; gap: 1rem; font-size: 11px; }
+.legend-item { display: flex; align-items: center; gap: 5px; color: var(--text2); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.chart-wrap { position: relative; width: 100%; }
+
+/* Timeline */
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: grid; grid-template-columns: 110px 50px 1fr auto; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--r); font-size: 13px; transition: background 0.15s; }
+.tl-item:hover { background: var(--surface2); }
+.tl-date { font-weight: 600; font-size: 12px; color: var(--text2); }
+.tl-age { font-size: 11px; color: var(--text3); text-align: center; background: var(--surface2); border-radius: 20px; padding: 2px 8px; }
+.tl-event { color: var(--text); }
+.tl-badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.badge-now { background: var(--green-dim); color: var(--green); }
+.badge-m { background: var(--meitav-dim); color: var(--meitav); }
+.badge-a { background: var(--amber-dim); color: var(--amber); }
+.badge-warn { background: var(--red-dim); color: var(--red); }
+.tl-divider { height: 1px; background: var(--border2); margin: 4px 14px; }
+
+/* Table */
+.tbl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); overflow: hidden; margin-bottom: 1rem; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead tr { background: var(--surface2); }
+th { padding: 9px 12px; text-align: right; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border2); color: var(--text); }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface2); }
+tr.highlight td { background: #d2992210 !important; }
+tr.total td { background: var(--surface2) !important; font-weight: 700; }
+.td-m { color: var(--meitav); font-weight: 600; }
+.td-a { color: var(--alt); font-weight: 600; }
+.td-g { color: var(--green); font-weight: 600; }
+.td-r { color: var(--red); font-weight: 600; }
+.td-dim { color: var(--text3); font-size: 11px; }
+
+/* Projection calc */
+.calc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 1.4rem; margin-bottom: 1rem; }
+.calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media(max-width:600px){ .calc-grid{grid-template-columns:1fr;} }
+.slider-group { margin-bottom: 1rem; }
+.slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.slider-label span { font-weight: 600; color: var(--text); }
+input[type=range] { width: 100%; -webkit-appearance: none; height: 4px; border-radius: 2px; background: var(--border); outline: none; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--meitav); cursor: pointer; border: 2px solid var(--bg); }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border2); font-size: 13px; }
+.result-row:last-child { border-bottom: none; }
+.result-label { color: var(--text2); }
+.result-val { font-weight: 700; font-size: 1.1rem; }
+
+/* Action plan */
+.action-item { display: grid; grid-template-columns: 30px 1fr; gap: 12px; padding: 1rem 0; border-bottom: 1px solid var(--border2); align-items: start; }
+.action-item:last-child { border-bottom: none; }
+.action-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.an-green { background: var(--green-dim); color: var(--green); border: 1px solid #3fb95033; }
+.an-blue { background: var(--meitav-dim); color: var(--meitav); border: 1px solid #388bfd33; }
+.an-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid #d2992233; }
+.an-red { background: var(--red-dim); color: var(--red); border: 1px solid #f8514933; }
+.action-content h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.action-content p { font-size: 12px; color: var(--text2); line-height: 1.55; }
+
+/* Info box */
+.info-box { border-radius: var(--r); padding: 0.8rem 1rem; font-size: 12px; line-height: 1.6; margin: 0.75rem 0; }
+.info-green { background: var(--green-dim); color: #7ee787; border: 1px solid #3fb95033; }
+.info-amber { background: var(--amber-dim); color: #e3b341; border: 1px solid #d2992233; }
+.info-red { background: var(--red-dim); color: #ff7b72; border: 1px solid #f8514933; }
+.info-blue { background: var(--blue-dim); color: #79c0ff; border: 1px solid #1f6feb33; }
+
+/* Links */
+.links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.link-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.75rem 1rem; text-decoration: none; display: flex; align-items: center; gap: 0.7rem; transition: border-color 0.15s, background 0.15s; }
+.link-card:hover { border-color: var(--meitav); background: var(--meitav-dim); }
+.link-icon { font-size: 1.2rem; }
+.link-text { font-size: 12px; font-weight: 500; color: var(--text); }
+.link-sub { font-size: 10px; color: var(--text3); }
+
+/* Footer */
+.footer { border-top: 1px solid var(--border); padding: 1.5rem 0 0; margin-top: 2rem; font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+/* Countdown */
+.countdown { display: flex; gap: 6px; }
+.cd-unit { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; text-align: center; min-width: 52px; }
+.cd-val { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+.cd-label { font-size: 9px; color: var(--text3); margin-top: 3px; }
+.cd-meitav .cd-val { color: var(--meitav); }
+.cd-warn .cd-val { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-title">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>לוח מחוונים פנסיוני</h1>
+        <div class="header-sub">ארי פרץ · ת.ז 310771068 · מעודכן מרץ 2026</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span class="data-tag">● נתוני אמת</span>
+      <a href="https://gemelnet.cma.gov.il" target="_blank" style="font-size:11px;color:var(--text3);text-decoration:none;border:1px solid var(--border);border-radius:20px;padding:3px 10px;">גמל-נט ↗</a>
+      <a href="https://pensyanet.cma.gov.il" target="_blank" style="font-size:11px;color:var(--text3);text-decoration:none;border:1px solid var(--border);border-radius:20px;padding:3px 10px;">פנסיה-נט ↗</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- Profile stats -->
+<div class="section-label">פרופיל חוסך</div>
+<div class="cards4">
+  <div class="stat">
+    <div class="stat-label">גיל נוכחי</div>
+    <div class="stat-val" id="age-display">34</div>
+    <div class="stat-sub">יוני 1991</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">שנים לפרישה</div>
+    <div class="stat-val" id="years-to-retire">33</div>
+    <div class="stat-sub">גיל פרישה 67</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">יתרת פנסיה</div>
+    <div class="stat-val" style="color:var(--meitav);font-size:1.2rem">410,874 ₪</div>
+    <div class="stat-sub">מיטב 163 · מ-16.3.2026</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">יתרת השתלמות</div>
+    <div class="stat-val" style="color:var(--meitav);font-size:1.2rem">32,513 ₪</div>
+    <div class="stat-sub">מיטב 883 · נזיל 7/2030</div>
+  </div>
+</div>
+
+<!-- Fund cards -->
+<div class="section-label">מוצרים פנסיוניים פעילים</div>
+<div class="cards2">
+  <!-- Pension -->
+  <div class="fund-card meitav">
+    <div class="fund-header">
+      <div>
+        <div class="fund-name meitav">מיטב פנסיה מקיפה מניות</div>
+        <div class="fund-code">מ.ה 163 · מ.ה מסלול 2105 · מיטב גמל ופנסיה בע"מ</div>
+      </div>
+      <span class="fund-badge badge-active">פעיל</span>
+    </div>
+    <div class="fund-metrics">
+      <div class="metric"><div class="metric-label">תשואה 2025</div><div class="metric-val green">20.21%</div></div>
+      <div class="metric"><div class="metric-label">תשואה 2024</div><div class="metric-val green">17.58%</div></div>
+      <div class="metric"><div class="metric-label">ממוצע 3 שנים</div><div class="metric-val green">17.41%</div></div>
+      <div class="metric"><div class="metric-label">ממוצע 5 שנים</div><div class="metric-val green">11.93%</div></div>
+      <div class="metric"><div class="metric-label">ד.נ מהפקדה</div><div class="metric-val blue">1.0%</div></div>
+      <div class="metric"><div class="metric-label">ד.נ מצבירה</div><div class="metric-val blue">0.22%</div></div>
+      <div class="metric"><div class="metric-label">הטבה בתוקף עד</div><div class="metric-val amber">3/2036</div></div>
+      <div class="metric"><div class="metric-label">דירוג 12 חודשים</div><div class="metric-val blue">6 מתוך 9</div></div>
+    </div>
+    <div style="padding:0 1.2rem 1rem;">
+      <div class="info-blue" style="font-size:11px;">⚡ אחרי הטבה: ד.נ הפקדה קופץ ל-6%! יש לנייד לפני 3/2036</div>
+    </div>
+  </div>
+
+  <!-- Study fund -->
+  <div class="fund-card meitav">
+    <div class="fund-header">
+      <div>
+        <div class="fund-name meitav">מיטב השתלמות מניות</div>
+        <div class="fund-code">מ.ה 880 (883) · מיטב גמל ופנסיה בע"מ</div>
+      </div>
+      <span class="fund-badge badge-active">פעיל</span>
+    </div>
+    <div class="fund-metrics">
+      <div class="metric"><div class="metric-label">תשואה 2025</div><div class="metric-val green">26.46%</div></div>
+      <div class="metric"><div class="metric-label">תשואה 2024</div><div class="metric-val green">~18%</div></div>
+      <div class="metric"><div class="metric-label">ממוצע 3 שנים</div><div class="metric-val green">8.21%</div></div>
+      <div class="metric"><div class="metric-label">ממוצע 5 שנים</div><div class="metric-val green">10.27%</div></div>
+      <div class="metric"><div class="metric-label">ד.נ מהפקדה</div><div class="metric-val green">0%</div></div>
+      <div class="metric"><div class="metric-label">ד.נ מצבירה</div><div class="metric-val blue">0.8%</div></div>
+      <div class="metric"><div class="metric-label">הטבה בתוקף עד</div><div class="metric-val amber">3/2033</div></div>
+      <div class="metric"><div class="metric-label">נזילות</div><div class="metric-val blue">7/2030</div></div>
+    </div>
+    <div style="padding:0 1.2rem 1rem;">
+      <div class="info-amber" style="font-size:11px;">⚡ אחרי הטבה: ד.נ צבירה קופץ ל-2%! יש לנייד לפני 3/2033</div>
+    </div>
+  </div>
+</div>
+
+<!-- Returns chart -->
+<div class="section-label">תשואות חודשיות — מיטב 883 מול אלטשולר 1093</div>
+<div class="chart-card">
+  <div class="chart-title">
+    <span>2024–2026 · קרן השתלמות · נתונים: גמל-נט, ביזפורטל &nbsp;<small style="color:var(--text3);">* מרץ 2026 טרם פורסם</small></span>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--meitav)"></div>מיטב 883</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--alt)"></div>אלטשולר 1093</div>
+    </div>
+  </div>
+  <div class="chart-wrap" style="height:200px"><canvas id="monthlyChart"></canvas></div>
+</div>
+
+<div class="section-label">השוואת תשואות שנתיות — פנסיה וקרן השתלמות</div>
+<div class="cards2">
+  <div class="chart-card" style="margin-bottom:0">
+    <div class="chart-title">
+      <span>קרן פנסיה מניות · 2021–2025</span>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--meitav)"></div>מיטב 2105</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--alt)"></div>אלטשולר 12419</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:180px"><canvas id="pensionYearChart"></canvas></div>
+  </div>
+  <div class="chart-card" style="margin-bottom:0">
+    <div class="chart-title">
+      <span>קרן השתלמות · ממוצעים שנתיים</span>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--meitav)"></div>מיטב 883</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--alt)"></div>אלטשולר 1093</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:180px"><canvas id="studyAvgChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Projections by real returns -->
+<div class="section-label">הקרנת הון — לפי תשואות בפועל</div>
+<div class="cards2">
+  <!-- SF projection -->
+  <div>
+    <div class="tbl-card">
+      <table>
+        <thead><tr>
+          <th>שנה</th><th>גיל</th>
+          <th style="color:#388bfd">מיטב 883</th>
+          <th style="color:#d29922">אלטשולר 1093</th>
+          <th>הפרש</th>
+        </tr></thead>
+        <tbody id="sf-tbody"></tbody>
+      </table>
+    </div>
+    <div class="info-green" id="sf-summary"></div>
+  </div>
+  <!-- Pension projection -->
+  <div>
+    <div class="tbl-card">
+      <table>
+        <thead><tr>
+          <th>שנה</th><th>גיל</th>
+          <th style="color:#388bfd">מיטב 163</th>
+          <th style="color:#d29922">אלטשולר 1328</th>
+          <th>הפרש</th>
+        </tr></thead>
+        <tbody id="p-tbody"></tbody>
+      </table>
+    </div>
+    <div class="info-green" id="p-summary"></div>
+  </div>
+</div>
+
+<!-- Projection chart -->
+<div class="chart-card">
+  <div class="chart-title">
+    <span>צבירה צפויה — לפי תשואות בפועל ← מיטב הכחול, אלטשולר הצהוב</span>
+  </div>
+  <div class="chart-wrap" style="height:220px"><canvas id="projChart"></canvas></div>
+</div>
+
+<!-- Interactive calculator -->
+<div class="section-label">מחשבון הקרנה אישי — שנה עם הנחות שלך</div>
+<div class="calc-card">
+  <div class="calc-grid">
+    <div>
+      <div class="slider-group">
+        <div class="slider-label">תשואה שנתית מיטב <span id="m-rate-lbl">11.0%</span></div>
+        <input type="range" id="m-rate" min="3" max="20" step="0.5" value="11">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">תשואה שנתית אלטשולר <span id="a-rate-lbl">7.0%</span></div>
+        <input type="range" id="a-rate" min="2" max="18" step="0.5" value="7">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">שנים חישוב <span id="years-lbl">10 שנים</span></div>
+        <input type="range" id="calc-years" min="3" max="17" step="1" value="10">
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:0.75rem;">תוצאה — סה"כ שני הרכיבים (פנסיה + השתלמות)</div>
+      <div class="result-row">
+        <span class="result-label">מיטב — סה"כ</span>
+        <span class="result-val" style="color:var(--meitav)" id="calc-m">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">אלטשולר — סה"כ</span>
+        <span class="result-val" style="color:var(--alt)" id="calc-a">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">הפרש לטובת מיטב</span>
+        <span class="result-val" style="color:var(--green)" id="calc-diff">—</span>
+      </div>
+      <div class="info-blue" style="font-size:11px;margin-top:0.75rem;" id="calc-note"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Fee timeline + countdown -->
+<div class="section-label">לוח זמנים פקיעת הטבות</div>
+<div class="cards2" style="margin-bottom:1rem;">
+  <div class="stat" style="display:flex;flex-direction:column;gap:0.5rem;">
+    <div class="stat-label">⏳ מיטב השתלמות — פוקע בעוד</div>
+    <div class="countdown" id="cd-sf"></div>
+    <div style="font-size:11px;color:var(--text3);">מרץ 2033 · גיל 41 · ד.נ צבירה 0.8% → 2%</div>
+  </div>
+  <div class="stat" style="display:flex;flex-direction:column;gap:0.5rem;">
+    <div class="stat-label">🚨 מיטב פנסיה — פוקע בעוד</div>
+    <div class="countdown" id="cd-p"></div>
+    <div style="font-size:11px;color:var(--text3);">מרץ 2036 · גיל 44 · ד.נ הפקדה 1% → 6%!</div>
+  </div>
+</div>
+
+<div class="tbl-card" style="margin-bottom:1rem;">
+  <div class="timeline" style="padding:0.5rem 0;">
+    <div class="tl-item">
+      <div class="tl-date">3/2026</div>
+      <div class="tl-age">גיל 34</div>
+      <div class="tl-event">ניוד למיטב — תחילת תקופות ההטבה בשתי הקרנות</div>
+      <span class="tl-badge badge-now">עכשיו ✓</span>
+    </div>
+    <div class="tl-divider"></div>
+    <div class="tl-item">
+      <div class="tl-date">7/2030</div>
+      <div class="tl-age">גיל 39</div>
+      <div class="tl-event">קרן ההשתלמות הופכת נזילה — שקול אסטרטגיית משיכה/השקעה</div>
+      <span class="tl-badge badge-m">נזילות</span>
+    </div>
+    <div class="tl-divider"></div>
+    <div class="tl-item">
+      <div class="tl-date">9/2032 ⚠</div>
+      <div class="tl-age">גיל 41</div>
+      <div class="tl-event" style="color:var(--meitav)"><b>תזכורת:</b> 6 חודשים לפני פקיעת מיטב השתלמות — התחל לבדוק חלופות</div>
+      <span class="tl-badge badge-m">פעולה</span>
+    </div>
+    <div class="tl-divider"></div>
+    <div class="tl-item">
+      <div class="tl-date">3/2033 🔴</div>
+      <div class="tl-age">גיל 41</div>
+      <div class="tl-event" style="color:var(--red)"><b>פקיעת הטבת מיטב השתלמות</b> — ד.נ צבירה קופץ מ-0.8% ל-2%</div>
+      <span class="tl-badge badge-warn">נייד!</span>
+    </div>
+    <div class="tl-divider"></div>
+    <div class="tl-item">
+      <div class="tl-date">9/2035 ⚠</div>
+      <div class="tl-age">גיל 43</div>
+      <div class="tl-event" style="color:var(--meitav)"><b>תזכורת:</b> 6 חודשים לפני פקיעת מיטב פנסיה — קריטי ביותר!</div>
+      <span class="tl-badge badge-m">פעולה</span>
+    </div>
+    <div class="tl-divider"></div>
+    <div class="tl-item">
+      <div class="tl-date">3/2036 🚨</div>
+      <div class="tl-age">גיל 44</div>
+      <div class="tl-event" style="color:var(--red)"><b>פקיעת הטבת מיטב פנסיה</b> — ד.נ הפקדה קופץ מ-1% ל-6%! חובה לנייד</div>
+      <span class="tl-badge badge-warn">נייד!!!</span>
+    </div>
+    <div class="tl-divider"></div>
+    <div class="tl-item">
+      <div class="tl-date">6/2058</div>
+      <div class="tl-age">גיל 67</div>
+      <div class="tl-event">גיל פרישה חוקי — קצבה חודשית</div>
+      <span class="tl-badge badge-now">יעד</span>
+    </div>
+  </div>
+</div>
+
+<!-- Action plan -->
+<div class="section-label">תוכנית פעולה</div>
+<div class="tbl-card" style="padding:0.5rem 1.2rem 1rem;">
+  <div class="action-item">
+    <div class="action-num an-green">✓</div>
+    <div class="action-content">
+      <h4>3/2026 — עכשיו · גיל 34</h4>
+      <p>ניוד בוצע בהצלחה. ודא שהמעסיק (יצחק אביבי ייצור) מפקיד נכון לפי טופס נספח ה' — מיטב 163 ומיטב 880. שמור דף זה כמסמך עבודה.</p>
+    </div>
+  </div>
+  <div class="action-item">
+    <div class="action-num an-blue">2</div>
+    <div class="action-content">
+      <h4>7/2030 · גיל 39 — קרן ההשתלמות נזילה</h4>
+      <p>שקול אם למשוך ולנצל את הפטור ממס רווחי הון, להגדיל הפקדות, או להשאיר ולהמשיך לצמוח. תלוי בצרכיך באותה עת.</p>
+    </div>
+  </div>
+  <div class="action-item">
+    <div class="action-num an-amber">3</div>
+    <div class="action-content">
+      <h4>9/2032 · גיל 41 — בדיקה לפני פקיעת השתלמות</h4>
+      <p>פנה ליועץ פנסיוני עצמאי. כנס ל-gemelnet.cma.gov.il, השווה קרנות מניות לפי תשואה 3/5 שנים. אם מיטב ממשיכה להוביל — נסה לנייד לתנאים חדשים. אם לא — בחר חלופה.</p>
+    </div>
+  </div>
+  <div class="action-item">
+    <div class="action-num an-red">4</div>
+    <div class="action-content">
+      <h4>9/2035 · גיל 43 — 🚨 קריטי: בדיקה לפני פקיעת פנסיה</h4>
+      <p>זוהי ההחלטה הגדולה ביותר שתקבל. 6% ד.נ מהפקדה עם שכר גבוה יכול לעלות לך עשרות אלפי שקלים בשנה. חובה להיות מנויד לפני 3/2036. פנה לכמה סוכנים/יועצים לקבל הצעות מתחרות.</p>
+    </div>
+  </div>
+  <div class="action-item">
+    <div class="action-num an-blue">5</div>
+    <div class="action-content">
+      <h4>כל 2–3 שנים — ביקורת שוטפת</h4>
+      <p>השווה תשואות ב-gemelnet ו-pensyanet. עדכן עם שינויים בשכר. ודא שהכיסויים הביטוחיים בפנסיה (נכות, שארים) עדיין מתאימים למצבך.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Links -->
+<div class="section-label">קישורים רשמיים ושימושיים</div>
+<div class="links-grid">
+  <a href="https://gemelnet.cma.gov.il" target="_blank" class="link-card">
+    <div class="link-icon">📊</div>
+    <div><div class="link-text">גמל-נט</div><div class="link-sub">השוואת קרנות גמל והשתלמות</div></div>
+  </a>
+  <a href="https://pensyanet.cma.gov.il" target="_blank" class="link-card">
+    <div class="link-icon">🏛️</div>
+    <div><div class="link-text">פנסיה-נט</div><div class="link-sub">השוואת קרנות פנסיה</div></div>
+  </a>
+  <a href="https://www.meitav.co.il" target="_blank" class="link-card">
+    <div class="link-icon">🔵</div>
+    <div><div class="link-text">מיטב</div><div class="link-sub">יתרות, תשואות, פרטי חשבון</div></div>
+  </a>
+  <a href="mailto:marcia@rkaplan.co.il" class="link-card">
+    <div class="link-icon">📧</div>
+    <div><div class="link-text">כהן מרסיה — סוכנת</div><div class="link-sub">046596260 · marcia@rkaplan.co.il</div></div>
+  </a>
+</div>
+
+<div class="footer">
+  <div class="container" style="padding-top:0">
+    ⚠ מסמך זה לצרכים אינפורמטיביים בלבד. אינו מהווה ייעוץ פנסיוני או השקעות. תשואות עבר אינן ערובה לעתיד. הנתונים מקורם בדוחות רשמיים של רשות שוק ההון עד מרץ 2026.
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║           ✏️  אזור העדכון החודשי — כל מה שצריך לשנות כאן              ║
+// ║                                                                          ║
+// ║  פעם בחודש: הוסף את מספר התשואה החדש בסוף הרשימה המתאימה.             ║
+// ║  אם החודש עדיין לא פורסם — כתוב null במקומו.                          ║
+// ║  מקור: gemelnet.cma.gov.il  |  pensyanet.cma.gov.il                    ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// פורמט כל שורה: 'חודש/שנה' ואחרי הנקודותיים — אחוז התשואה (או null אם לא פורסם)
+// לדוגמה: אם מרץ 2026 יצא 2.3% — שנה את null האחרון ל-2.3
+
+const DATA = {
+
+  // ── קרן השתלמות מיטב 883 (מסלול מניות) ──────────────────────────────────
+  // מקור: https://lirot.co.il/gemel/883 או gemelnet.cma.gov.il
+  meitav883: [
+    // 2024
+    { m:'1/24',  v: 0.48  },
+    { m:'2/24',  v: 4.04  },
+    { m:'3/24',  v: 3.39  },
+    { m:'4/24',  v:-2.94  },
+    { m:'5/24',  v: 2.41  },
+    { m:'6/24',  v: 2.01  },
+    { m:'7/24',  v: 1.57  },
+    { m:'8/24',  v: 1.18  },
+    { m:'9/24',  v: 2.85  },
+    { m:'10/24', v: null  }, // לא פורסם בזמנו
+    { m:'11/24', v: null  }, // לא פורסם בזמנו
+    { m:'12/24', v: null  }, // לא פורסם בזמנו
+    // 2025
+    { m:'1/25',  v: 2.53  },
+    { m:'2/25',  v:-0.90  },
+    { m:'3/25',  v:-2.86  },
+    { m:'4/25',  v: 0.91  },
+    { m:'5/25',  v: 5.33  },
+    { m:'6/25',  v: 5.73  },
+    { m:'7/25',  v: 2.35  },
+    { m:'8/25',  v: 1.33  },
+    { m:'9/25',  v: 3.55  },
+    { m:'10/25', v: 2.47  },
+    { m:'11/25', v: 1.43  },
+    { m:'12/25', v: 2.14  },
+    // 2026 — ✏️ עדכן כאן בכל חודש
+    { m:'1/26',  v: 4.29  }, // פורסם
+    { m:'2/26',  v: 1.10  }, // פורסם (YTD 5.42% לפי ביזפורטל)
+    { m:'3/26',  v: null  }, // ✏️ עדכן כשיתפרסם (סוף אפריל 2026)
+    { m:'4/26',  v: null  }, // ✏️ עדכן כשיתפרסם
+    { m:'5/26',  v: null  },
+    { m:'6/26',  v: null  },
+    { m:'7/26',  v: null  },
+    { m:'8/26',  v: null  },
+    { m:'9/26',  v: null  },
+    { m:'10/26', v: null  },
+    { m:'11/26', v: null  },
+    { m:'12/26', v: null  },
+  ],
+
+  // ── קרן השתלמות אלטשולר שחם 1093 (כללי — לצורך השוואה בלבד) ─────────────
+  // מקור: https://lirot.co.il/gemel/1093
+  alt1093: [
+    // 2024
+    { m:'1/24',  v: 0.60  },
+    { m:'2/24',  v: 1.90  },
+    { m:'3/24',  v: 1.50  },
+    { m:'4/24',  v:-0.80  },
+    { m:'5/24',  v: 1.20  },
+    { m:'6/24',  v: 0.80  },
+    { m:'7/24',  v: 0.50  },
+    { m:'8/24',  v: 0.40  },
+    { m:'9/24',  v: 1.10  },
+    { m:'10/24', v: 0.03  },
+    { m:'11/24', v: 0.50  },
+    { m:'12/24', v: 0.30  },
+    // 2025
+    { m:'1/25',  v: 0.70  },
+    { m:'2/25',  v:-0.30  },
+    { m:'3/25',  v:-1.10  },
+    { m:'4/25',  v: 0.40  },
+    { m:'5/25',  v: 1.80  },
+    { m:'6/25',  v: 1.50  },
+    { m:'7/25',  v: 0.90  },
+    { m:'8/25',  v: 0.60  },
+    { m:'9/25',  v: 1.20  },
+    { m:'10/25', v: 0.80  },
+    { m:'11/25', v: 0.50  },
+    { m:'12/25', v: 0.59  },
+    // 2026
+    { m:'1/26',  v: 1.65  }, // פורסם (YTD לפי ביזפורטל)
+    { m:'2/26',  v: 0.00  }, // פורסם (תשואה אפסית לפי ביזפורטל)
+    { m:'3/26',  v: null  }, // ✏️ עדכן כשיתפרסם
+    { m:'4/26',  v: null  },
+    { m:'5/26',  v: null  },
+    { m:'6/26',  v: null  },
+    { m:'7/26',  v: null  },
+    { m:'8/26',  v: null  },
+    { m:'9/26',  v: null  },
+    { m:'10/26', v: null  },
+    { m:'11/26', v: null  },
+    { m:'12/26', v: null  },
+  ],
+
+  // ── קרן פנסיה מניות — תשואות שנתיות ─────────────────────────────────────
+  // מקור: https://lirot.co.il/pensia/2105  |  pensyanet.cma.gov.il
+  pension: [
+    { y:'2019', meitav: 16.66, alt: 24.94 },
+    { y:'2020', meitav: 7.87, alt: 9.08 },
+    { y:'2021', meitav: 19.81, alt: 15.78 },
+    { y:'2022', meitav: -9.39, alt:-13.64 },
+    { y:'2023', meitav: 14.52, alt: 15.20 },
+    { y:'2024', meitav: 17.58, alt:  18.37 }, // אלטשולר — חסר נתון מלא
+    { y:'2025', meitav: 20.21, alt:  17.53 },
+    { y:'2026', meitav:  null, alt:  null }, // ✏️ עדכן בסוף 2026
+  ],
+
+  // ── ממוצעים ודירוגים — קרן השתלמות (מיטב 883 מול אלטשולר 1093) ─────────
+  // מקור: gemelnet.cma.gov.il | עדכן פעם בשנה או כשיש שינוי משמעותי
+  sfAverages: {
+    meitav: { avg3: 8.21, avg5: 10.27, lastYear: 26.46, rank: 4,  rankOf: 11 },
+    alt:    { avg3: 2.93, avg5:  5.00, lastYear: null,  rank: 10, rankOf: 10 },
+  },
+
+  // ── ממוצעים — קרן פנסיה מניות ────────────────────────────────────────────
+  // מקור: pensyanet.cma.gov.il | עדכן פעם בשנה
+  pensionAverages: {
+    meitav: { avg3: 17.41, avg5: 11.93, lastYear: 20.21, rank: 6, rankOf: 9 },
+    alt:    { avg3:  7.08, avg5:  9.35, lastYear:  8.48, rank: 8, rankOf: 9 },
+  },
+
+};
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║           סוף אזור העדכון — אל תשנה שום דבר מתחת לכאן                ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// שלוף מהמבנה לפורמט שהגרפים צריכים
+const months    = DATA.meitav883.map(d => d.m);
+const meitav883 = DATA.meitav883.map(d => d.v);
+const alt1093   = DATA.alt1093.map(d => d.v);
+const penYears  = DATA.pension.map(d => d.y);
+const penM      = DATA.pension.map(d => d.meitav);
+const penA      = DATA.pension.map(d => d.alt);
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const fmt = n => Math.round(n).toLocaleString('he-IL') + ' ₪';
+const fmtd = n => (n >= 0 ? '+' : '') + Math.round(n).toLocaleString('he-IL') + ' ₪';
+const BIRTH = new Date(1991, 5, 25);
+const isDark = true;
+const gC = 'rgba(255,255,255,0.06)';
+const tC = '#6e7681';
+const M = '#388bfd', A = '#d29922', G = '#3fb950', R = '#f85149';
+
+// Age display
+function getAge() {
+  const now = new Date();
+  let age = now.getFullYear() - BIRTH.getFullYear();
+  if (now < new Date(now.getFullYear(), BIRTH.getMonth(), BIRTH.getDate())) age--;
+  return age;
+}
+document.getElementById('age-display').textContent = getAge();
+document.getElementById('years-to-retire').textContent = 67 - getAge();
+
+// ── Countdown ────────────────────────────────────────────────────────────────
+function buildCountdown(targetDate, containerId, cls) {
+  const now = new Date();
+  const diff = targetDate - now;
+  if (diff <= 0) { document.getElementById(containerId).textContent = 'פג תוקף'; return; }
+  const days = Math.floor(diff / 86400000);
+  const months = Math.floor(days / 30.44);
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+  const remDays = Math.floor(days % 30.44);
+  const el = document.getElementById(containerId);
+  el.innerHTML = `
+    <div class="cd-unit ${cls}"><div class="cd-val">${years}</div><div class="cd-label">שנים</div></div>
+    <div class="cd-unit ${cls}"><div class="cd-val">${remMonths}</div><div class="cd-label">חודשים</div></div>
+    <div class="cd-unit ${cls}"><div class="cd-val">${remDays}</div><div class="cd-label">ימים</div></div>`;
+}
+buildCountdown(new Date(2033, 2, 1), 'cd-sf', 'cd-meitav');
+buildCountdown(new Date(2036, 2, 1), 'cd-p', 'cd-warn');
+
+// ── Monthly returns chart ─────────────────────────────────────────────────────
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      { label: 'מיטב 883', data: meitav883, backgroundColor: M+'99', borderColor: M, borderWidth: 0.5, borderRadius: 3 },
+      { label: 'אלטשולר 1093', data: alt1093, backgroundColor: A+'88', borderColor: A, borderWidth: 0.5, borderRadius: 3 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: {
+        label: c => c.dataset.label + ': ' + (c.parsed.y != null ? c.parsed.y.toFixed(2) + '%' : 'טרם פורסם'),
+        title: t => t[0].label.includes('*') ? t[0].label + ' (טרם פורסם רשמית)' : t[0].label
+      }}
+    },
+    scales: {
+      x: { ticks: { color: tC, font: { size: 10 }, autoSkip: false, maxRotation: 45, callback: function(val, i) { return months[i]; } }, grid: { color: gC } },
+      y: { ticks: { color: tC, callback: v => v + '%' }, grid: { color: gC } }
+    }
+  }
+});
+
+// ── Annual pension chart ──────────────────────────────────────────────────────
+new Chart(document.getElementById('pensionYearChart'), {
+  type: 'bar',
+  data: {
+    labels: penYears,
+    datasets: [
+      { label: 'מיטב 2105', data: penM, backgroundColor: M+'aa', borderColor: M, borderWidth: 0.5, borderRadius: 3 },
+      { label: 'אלטשולר 12419', data: penA, backgroundColor: A+'88', borderColor: A, borderWidth: 0.5, borderRadius: 3 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: tC }, grid: { color: gC } },
+      y: { ticks: { color: tC, callback: v => v + '%' }, grid: { color: gC } }
+    }
+  }
+});
+
+// ── Study fund averages chart ─────────────────────────────────────────────────
+const sfA = DATA.sfAverages;
+new Chart(document.getElementById('studyAvgChart'), {
+  type: 'bar',
+  data: {
+    labels: ['ממוצע 3 שנים','ממוצע 5 שנים','שנה אחרונה','דירוג (מקום)'],
+    datasets: [
+      { label: 'מיטב 883', data: [sfA.meitav.avg3, sfA.meitav.avg5, sfA.meitav.lastYear, sfA.meitav.rank], backgroundColor: M+'aa', borderColor: M, borderWidth: 0.5, borderRadius: 3 },
+      { label: 'אלטשולר 1093', data: [sfA.alt.avg3, sfA.alt.avg5, sfA.alt.lastYear, sfA.alt.rank], backgroundColor: A+'88', borderColor: A, borderWidth: 0.5, borderRadius: 3 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + (c.parsed.y != null ? c.parsed.y.toFixed(2) : 'N/A') } } },
+    scales: {
+      x: { ticks: { color: tC, font: { size: 10 }, autoSkip: false }, grid: { color: gC } },
+      y: { ticks: { color: tC }, grid: { color: gC } }
+    }
+  }
+});
+
+// ── Projection tables ─────────────────────────────────────────────────────────
+function buildTables() {
+  // משתמש בממוצעי 5 שנים מבלוק ה-DATA
+  const sfRateM = DATA.sfAverages.meitav.avg5 / 100;  // 10.27%
+  const sfRateA = DATA.sfAverages.alt.avg5    / 100;  // 5.0%
+  const pRateM  = DATA.pensionAverages.meitav.avg5 / 100; // 11.93%
+  const pRateA  = DATA.pensionAverages.alt.avg5    / 100; // 9.35%
+
+  // SF
+  const SF0 = 32513, SF_ANN = 1571*12;
+  let sfM = SF0, sfA = SF0;
+  const sfMvals = [], sfAvals = [], sfLabels = [];
+  let sfTbody = '';
+  for (let y = 1; y <= 7; y++) {
+    const yr = 2026 + y, age = yr - 1991;
+    sfM = sfM * (1 + sfRateM - 0.008) + SF_ANN;
+    const adep = SF_ANN * (1 - (y <= 3 ? 0.0032 : 0.008));
+    sfA = sfA * (1 + sfRateA) + adep;
+    sfMvals.push(Math.round(sfM)); sfAvals.push(Math.round(sfA));
+    sfLabels.push(yr);
+    const diff = sfM - sfA;
+    const hl = yr === 2029 ? ' class="highlight"' : (y === 7 ? ' class="total"' : '');
+    sfTbody += `<tr${hl}><td class="td-dim">${yr}${yr===2029?' ⚡':''}</td><td class="td-dim">${age}</td>
+      <td class="td-m">${fmt(sfM)}</td><td class="td-a">${fmt(sfA)}</td>
+      <td class="${diff>=0?'td-g':'td-r'}">${fmtd(diff)}</td></tr>`;
+  }
+  document.getElementById('sf-tbody').innerHTML = sfTbody;
+  const sfDiff = sfMvals[6] - sfAvals[6];
+  document.getElementById('sf-summary').textContent =
+    `✅ מיטב עודפת ${fmt(sfDiff)} בתום 7 שנים לפי תשואות 5-שנים בפועל (${(sfRateM*100).toFixed(2)}% vs ${(sfRateA*100).toFixed(2)}%)`;
+
+  // Pension
+  const P0 = 410874, P_ANN = 3395*12;
+  let pM = P0, pA = P0;
+  const pMvals = [], pAvals = [], pLabels = [];
+  let pTbody = '';
+  for (let y = 1; y <= 10; y++) {
+    const yr = 2026 + y, age = yr - 1991;
+    pM = pM * (1 + pRateM - 0.0022) + P_ANN*(1-0.01);
+    const adepf = y<=2 ? 0.0037 : 0.0149, aaccf = y<=2 ? 0.0002 : 0.001;
+    pA = pA * (1 + pRateA - aaccf) + P_ANN*(1-adepf);
+    pMvals.push(Math.round(pM)); pAvals.push(Math.round(pA));
+    pLabels.push(yr);
+    const diff = pM - pA;
+    const hl = yr === 2029 ? ' class="highlight"' : (y === 10 ? ' class="total"' : '');
+    pTbody += `<tr${hl}><td class="td-dim">${yr}${yr===2029?' ⚡':''}</td><td class="td-dim">${age}</td>
+      <td class="td-m">${fmt(pM)}</td><td class="td-a">${fmt(pA)}</td>
+      <td class="${diff>=0?'td-g':'td-r'}">${fmtd(diff)}</td></tr>`;
+  }
+  document.getElementById('p-tbody').innerHTML = pTbody;
+  const pDiff = pMvals[9] - pAvals[9];
+  document.getElementById('p-summary').textContent =
+    `✅ מיטב עודפת ${fmt(pDiff)} בתום 10 שנים לפי תשואות 5-שנים בפועל (${(pRateM*100).toFixed(2)}% vs ${(pRateA*100).toFixed(2)}%)`;
+
+  // Combined projection chart
+  const allYears = [...new Set([...sfLabels, ...pLabels])].sort();
+  const sfMap = {}; sfLabels.forEach((y,i) => sfMap[y] = sfMvals[i]);
+  const saMap = {}; sfLabels.forEach((y,i) => saMap[y] = sfAvals[i]);
+  const pfMap = {}; pLabels.forEach((y,i) => pfMap[y] = pMvals[i]);
+  const paMap = {}; pLabels.forEach((y,i) => paMap[y] = pAvals[i]);
+
+  // For combined: use pension (longer) years, add SF when available
+  new Chart(document.getElementById('projChart'), {
+    type: 'line',
+    data: {
+      labels: pLabels,
+      datasets: [
+        { label: 'מיטב — פנסיה + השתלמות', data: pLabels.map((y,i) => pMvals[i] + (sfMap[y]||sfMvals[Math.min(i,6)])), borderColor: M, backgroundColor: M+'18', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2 },
+        { label: 'אלטשולר — פנסיה + השתלמות', data: pLabels.map((y,i) => pAvals[i] + (saMap[y]||sfAvals[Math.min(i,6)])), borderColor: A, backgroundColor: A+'12', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2, borderDash: [6,3] }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + Math.round(c.parsed.y).toLocaleString('he-IL') + ' ₪' } } },
+      scales: {
+        x: { ticks: { color: tC, autoSkip: false }, grid: { color: gC } },
+        y: { ticks: { color: tC, callback: v => (Math.round(v/1000)) + 'K ₪' }, grid: { color: gC } }
+      }
+    }
+  });
+}
+buildTables();
+
+// ── Interactive calculator ───────────────────────────────────────────────────
+function calcProjection() {
+  const mRate = parseFloat(document.getElementById('m-rate').value) / 100;
+  const aRate = parseFloat(document.getElementById('a-rate').value) / 100;
+  const yrs = parseInt(document.getElementById('calc-years').value);
+  document.getElementById('m-rate-lbl').textContent = (mRate*100).toFixed(1) + '%';
+  document.getElementById('a-rate-lbl').textContent = (aRate*100).toFixed(1) + '%';
+  document.getElementById('years-lbl').textContent = yrs + ' שנים';
+
+  // SF
+  let sfM = 32513, sfA = 32513;
+  for (let y=1; y<=Math.min(yrs,7); y++) {
+    sfM = sfM * (1 + mRate - 0.008) + 1571*12;
+    sfA = sfA * (1 + aRate) + 1571*12*(1-(y<=3?0.0032:0.008));
+  }
+  // Pension
+  let pM = 410874, pA = 410874;
+  for (let y=1; y<=yrs; y++) {
+    pM = pM * (1 + mRate - 0.0022) + 3395*12*0.99;
+    const adepf=y<=2?0.0037:0.0149, aaccf=y<=2?0.0002:0.001;
+    pA = pA * (1 + aRate - aaccf) + 3395*12*(1-adepf);
+  }
+  const totM = pM + (yrs<=7?sfM:sfM), totA = pA + (yrs<=7?sfA:sfA);
+  const diff = totM - totA;
+  document.getElementById('calc-m').textContent = fmt(totM);
+  document.getElementById('calc-a').textContent = fmt(totA);
+  document.getElementById('calc-diff').textContent = fmtd(diff);
+  document.getElementById('calc-diff').style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('calc-note').textContent =
+    diff >= 0
+      ? `בהנחת תשואה שנתית ${(mRate*100).toFixed(1)}% למיטב ו-${(aRate*100).toFixed(1)}% לאלטשולר לאורך ${yrs} שנים — מיטב מובילה ב-${fmt(diff)}.`
+      : `בהנחה זו אלטשולר מובילה ב-${fmt(-diff)}.`;
+}
+
+['m-rate','a-rate','calc-years'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calcProjection));
+calcProjection();
+</script>
+</body>
+</html>

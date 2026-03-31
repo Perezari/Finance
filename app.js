@@ -813,6 +813,19 @@ async function setInstitution(catId, instId) {
   renderCategoriesList();
   renderCurrentReport();
   showToast('✅ גוף מנהל עודכן');
+  // Refresh institution display inside open edit modal
+  const dispEl = document.getElementById(`cat-edit-inst-display-${catId}`);
+  if (dispEl) {
+    const inst = instId ? getInstitution(instId) : null;
+    dispEl.innerHTML = inst ? `
+      <img src="${logoUrl(inst.domain)}" width="22" height="22" style="border-radius:5px;object-fit:contain" onerror="this.style.display='none'"/>
+      <span style="font-size:.875rem;font-weight:600;color:var(--ink);flex:1">${inst.name}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    ` : `
+      <span style="color:var(--ink-4);flex:1;font-size:.875rem">${ICONS_JS.bank}&nbsp; בחר גוף מנהל</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    `;
+  }
 }
 
 /* ── INSTITUTION MODAL ─────────────────────────────── */
@@ -820,7 +833,10 @@ function openInstModal(catId) {
   instTargetMode   = 'cat';
   instTargetCatId  = catId;
   renderInstGrid(INSTITUTIONS);
-  document.getElementById('inst-modal').style.display = 'flex';
+  const el = document.getElementById('inst-modal');
+  el.style.display = 'flex';
+  // If cat-edit-modal is open, elevate inst-modal above it
+  el.style.zIndex = document.getElementById('cat-edit-modal') ? '1002' : '';
   document.getElementById('inst-search').value = '';
 }
 
@@ -833,7 +849,9 @@ function openMortgageInstModal() {
 }
 
 function closeInstModal() {
-  document.getElementById('inst-modal').style.display = 'none';
+  const el = document.getElementById('inst-modal');
+  el.style.display = 'none';
+  el.style.zIndex = '';
   instTargetCatId = null;
 }
 
@@ -1280,12 +1298,23 @@ function isPensionCat(cat) {
 }
 
 function isLiquidCat(cat) {
+  // If a future liquid_date is set — not liquid yet
+  if (cat.liquid_date) {
+    const d = new Date(cat.liquid_date);
+    if (!isNaN(d) && d > new Date()) return false;
+    // Date passed — now liquid (override is_liquid)
+    return true;
+  }
+  // Manual override takes priority
+  if (cat.is_liquid === true)  return true;
+  if (cat.is_liquid === false) return false;
+  // Legacy auto-detection
   const legacyLiquid = ['cash','currentAcc','savingsFund','deposit','hishtalmut'];
   if (legacyLiquid.includes(cat.key))  return true;
   if (cat.key.startsWith('liquid_'))   return true;
   if (cat.key.startsWith('savings_'))  return true;
-  if (cat.key.startsWith('invest_'))   return true;   // חשבון מסחר / תיק השקעות — נזיל
-  if (cat.key.startsWith('pension_'))  return false;  // פנסיה בלבד — לא נזיל
+  if (cat.key.startsWith('invest_'))   return true;
+  if (cat.key.startsWith('pension_'))  return false;
   if (isPensionCat(cat))               return false;
   return true;
 }
@@ -2600,71 +2629,189 @@ function renderCategoriesList() {
   if (!list) return;
   list.innerHTML = categories.map((cat, idx) => {
     const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
-    const logo = inst ? `<img src="${logoUrl(inst.domain)}" alt="" class="cat-list-logo" onerror="this.style.display='none'"/>` : '';
+    const logo = inst
+      ? `<img src="${logoUrl(inst.domain)}" alt="" class="cat-list-logo" onerror="this.style.display='none'"/>`
+      : `<div style="width:28px;height:28px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-4)">${ICONS_JS.bank}</div>`;
+    const liqIcon = (() => {
+      if (cat.liquid_date) {
+        const d = new Date(cat.liquid_date);
+        const days = Math.ceil((d - new Date()) / 86400000);
+        return days > 0
+          ? `<span style="font-size:.65rem;color:var(--amber,#f59e0b);font-weight:700">📅 ${days}י׳</span>`
+          : `<span style="font-size:.65rem;color:var(--green);font-weight:700">✓ נזיל</span>`;
+      }
+      if (cat.is_liquid === false) return `<span style="font-size:.65rem;color:var(--amber,#f59e0b);font-weight:700">לא נזיל</span>`;
+      return '';
+    })();
     return `
     <div class="cat-item" draggable="true" data-idx="${idx}" data-id="${cat.id}"
          ondragstart="catDragStart(event,${idx})"
          ondragover="catDragOver(event)"
          ondrop="catDrop(event,${idx})"
-         ondragend="catDragEnd(event)">
-      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-        <span class="drag-handle" title="גרור לשינוי סדר">⠿</span>
+         ondragend="catDragEnd(event)"
+         onclick="if(!event.target.closest('.cat-delete')&&!event.target.closest('.drag-handle'))openCatEdit('${cat.id}')"
+         style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <span class="drag-handle" title="גרור לשינוי סדר" onclick="event.stopPropagation()">⠿</span>
         ${logo}
         <div style="min-width:0;flex:1">
           <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${cat.label}</div>
-          <div style="font-size:.72rem;color:var(--green)">${inst ? inst.name : ''}</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
-        <button class="cat-action-btn" onclick="openCatEdit('${cat.id}')" title="עריכה">${ICONS_JS.edit}</button>
-        <button class="cat-action-btn" onclick="openInstModal('${cat.id}')" title="גוף מנהל">${ICONS_JS.bank}</button>
-        <button class="cat-delete" onclick="deleteCategory('${cat.id}')" title="מחק">${ICONS_JS.x}</button>
-      </div>
-    </div>
-    <div class="cat-edit-panel" id="cat-edit-${cat.id}" style="display:none;">
-      <div class="cat-edit-grid">
-        <input type="text" id="cat-edit-label-${cat.id}" value="${cat.label}" placeholder="שם בעברית" class="form-input" style="direction:rtl;text-align:right"/>
-      </div>
-
-      <div class="cf-section">
-        <div class="cf-section-header">שדות נוספים</div>
-        <div class="cf-fields-list" id="cf-list-${cat.id}">
-          ${renderCustomFieldItems(cat)}
-        </div>
-        <div class="cf-add-form" id="cf-add-form-${cat.id}" style="display:none;">
-          <input type="text" id="cf-new-label-${cat.id}" placeholder="שם השדה (למשל: דמי ניהול)" class="form-input cf-new-label-input" style="direction:rtl;text-align:right"/>
-          <select id="cf-new-type-${cat.id}" class="form-input cf-type-select">
-            <option value="number">🔢 מספר / אחוז</option>
-            <option value="date">📅 תאריך</option>
-            <option value="text">📝 טקסט חופשי</option>
-          </select>
-          <div style="display:flex;gap:6px;margin-top:6px">
-            <button class="cat-edit-save-btn" style="flex:1" onclick="confirmAddCustomField('${cat.id}')">${ICONS_JS.check} הוסף</button>
-            <button class="cat-edit-cancel-btn" onclick="cancelAddCustomField('${cat.id}')">ביטול</button>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:1px">
+            ${inst ? `<span style="font-size:.72rem;color:var(--green)">${inst.name}</span>` : ''}
+            ${liqIcon}
           </div>
         </div>
-        <button class="cf-add-btn" id="cf-add-btn-${cat.id}" onclick="showAddCustomFieldForm('${cat.id}')">
-          ${ICONS_JS.plus} הוסף שדה
-        </button>
       </div>
-
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="cat-edit-save-btn" onclick="saveCatEdit('${cat.id}')">${ICONS_JS.check} שמור</button>
-        <button class="cat-edit-cancel-btn" onclick="closeCatEdit('${cat.id}')">ביטול</button>
-      </div>
-    </div>`;
+      <button class="cat-delete" onclick="event.stopPropagation();deleteCategory('${cat.id}')" title="מחק">${ICONS_JS.x}</button>
+    </div>
+`;
   }).join('');
 }
 
-function openCatEdit(id) {
-  document.querySelectorAll('.cat-edit-panel').forEach(p => p.style.display='none');
-  const panel = document.getElementById(`cat-edit-${id}`);
-  if (panel) { panel.style.display='block'; panel.querySelector('input').focus(); }
+function updateLiqLabel(catId) {
+  const val = document.querySelector(`input[name="liq-${catId}"]:checked`)?.value;
+  ['auto','true','false','date'].forEach(v => {
+    const el = document.getElementById(`liq-${v}-${catId}`);
+    if (!el) return;
+    const isActive = v === val;
+    const activeColor = (v === 'false' || v === 'date') ? 'var(--amber,#f59e0b)' : 'var(--green)';
+    const activeBg    = (v === 'false' || v === 'date') ? 'rgba(245,158,11,.1)'  : 'rgba(14,158,126,.1)';
+    el.style.borderColor = isActive ? activeColor : 'var(--border)';
+    el.style.color       = isActive ? activeColor : 'var(--ink-3)';
+    el.style.background  = isActive ? activeBg    : 'var(--surface2)';
+  });
+  // Show/hide date picker row
+  const dateRow = document.getElementById(`liq-date-row-${catId}`);
+  if (dateRow) dateRow.style.display = val === 'date' ? 'block' : 'none';
 }
 
-function closeCatEdit(id) {
-  const panel = document.getElementById(`cat-edit-${id}`);
-  if (panel) panel.style.display='none';
+function openCatEdit(id) {
+  const cat = categories.find(c => c.id === id);
+  if (!cat) return;
+
+  const liqAutoActive  = !cat.liquid_date && (cat.is_liquid === null || cat.is_liquid === undefined);
+  const liqTrueActive  = !cat.liquid_date && cat.is_liquid === true;
+  const liqFalseActive = !cat.liquid_date && cat.is_liquid === false;
+  const liqDateActive  = !!cat.liquid_date;
+
+  function liqStyle(active, color, bg) {
+    return `text-align:center;padding:7px 6px;border-radius:8px;border:1.5px solid ${active ? color : 'var(--border)'};font-size:.78rem;font-weight:600;color:${active ? color : 'var(--ink-3)'};background:${active ? bg : 'var(--surface2)'};transition:all .15s`;
+  }
+
+  const daysLeft = (() => {
+    if (!cat.liquid_date) return null;
+    const d = new Date(cat.liquid_date);
+    return isNaN(d) ? null : Math.ceil((d - new Date()) / 86400000);
+  })();
+
+  document.getElementById('cat-edit-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'cat-edit-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-box" style="direction:rtl">
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">${ICONS_JS.edit}&nbsp; עריכת קטגוריה</span>
+        <button onclick="closeCatEdit()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+
+      <!-- Scrollable body -->
+      <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 18px 8px;flex:1">
+
+        <!-- Name -->
+        <div style="margin-bottom:14px">
+          <div class="cf-section-header" style="margin-bottom:6px">שם הקטגוריה</div>
+          <input type="text" id="cat-edit-label-${id}" value="${cat.label}"
+            placeholder="שם בעברית" class="form-input"
+            style="direction:rtl;text-align:right;width:100%"/>
+        </div>
+
+        <!-- Institution -->
+        <div style="margin-bottom:14px">
+          <div class="cf-section-header" style="margin-bottom:8px">גוף מנהל</div>
+          <div id="cat-edit-inst-display-${id}" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;cursor:pointer"
+               onclick="openInstModal('${id}')">
+            ${cat.institution_id && getInstitution(cat.institution_id) ? `
+              <img src="${logoUrl(getInstitution(cat.institution_id).domain)}" width="22" height="22" style="border-radius:5px;object-fit:contain" onerror="this.style.display='none'"/>
+              <span style="font-size:.875rem;font-weight:600;color:var(--ink);flex:1">${getInstitution(cat.institution_id).name}</span>
+            ` : `
+              <span style="color:var(--ink-4);flex:1;font-size:.875rem">${ICONS_JS.bank}&nbsp; בחר גוף מנהל</span>
+            `}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+
+        <!-- Liquidity toggle -->
+        <div style="margin-bottom:14px">
+          <div class="cf-section-header" style="margin-bottom:8px">נזילות</div>
+          <div style="display:flex;gap:6px">
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="liq-${id}" value="auto" ${liqAutoActive ? 'checked' : ''} style="display:none" onchange="updateLiqLabel('${id}')"/>
+              <div class="liq-opt" id="liq-auto-${id}" style="${liqStyle(liqAutoActive,'var(--green)','rgba(14,158,126,.1)')}">אוטומטי</div>
+            </label>
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="liq-${id}" value="true" ${liqTrueActive ? 'checked' : ''} style="display:none" onchange="updateLiqLabel('${id}')"/>
+              <div class="liq-opt" id="liq-true-${id}" style="${liqStyle(liqTrueActive,'var(--green)','rgba(14,158,126,.1)')}">✓ נזיל</div>
+            </label>
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="liq-${id}" value="false" ${liqFalseActive ? 'checked' : ''} style="display:none" onchange="updateLiqLabel('${id}')"/>
+              <div class="liq-opt" id="liq-false-${id}" style="${liqStyle(liqFalseActive,'var(--amber,#f59e0b)','rgba(245,158,11,.1)')}">✗ לא נזיל</div>
+            </label>
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="liq-${id}" value="date" ${liqDateActive ? 'checked' : ''} style="display:none" onchange="updateLiqLabel('${id}')"/>
+              <div class="liq-opt" id="liq-date-${id}" style="${liqStyle(liqDateActive,'var(--amber,#f59e0b)','rgba(245,158,11,.1)')}">📅 תאריך</div>
+            </label>
+          </div>
+          <div id="liq-date-row-${id}" style="margin-top:10px;display:${liqDateActive ? 'block' : 'none'}">
+            <div style="font-size:.72rem;color:var(--ink-4);margin-bottom:5px">הנכס יהפוך נזיל בתאריך:</div>
+            <input type="date" id="liq-date-val-${id}" value="${cat.liquid_date || ''}"
+              class="form-input" style="direction:ltr;text-align:left;width:100%"/>
+            ${daysLeft !== null ? (daysLeft > 0
+              ? `<div style="font-size:.72rem;margin-top:5px;color:var(--amber,#f59e0b);font-weight:600">נזיל בעוד ${daysLeft} ימים</div>`
+              : `<div style="font-size:.72rem;margin-top:5px;color:var(--green);font-weight:600">✓ כבר נזיל (התאריך עבר)</div>`) : ''}
+          </div>
+        </div>
+
+        <!-- Custom fields -->
+        <div class="cf-section">
+          <div class="cf-section-header">שדות נוספים</div>
+          <div class="cf-fields-list" id="cf-list-${id}">
+            ${renderCustomFieldItems(cat)}
+          </div>
+          <div class="cf-add-form" id="cf-add-form-${id}" style="display:none;">
+            <input type="text" id="cf-new-label-${id}" placeholder="שם השדה (למשל: דמי ניהול)" class="form-input cf-new-label-input" style="direction:rtl;text-align:right"/>
+            <select id="cf-new-type-${id}" class="form-input cf-type-select">
+              <option value="number">🔢 מספר / אחוז</option>
+              <option value="date">📅 תאריך</option>
+              <option value="text">📝 טקסט חופשי</option>
+            </select>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="cat-edit-save-btn" style="flex:1" onclick="confirmAddCustomField('${id}')">${ICONS_JS.check} הוסף</button>
+              <button class="cat-edit-cancel-btn" onclick="cancelAddCustomField('${id}')">ביטול</button>
+            </div>
+          </div>
+          <button class="cf-add-btn" id="cf-add-btn-${id}" onclick="showAddCustomFieldForm('${id}')">
+            ${ICONS_JS.plus} הוסף שדה
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer buttons -->
+      <div style="display:flex;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--border);flex-shrink:0">
+        <button class="cat-edit-save-btn" style="flex:1" onclick="saveCatEdit('${id}')">${ICONS_JS.check} שמור</button>
+        <button class="cat-edit-cancel-btn" style="min-width:72px" onclick="closeCatEdit()">ביטול</button>
+      </div>
+
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) closeCatEdit(); };
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById(`cat-edit-label-${id}`)?.focus(), 80);
+}
+
+function closeCatEdit() {
+  document.getElementById('cat-edit-modal')?.remove();
 }
 
 async function saveCatEdit(id) {
@@ -2679,10 +2826,21 @@ async function saveCatEdit(id) {
     return valEl ? { ...f, value: valEl.value } : f;
   });
 
+  // Read liquidity setting
+  const liqVal = document.querySelector(`input[name="liq-${id}"]:checked`)?.value;
+  let is_liquid  = liqVal === 'true' ? true : liqVal === 'false' ? false : null;
+  let liquid_date = null;
+  if (liqVal === 'date') {
+    const dateInput = document.getElementById(`liq-date-val-${id}`)?.value;
+    liquid_date = dateInput || null;
+    is_liquid   = null; // isLiquidCat handles it via liquid_date
+  }
+
   showLoader('שומר...');
-  await db.from('categories').update({ label, custom_fields: updatedFields }).eq('id',id).eq('user_id',currentUser.id);
+  await db.from('categories').update({ label, custom_fields: updatedFields, is_liquid, liquid_date }).eq('id',id).eq('user_id',currentUser.id);
   await loadCategories();
   hideLoader();
+  closeCatEdit();
   renderCategoriesList();
   renderCurrentReport();
   showToast('✅ קטגוריה עודכנה');
@@ -2785,29 +2943,28 @@ function renderMortgageInstSettings() {
   }
   const inst = savedId ? getInstitution(savedId) : null;
   section.innerHTML = inst
-    ? `<div class="cat-item" style="margin-bottom:8px">
-        <div style="display:flex;align-items:center;gap:8px;flex:1">
+    ? `<div class="cat-item" style="cursor:pointer" onclick="openMortgageInstFromSettings()">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
           <img src="${logoUrl(inst.domain)}" alt="" class="cat-list-logo" onerror="this.style.display='none'"/>
           <div>
             <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${inst.name}</div>
             <div style="font-size:.72rem;color:var(--green)">גוף מנהל משכנתא</div>
           </div>
         </div>
-        <div style="display:flex;gap:5px">
-          <button class="cat-action-btn" onclick="openMortgageInstFromSettings()" title="שנה">${ICONS_JS.edit}</button>
-          <button class="cat-action-btn" onclick="clearMortgageInst()" title="הסר" style="color:var(--red)">${ICONS_JS.x}</button>
-        </div>
+        <button class="cat-delete" onclick="event.stopPropagation();clearMortgageInst()" title="הסר">${ICONS_JS.x}</button>
       </div>`
-    : `<button class="mortgage-inst-btn" onclick="openMortgageInstFromSettings()" style="margin-top:4px">
-        ${ICONS_JS.bank} בחר גוף מנהל משכנתא
-      </button>`;
+    : `<div class="cat-item" style="cursor:pointer;justify-content:center;color:var(--ink-3);gap:8px;font-size:.875rem" onclick="openMortgageInstFromSettings()">
+        ${ICONS_JS.bank} <span>בחר גוף מנהל משכנתא</span>
+      </div>`;
 }
 
 function openMortgageInstFromSettings() {
   instTargetMode  = 'mortgage_settings';
   instTargetCatId = null;
   renderInstGrid(INSTITUTIONS.filter(i => i.type === 'bank'));
-  document.getElementById('inst-modal').style.display = 'flex';
+  const el = document.getElementById('inst-modal');
+  el.style.display = 'flex';
+  el.style.zIndex  = '1002';
   document.getElementById('inst-search').value = '';
 }
 
@@ -3780,6 +3937,22 @@ function openCatHistory(catKey, catLabel) {
   const tickerItems = ins.map(([icon, text]) =>
     `<span class="tkr-item">${icon} <bdi dir="rtl" class="tkr-text">${text}</bdi></span>`
   );
+
+  // Append liquid_date countdown if set
+  if (cat?.liquid_date) {
+    const ld   = new Date(cat.liquid_date);
+    const now0 = new Date();
+    if (!isNaN(ld)) {
+      const daysLeft = Math.ceil((ld - now0) / 86400000);
+      const SVG_CAL = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+      if (daysLeft > 0) {
+        tickerItems.push(`<span class="tkr-item">${SVG_CAL} <bdi dir="rtl" class="tkr-text">נזיל בעוד: <strong style="color:#d97706">${daysLeft} ימים</strong></bdi></span>`);
+      } else {
+        tickerItems.push(`<span class="tkr-item">${SVG_CAL} <bdi dir="rtl" class="tkr-text"><strong style="color:var(--green)">✓ כבר נזיל</strong></bdi></span>`);
+      }
+      tickerItems.push(`<span class="tkr-item">${SVG_CAL} <bdi dir="rtl" class="tkr-text">תאריך נזילות: <strong>${ld.toLocaleDateString('he-IL', { day:'numeric', month:'short', year:'numeric' })}</strong></bdi></span>`);
+    }
+  }
 
   // Append custom fields as plain items
   const customFields = cat?.custom_fields || [];

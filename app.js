@@ -2536,27 +2536,31 @@ async function exportPDF() {
   iframe.style.border = 'none';
   document.body.appendChild(iframe);
 
-  // 3. כתיבת ה-HTML של הדוח לתוך ה-Iframe
+  // 3. הגדרת onload *לפני* כתיבת התוכן — חובה על iOS Safari!
+  // ב-iOS בלחיצה השנייה, onload יכול לירות סינכרונית עם doc.close(),
+  // לפני שה-handler מוגדר — מה שגורם ללואדר להישאר תקוע.
+  let printDone = false;
+  function triggerPrint() {
+    if (printDone) return;
+    printDone = true;
+    setTimeout(() => {
+      hideLoader();
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      // ה-Iframe נשאר ברקע ויימחק בלחיצה הבאה
+    }, 2500);
+  }
+
+  iframe.onload = triggerPrint;
+
+  // Fallback: אם onload לא ירה תוך 4 שניות (iOS edge case) — מפעילים ידנית
+  setTimeout(triggerPrint, 4000);
+
+  // 4. כתיבת ה-HTML של הדוח לתוך ה-Iframe
   const doc = iframe.contentWindow.document;
   doc.open();
   doc.write(html);
   doc.close();
-
-  // 4. המתנה לטעינת התוכן
-  iframe.onload = () => {
-    // השהייה מכוונת של 2.5 שניות כדי שהמשתמש יספיק לראות את הלואדר
-    setTimeout(() => {
-      hideLoader();
-      
-      // מיקוד על ה-Iframe והקפצת חלון ההדפסה/שמירה
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-
-      // שים לב: אנחנו *לא* מוחקים את ה-Iframe כאן!
-      // הוא יישאר ברקע לא נראה, ויימחק אוטומטית רק בלחיצה הבאה על כפתור הייצוא.
-      // זה מבטיח שהאייפון לא יקרוס ויאפשר להדפיס שוב ושוב.
-    }, 2500); 
-  };
 }
 
 const ONBOARDING_STEPS = [

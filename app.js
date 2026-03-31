@@ -2516,36 +2516,41 @@ async function exportPDF() {
 </body>
 </html>`;
 
-  // Render into a hidden off-screen container so html2pdf can access the DOM
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;direction:rtl';
-  container.innerHTML = html;
-  document.body.appendChild(container);
+// --- הצגת לואדר ---
+  showLoader('מכין מסמך להדפסה...');
 
-  const dateStr = latest.record_date.slice(0, 7); // "YYYY-MM"
-  const filename = `דוח-פיננסי-${dateStr}.pdf`;
+  // 1. יצירת Iframe נסתר לחלוטין
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '-10000px';
+  iframe.style.bottom = '-10000px';
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
 
-  showLoader('מייצר PDF...');
-  html2pdf()
-    .set({
-      margin:      [6, 6, 6, 6],
-      filename,
-      image:       { type: 'jpeg', quality: 0.97 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    })
-    .from(container.querySelector('.page'))
-    .save()
-    .then(() => {
-      document.body.removeChild(container);
-      hideLoader();
-    })
-    .catch(err => {
-      document.body.removeChild(container);
-      hideLoader();
-      console.error(err);
-      showToast('❌ שגיאה ביצירת PDF');
-    });
+  // 2. כתיבת ה-HTML של הדוח לתוך ה-Iframe
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // 3. המתנה לטעינת התוכן (כדי להבטיח שפונטים ותמונות נטענו)
+  iframe.onload = () => {
+    hideLoader();
+    
+    // מיקוד על ה-Iframe והקפצת חלון ההדפסה/שמירה
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+
+    // 4. ניקוי והשמדת ה-Iframe לאחר שהמשתמש סיים (שמר או ביטל)
+    // שמים טיימר כדי לא למחוק את המסמך בזמן שחלון ההדפסה עוד פתוח
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 2000);
+  };
+
+  hideLoader();
 }
 
 const ONBOARDING_STEPS = [

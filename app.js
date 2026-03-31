@@ -2637,7 +2637,7 @@ function renderCategoriesList() {
         const d = new Date(cat.liquid_date);
         const days = Math.ceil((d - new Date()) / 86400000);
         return days > 0
-          ? `<span style="font-size:.65rem;color:var(--amber,#f59e0b);font-weight:700">📅 ${days}י׳</span>`
+          ? `<span style="font-size:.65rem;color:var(--amber,#f59e0b);font-weight:700;display:inline-flex;align-items:center;gap:2px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${days}י׳</span>`
           : `<span style="font-size:.65rem;color:var(--green);font-weight:700">✓ נזיל</span>`;
       }
       if (cat.is_liquid === false) return `<span style="font-size:.65rem;color:var(--amber,#f59e0b);font-weight:700">לא נזיל</span>`;
@@ -2761,7 +2761,7 @@ function openCatEdit(id) {
             </label>
             <label style="flex:1;cursor:pointer">
               <input type="radio" name="liq-${id}" value="date" ${liqDateActive ? 'checked' : ''} style="display:none" onchange="updateLiqLabel('${id}')"/>
-              <div class="liq-opt" id="liq-date-${id}" style="${liqStyle(liqDateActive,'var(--amber,#f59e0b)','rgba(245,158,11,.1)')}">📅 תאריך</div>
+              <div class="liq-opt" id="liq-date-${id}" style="${liqStyle(liqDateActive,'var(--amber,#f59e0b)','rgba(245,158,11,.1)')}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> תאריך</div>
             </label>
           </div>
           <div id="liq-date-row-${id}" style="margin-top:10px;display:${liqDateActive ? 'block' : 'none'}">
@@ -2783,9 +2783,9 @@ function openCatEdit(id) {
           <div class="cf-add-form" id="cf-add-form-${id}" style="display:none;">
             <input type="text" id="cf-new-label-${id}" placeholder="שם השדה (למשל: דמי ניהול)" class="form-input cf-new-label-input" style="direction:rtl;text-align:right"/>
             <select id="cf-new-type-${id}" class="form-input cf-type-select">
-              <option value="number">🔢 מספר / אחוז</option>
-              <option value="date">📅 תאריך</option>
-              <option value="text">📝 טקסט חופשי</option>
+              <option value="number">מספר / אחוז</option>
+              <option value="date">תאריך</option>
+              <option value="text">טקסט חופשי</option>
             </select>
             <div style="display:flex;gap:6px;margin-top:6px">
               <button class="cat-edit-save-btn" style="flex:1" onclick="confirmAddCustomField('${id}')">${ICONS_JS.check} הוסף</button>
@@ -2853,7 +2853,7 @@ function renderCustomFieldItems(cat) {
   if (!fields.length) return `<div class="cf-empty">אין שדות עדיין</div>`;
   return fields.map(f => {
     const inputType = f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text';
-    const typeIcon  = f.type === 'date' ? '📅' : f.type === 'number' ? '🔢' : '📝';
+    const typeIcon  = f.type === 'date' ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>` : f.type === 'number' ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>` : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
     return `
     <div class="cf-field-row" id="cf-row-${cat.id}-${f.id}">
       <span class="cf-field-type-icon" title="${f.type}">${typeIcon}</span>

@@ -922,9 +922,12 @@ select option{background:var(--surface)}
   direction: rtl;
 }
 .cf-field-type-icon {
-  font-size: .9rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--ink-4);
 }
+.cf-field-type-icon svg { display: block; }
 .cf-field-label {
   font-size: .78rem;
   font-weight: 600;

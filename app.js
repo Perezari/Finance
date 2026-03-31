@@ -2516,10 +2516,36 @@ async function exportPDF() {
 </body>
 </html>`;
 
-  const win = window.open('', '_blank');
-  if (!win) { showToast('⚠️ אפשר חלונות קופצים בדפדפן'); return; }
-  win.document.write(html);
-  win.document.close();
+  // Render into a hidden off-screen container so html2pdf can access the DOM
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;direction:rtl';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  const dateStr = latest.record_date.slice(0, 7); // "YYYY-MM"
+  const filename = `דוח-פיננסי-${dateStr}.pdf`;
+
+  showLoader('מייצר PDF...');
+  html2pdf()
+    .set({
+      margin:      [6, 6, 6, 6],
+      filename,
+      image:       { type: 'jpeg', quality: 0.97 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    })
+    .from(container.querySelector('.page'))
+    .save()
+    .then(() => {
+      document.body.removeChild(container);
+      hideLoader();
+    })
+    .catch(err => {
+      document.body.removeChild(container);
+      hideLoader();
+      console.error(err);
+      showToast('❌ שגיאה ביצירת PDF');
+    });
 }
 
 const ONBOARDING_STEPS = [

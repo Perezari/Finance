@@ -2519,8 +2519,15 @@ async function exportPDF() {
 // --- הצגת לואדר ---
   showLoader('מכין מסמך להדפסה...');
 
-  // 1. יצירת Iframe נסתר לחלוטין
+  // 1. ניקוי: מחיקת Iframe קודם אם קיים (זה מה שפותר את התקיעה באייפון בפעם השנייה)
+  const existingIframe = document.getElementById('print-iframe');
+  if (existingIframe) {
+    existingIframe.remove();
+  }
+
+  // 2. יצירת Iframe נסתר לחלוטין
   const iframe = document.createElement('iframe');
+  iframe.id = 'print-iframe'; // נותנים לו ID כדי שנזהה אותו בפעם הבאה
   iframe.style.position = 'fixed';
   iframe.style.right = '-10000px';
   iframe.style.bottom = '-10000px';
@@ -2529,28 +2536,27 @@ async function exportPDF() {
   iframe.style.border = 'none';
   document.body.appendChild(iframe);
 
-  // 2. כתיבת ה-HTML של הדוח לתוך ה-Iframe
+  // 3. כתיבת ה-HTML של הדוח לתוך ה-Iframe
   const doc = iframe.contentWindow.document;
   doc.open();
   doc.write(html);
   doc.close();
 
-  // 3. המתנה לטעינת התוכן (כדי להבטיח שפונטים ותמונות נטענו)
+  // 4. המתנה לטעינת התוכן
   iframe.onload = () => {
-    hideLoader();
-    
-    // מיקוד על ה-Iframe והקפצת חלון ההדפסה/שמירה
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-
-    // 4. ניקוי והשמדת ה-Iframe לאחר שהמשתמש סיים (שמר או ביטל)
-    // שמים טיימר כדי לא למחוק את המסמך בזמן שחלון ההדפסה עוד פתוח
+    // השהייה מכוונת של 2.5 שניות כדי שהמשתמש יספיק לראות את הלואדר
     setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 2000);
-  };
+      hideLoader();
+      
+      // מיקוד על ה-Iframe והקפצת חלון ההדפסה/שמירה
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
 
-  hideLoader();
+      // שים לב: אנחנו *לא* מוחקים את ה-Iframe כאן!
+      // הוא יישאר ברקע לא נראה, ויימחק אוטומטית רק בלחיצה הבאה על כפתור הייצוא.
+      // זה מבטיח שהאייפון לא יקרוס ויאפשר להדפיס שוב ושוב.
+    }, 2500); 
+  };
 }
 
 const ONBOARDING_STEPS = [

@@ -9,7 +9,7 @@
   --shadow-xs:0 1px 3px rgba(0,0,0,.06); --shadow-sm:0 2px 8px rgba(0,0,0,.07);
   --shadow-md:0 6px 20px rgba(0,0,0,.08); --shadow-lg:0 16px 48px rgba(0,0,0,.10);
   --shadow-green:0 6px 24px rgba(14,158,126,.25);
-  --r-xs:6px; --r-sm:10px; --r-md:16px; --r-lg:22px; --r-xl:28px;
+  --r-xs:6px; --r-sm:10px; --r-md:16px; --r-lg:22px; --r-xl:8px;
   --sidebar:248px; --topbar-h:60px;
   --font:'Outfit','Heebo',sans-serif; --mono:'JetBrains Mono',monospace;
 }
@@ -802,6 +802,8 @@ select option{background:var(--surface)}
   -webkit-overflow-scrolling: touch;
   padding: 20px 22px 40px;
   flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* ══ CATEGORY ITEM — drag & edit ═════════════════════ */
@@ -1748,7 +1750,13 @@ select option{background:var(--surface)}
   display: flex;
   flex-direction: column;
   gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+.chb-body::-webkit-scrollbar { width: 4px; }
+.chb-body::-webkit-scrollbar-track { background: transparent; }
+.chb-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+.chb-body::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
 
 /* Cat history — mobile bottom sheet */
 @media (max-width: 640px) {

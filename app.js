@@ -3381,10 +3381,19 @@ function showTaxBreakdown() {
   const nonPensionTotal = calc.totalAssets - pensionTotal;
   const pensionAfterTax = pensionTotal - tax;
 
+  // Split categories into 3 groups
+  const liquidCats    = categories.filter(c => !isPensionCat(c) &&  isLiquidCat(c) && (calc[c.key]||0) > 0);
+  const nonLiquidCats = categories.filter(c => !isPensionCat(c) && !isLiquidCat(c) && (calc[c.key]||0) > 0);
+  const pensionCats   = categories.filter(c =>  isPensionCat(c)                    && (calc[c.key]||0) > 0);
+
+  const liquidTotal    = liquidCats.reduce((s,c)    => s + (calc[c.key]||0), 0);
+  const nonLiquidTotal = nonLiquidCats.reduce((s,c) => s + (calc[c.key]||0), 0);
+
   // Pills
-  const totalForPills = nonPensionTotal + pensionAfterTax;
-  const liqPct = totalForPills ? Math.round(nonPensionTotal / totalForPills * 100) : 0;
-  const penPct = totalForPills ? Math.round(pensionAfterTax / totalForPills * 100) : 0;
+  const totalForPills = liquidTotal + nonLiquidTotal + pensionAfterTax;
+  const liqPct    = totalForPills ? Math.round(liquidTotal    / totalForPills * 100) : 0;
+  const nliqPct   = totalForPills ? Math.round(nonLiquidTotal / totalForPills * 100) : 0;
+  const penPct    = totalForPills ? Math.round(pensionAfterTax / totalForPills * 100) : 0;
 
   // Simple row: label + value, no bar
   function simpleRow(label, val, valColor) {
@@ -3396,21 +3405,16 @@ function showTaxBreakdown() {
       </div>`;
   }
 
-  const nonPensionRows = categories
-    .filter(c => !isPensionCat(c))
-    .map(cat => simpleRow(cat.label, calc[cat.key] || 0, 'var(--ink)'))
-    .join('');
-
-  const pensionRows = categories
-    .filter(isPensionCat)
-    .map(cat => simpleRow(cat.label, calc[cat.key] || 0, 'var(--ink)'))
-    .join('');
+  const liquidRows    = liquidCats.map(c    => simpleRow(c.label, calc[c.key]||0, 'var(--ink)')).join('');
+  const nonLiquidRows = nonLiquidCats.map(c => simpleRow(c.label, calc[c.key]||0, 'var(--ink)')).join('');
+  const pensionRows   = pensionCats.map(c   => simpleRow(c.label, calc[c.key]||0, 'var(--ink)')).join('');
 
   // Ticker
   const SVG_TAX = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
   const tickerItems = [
     `<span class="tkr-item">${SVG_TAX} <bdi dir="rtl" class="tkr-text">שווי נקי: <strong>${fmt(netAfterTax)}</strong></bdi></span>`,
     `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">נזיל: <strong>${liqPct}%</strong></bdi></span>`,
+    ...(nliqPct > 0 ? [`<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">לא נזיל: <strong style="color:var(--amber,#f59e0b)">${nliqPct}%</strong></bdi></span>`] : []),
     `<span class="tkr-item">${ICONS_JS.piggy} <bdi dir="rtl" class="tkr-text">פנסיה נטו: <strong>${penPct}%</strong></bdi></span>`,
     `<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">מס פנסיה: <strong style="color:var(--red)">− ${fmt(tax)}</strong></bdi></span>`,
   ];
@@ -3440,10 +3444,11 @@ function showTaxBreakdown() {
           <span style="font-family:var(--mono);font-size:2rem;font-weight:800;color:var(--ink);line-height:1">${fmt(netAfterTax)}</span>
         </div>
         <div style="font-size:.72rem;color:var(--ink-4);margin-bottom:10px">
-          נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}
+          נזיל ${fmt(liquidTotal)}${nonLiquidTotal ? ` · לא נזיל ${fmt(nonLiquidTotal)}` : ''} + פנסיה נטו ${fmt(pensionAfterTax)}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--green);font-weight:700">נזיל ${liqPct}%</span>
+          ${nliqPct > 0 ? `<span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--amber,#f59e0b);font-weight:700">לא נזיל ${nliqPct}%</span>` : ''}
           <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--amber,#f59e0b);font-weight:700">פנסיה ${penPct}%</span>
           <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--red);font-weight:700">מס − ${fmt(tax)}</span>
         </div>
@@ -3452,12 +3457,20 @@ function showTaxBreakdown() {
       <!-- Scrollable body — single container -->
       <div class="chb-body">
 
-        ${nonPensionRows ? `
+        ${liquidRows ? `
           <div class="chb-history-header" style="margin:0 -20px;padding-right:20px;padding-left:20px"><span>נכסים נזילים (ללא מס)</span></div>
-          ${nonPensionRows}
+          ${liquidRows}
           <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:.875rem;font-weight:700">
             <span style="color:var(--ink)">סה"כ נזיל</span>
-            <span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span>
+            <span style="font-family:var(--mono);color:var(--green)">${fmt(liquidTotal)}</span>
+          </div>` : ''}
+
+        ${nonLiquidRows ? `
+          <div class="chb-history-header" style="margin:8px -20px 0;padding-right:20px;padding-left:20px"><span>נכסים לא נזילים (ללא מס)</span></div>
+          ${nonLiquidRows}
+          <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:.875rem;font-weight:700">
+            <span style="color:var(--ink)">סה"כ לא נזיל</span>
+            <span style="font-family:var(--mono);color:var(--amber,#f59e0b)">${fmt(nonLiquidTotal)}</span>
           </div>` : ''}
 
         ${pensionRows ? `

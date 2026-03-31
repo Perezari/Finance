@@ -2662,7 +2662,7 @@ function renderCategoriesList() {
           </div>
         </div>
       </div>
-      <button class="cat-delete" onclick="event.stopPropagation();deleteCategory('${cat.id}')" title="מחק">${ICONS_JS.x}</button>
+      <button class="cat-delete" onclick="event.stopPropagation();deleteCategory('${cat.id}')" title="מחק">${ICONS_JS.trash}</button>
     </div>
 `;
   }).join('');
@@ -2780,19 +2780,7 @@ function openCatEdit(id) {
           <div class="cf-fields-list" id="cf-list-${id}">
             ${renderCustomFieldItems(cat)}
           </div>
-          <div class="cf-add-form" id="cf-add-form-${id}" style="display:none;">
-            <input type="text" id="cf-new-label-${id}" placeholder="שם השדה (למשל: דמי ניהול)" class="form-input cf-new-label-input" style="direction:rtl;text-align:right"/>
-            <select id="cf-new-type-${id}" class="form-input cf-type-select">
-              <option value="number">מספר / אחוז</option>
-              <option value="date">תאריך</option>
-              <option value="text">טקסט חופשי</option>
-            </select>
-            <div style="display:flex;gap:6px;margin-top:6px">
-              <button class="cat-edit-save-btn" style="flex:1" onclick="confirmAddCustomField('${id}')">${ICONS_JS.check} הוסף</button>
-              <button class="cat-edit-cancel-btn" onclick="cancelAddCustomField('${id}')">ביטול</button>
-            </div>
-          </div>
-          <button class="cf-add-btn" id="cf-add-btn-${id}" onclick="showAddCustomFieldForm('${id}')">
+          <button class="cf-add-btn" style="margin-top:20px" onclick="showAddCustomFieldForm('${id}')">
             ${ICONS_JS.plus} הוסף שדה
           </button>
         </div>
@@ -2868,23 +2856,79 @@ function renderCustomFieldItems(cat) {
 }
 
 function showAddCustomFieldForm(catId) {
-  document.getElementById(`cf-add-form-${catId}`).style.display = 'block';
-  document.getElementById(`cf-add-btn-${catId}`).style.display  = 'none';
-  document.getElementById(`cf-new-label-${catId}`)?.focus();
+  document.getElementById('cf-add-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'cf-add-modal';
+  modal.className = 'modal-overlay cat-history-overlay';
+  modal.style.zIndex = '1003';
+  modal.innerHTML = `
+    <div class="modal-box" style="direction:rtl">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">${ICONS_JS.plus}&nbsp; הוסף שדה</span>
+        <button onclick="cancelAddCustomField()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+      <div style="padding:16px 18px 8px;display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div class="cf-section-header" style="margin-bottom:6px">שם השדה</div>
+          <input type="text" id="cf-new-label-modal" placeholder="למשל: דמי ניהול" class="form-input"
+            style="direction:rtl;text-align:right;width:100%"/>
+        </div>
+        <div>
+          <div class="cf-section-header" style="margin-bottom:6px">סוג השדה</div>
+          <div style="display:flex;gap:6px">
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="cf-type-modal" value="number" checked style="display:none" onchange="updateCfTypeLabel()"/>
+              <div class="liq-opt" id="cf-type-number" style="text-align:center;padding:9px 6px;border-radius:8px;border:1.5px solid var(--green);font-size:.78rem;font-weight:600;color:var(--green);background:rgba(14,158,126,.1);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg> מספר
+              </div>
+            </label>
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="cf-type-modal" value="date" style="display:none" onchange="updateCfTypeLabel()"/>
+              <div class="liq-opt" id="cf-type-date" style="text-align:center;padding:9px 6px;border-radius:8px;border:1.5px solid var(--border);font-size:.78rem;font-weight:600;color:var(--ink-3);background:var(--surface2);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> תאריך
+              </div>
+            </label>
+            <label style="flex:1;cursor:pointer">
+              <input type="radio" name="cf-type-modal" value="text" style="display:none" onchange="updateCfTypeLabel()"/>
+              <div class="liq-opt" id="cf-type-text" style="text-align:center;padding:9px 6px;border-radius:8px;border:1.5px solid var(--border);font-size:.78rem;font-weight:600;color:var(--ink-3);background:var(--surface2);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg> טקסט
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--border)">
+        <button class="cat-edit-save-btn" style="flex:1" onclick="confirmAddCustomField('${catId}')">${ICONS_JS.check} הוסף</button>
+        <button class="cat-edit-cancel-btn" style="min-width:72px" onclick="cancelAddCustomField()">ביטול</button>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) cancelAddCustomField(); };
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('cf-new-label-modal')?.focus(), 80);
+  // store catId for confirmAddCustomField
+  modal.dataset.catId = catId;
 }
 
-function cancelAddCustomField(catId) {
-  document.getElementById(`cf-add-form-${catId}`).style.display = 'none';
-  document.getElementById(`cf-add-btn-${catId}`).style.display  = 'flex';
-  const labelEl = document.getElementById(`cf-new-label-${catId}`);
-  if (labelEl) labelEl.value = '';
+function updateCfTypeLabel() {
+  const val = document.querySelector('input[name="cf-type-modal"]:checked')?.value;
+  ['number','date','text'].forEach(v => {
+    const el = document.getElementById(`cf-type-${v}`);
+    if (!el) return;
+    const active = v === val;
+    el.style.borderColor = active ? 'var(--green)' : 'var(--border)';
+    el.style.color       = active ? 'var(--green)' : 'var(--ink-3)';
+    el.style.background  = active ? 'rgba(14,158,126,.1)' : 'var(--surface2)';
+  });
+}
+
+function cancelAddCustomField() {
+  document.getElementById('cf-add-modal')?.remove();
 }
 
 async function confirmAddCustomField(catId) {
-  const labelEl = document.getElementById(`cf-new-label-${catId}`);
-  const typeEl  = document.getElementById(`cf-new-type-${catId}`);
+  const labelEl = document.getElementById('cf-new-label-modal');
+  const type    = document.querySelector('input[name="cf-type-modal"]:checked')?.value || 'number';
   const label   = labelEl?.value.trim();
-  const type    = typeEl?.value || 'text';
   if (!label) return showToast('⚠️ יש להזין שם לשדה');
 
   const cat = categories.find(c => c.id === catId);
@@ -2910,7 +2954,7 @@ async function confirmAddCustomField(catId) {
   const listEl   = document.getElementById(`cf-list-${catId}`);
   if (listEl && freshCat) listEl.innerHTML = renderCustomFieldItems(freshCat);
 
-  cancelAddCustomField(catId);
+  cancelAddCustomField();
   showToast('✅ שדה נוסף');
 }
 
@@ -2951,7 +2995,7 @@ function renderMortgageInstSettings() {
             <div style="font-size:.72rem;color:var(--green)">גוף מנהל משכנתא</div>
           </div>
         </div>
-        <button class="cat-delete" onclick="event.stopPropagation();clearMortgageInst()" title="הסר">${ICONS_JS.x}</button>
+        <button class="cat-delete" onclick="event.stopPropagation();clearMortgageInst()" title="הסר">${ICONS_JS.trash}</button>
       </div>`
     : `<div class="cat-item" style="cursor:pointer;justify-content:center;color:var(--ink-3);gap:8px;font-size:.875rem" onclick="openMortgageInstFromSettings()">
         ${ICONS_JS.bank} <span>בחר גוף מנהל משכנתא</span>

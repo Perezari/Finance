@@ -1458,7 +1458,7 @@ function renderCurrentReport() {
   const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
  
   const SVG_TOTAL    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>`;
-  const SVG_LIQUID   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 8 2 13a10 10 0 0 0 20 0c0-5-4.48-11-10-11z"/></svg>`;
+  const SVG_DROP = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`;
   const SVG_MORTGAGE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
   const SVG_NETWORTH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
   const SVG_GROWTH   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
@@ -1602,7 +1602,7 @@ function renderCurrentReport() {
         ${yearAgoSub}
       </div>
       <div class="hero-tile" style="animation-delay:.05s;cursor:pointer" onclick="showLiquidInfo()">
-        <div class="ht-label">${SVG_LIQUID} נכסים נזילים</div>
+        <div class="ht-label">${SVG_DROP} נכסים נזילים</div>
         <div class="ht-value blur-text" data-countup="${liquid}">${fmt(liquid)}</div>
         <span class="ht-sub">${liquidPct}% מהתיק</span>
       </div>
@@ -3091,105 +3091,110 @@ function showLiquidInfo() {
   if (!records.length) return;
   const latest     = records[records.length - 1];
   const calc       = calcRecord(latest);
-  const liqCats    = categories.filter(c => isLiquidCat(c) && (calc[c.key]||0) > 0);
+  const liqCats    = categories.filter(c => isLiquidCat(c)  && (calc[c.key]||0) > 0);
   const nonLiqCats = categories.filter(c => !isLiquidCat(c) && (calc[c.key]||0) > 0);
-  const liquid     = liqCats.reduce((s,c) => s + (calc[c.key]||0), 0);
+  const liquid     = liqCats.reduce((s,c)    => s + (calc[c.key]||0), 0);
   const nonLiquid  = nonLiqCats.reduce((s,c) => s + (calc[c.key]||0), 0);
   const pct        = calc.totalAssets ? (liquid / calc.totalAssets * 100).toFixed(1) : '0';
   const p          = parseFloat(pct);
+  const liqPct     = calc.totalAssets ? Math.round(liquid   / calc.totalAssets * 100) : 0;
+  const nliqPct    = calc.totalAssets ? Math.round(nonLiquid / calc.totalAssets * 100) : 0;
 
-  // Header gradient — same pattern as tax modal
-  const headerGradient = p >= 15 && p <= 40
-    ? 'linear-gradient(135deg,var(--green),var(--green-dark))'
-    : p < 15
-      ? 'linear-gradient(135deg,var(--red,#ef4444),#b91c1c)'
-      : 'linear-gradient(135deg,var(--amber,#f59e0b),#b45309)';
-  const statusBadge = p >= 15 && p <= 40
-    ? 'יחס נזילות תקין'
-    : p < 15
-      ? 'נזילות נמוכה מדי'
-      : 'נזילות גבוהה — כסף לא עובד';
-  const liqPct  = calc.totalAssets ? Math.round(liquid  / calc.totalAssets * 100) : 0;
-  const nliqPct = calc.totalAssets ? Math.round(nonLiquid / calc.totalAssets * 100) : 0;
+  const statusBadge = p >= 15 && p <= 40 ? 'יחס נזילות תקין'
+    : p < 15 ? 'נזילות נמוכה מדי' : 'נזילות גבוהה — כסף לא עובד';
+  const statusColor = p >= 15 && p <= 40 ? 'var(--green)'
+    : p < 15 ? 'var(--red,#ef4444)' : 'var(--amber,#f59e0b)';
 
-  // Max value for proportional bars
-  const allVals = [...liqCats, ...nonLiqCats].map(c => calc[c.key]||0);
-  const maxVal  = Math.max(...allVals, 1);
-
-  function barRow(cat, isLiquid) {
-    const val    = calc[cat.key] || 0;
-    const barPct = Math.round((val / maxVal) * 100);
-    const barColor = isLiquid ? 'var(--green)' : 'var(--amber,#f59e0b)';
-    const valColor = isLiquid ? 'var(--green)' : 'var(--ink-4)';
+  // ── Simple row: label + value only ─────────────────
+  function simpleRow(cat, isLiquid) {
+    const val      = calc[cat.key] || 0;
+    const valColor = isLiquid ? 'var(--ink)' : 'var(--ink-2)';
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-        <div style="flex:1;padding-left:12px">
-          <div style="font-size:.875rem;color:var(--ink-2);margin-bottom:4px">${cat.label}</div>
-          <div style="height:3px;background:var(--border);border-radius:2px">
-            <div style="height:3px;border-radius:2px;background:${barColor};width:${barPct}%;transition:width .4s ease"></div>
-          </div>
-        </div>
-        <span style="font-family:var(--mono);font-size:.875rem;font-weight:600;color:${valColor};white-space:nowrap">${fmt(val)}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
+        <span style="font-size:.875rem;color:var(--ink-2)">${cat.label}</span>
+        <span style="font-family:var(--mono);font-size:.875rem;font-weight:700;color:${valColor};white-space:nowrap">${fmt(val)}</span>
       </div>`;
   }
 
-  const liqRowsHtml    = liqCats.map(c => barRow(c, true)).join('') ||
-    `<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>`;
-  const nonLiqRowsHtml = nonLiqCats.map(c => barRow(c, false)).join('');
+  const liqRowsHtml    = liqCats.map(c => simpleRow(c, true)).join('')
+    || `<div style="color:var(--ink-4);font-size:.875rem;padding:8px 0">אין</div>`;
+  const nonLiqRowsHtml = nonLiqCats.map(c => simpleRow(c, false)).join('');
 
+  // ── Ticker ──────────────────────────────────────────
+  const SVG_DROP = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`;
+  const tickerItems = [
+    `<span class="tkr-item">${SVG_DROP} <bdi dir="rtl" class="tkr-text">נזיל: <strong style="color:${statusColor}">${pct}%</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.target} <bdi dir="rtl" class="tkr-text">אידיאלי: <strong>15%–40%</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.check} <bdi dir="rtl" class="tkr-text" style="color:${statusColor}">${statusBadge}</bdi></span>`,
+  ];
+  const SEP      = `<span class="tkr-sep">·</span>`;
+  const LOOP_SEP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
+  const tickerHtml = `<div class="tkr-track" id="liq-tkr-track">${tickerItems.join(SEP) + LOOP_SEP + tickerItems.join(SEP) + LOOP_SEP}</div>`;
+
+  // ── Build modal ─────────────────────────────────────
   document.getElementById('liquid-info-modal')?.remove();
   const modal = document.createElement('div');
   modal.id = 'liquid-info-modal';
-  modal.className = 'info-modal-overlay';
+  modal.className = 'info-modal-overlay cat-history-overlay';
   modal.innerHTML = `
-    <div class="info-modal-box" style="overflow:hidden">
+    <div class="modal-box">
 
-      <!-- ── Colored Header ── -->
-      <div style="background:${headerGradient};padding:13px 18px 15px;flex-shrink:0;direction:rtl">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <span style="font-size:.82rem;font-weight:600;color:rgba(255,255,255,.85)">נכסים נזילים</span>
-          <button onclick="document.getElementById('liquid-info-modal').remove()"
-            style="background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ICONS_JS.x}</button>
+      <!-- Header -->
+      <div class="chb-header">
+        <div class="chb-title">${SVG_DROP} נכסים נזילים</div>
+        <button onclick="document.getElementById('liquid-info-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+
+      <!-- Ticker -->
+      <div class="chb-ticker-row">${tickerHtml}</div>
+
+      <!-- Summary strip -->
+      <div class="chb-top" style="padding:14px 20px 16px;direction:rtl">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px">
+          <span style="font-family:var(--mono);font-size:2rem;font-weight:800;color:${statusColor};line-height:1">${pct}%</span>
+          <span style="font-size:.85rem;color:var(--ink-3)">נזיל מהתיק</span>
         </div>
-        <div style="font-family:var(--font);font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1">
-          ${pct}% נזיל
+        <div style="height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:10px">
+          <div style="height:6px;border-radius:4px;background:${statusColor};width:${Math.min(liqPct,100)}%;transition:width .5s ease"></div>
         </div>
-        <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:4px">
-          אידיאלי: 15%–40% מהתיק
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">${statusBadge}</span>
-          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">נזיל ${liqPct}%</span>
-          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">לא נזיל ${nliqPct}%</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:${statusColor};font-weight:700">${statusBadge}</span>
+          <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--ink-3)">נזיל ${liqPct}%</span>
+          <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--ink-3)">לא נזיל ${nliqPct}%</span>
         </div>
       </div>
 
-      <!-- ── Scrollable Body ── -->
-      <div id="liquid-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 24px;direction:rtl">
+      <!-- Scrollable body — single container -->
+      <div class="chb-body">
 
-        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-4);margin-bottom:4px">
-          נכסים נזילים (ניתן למשיכה מיידית)
-        </div>
+        <div class="chb-history-header" style="margin:0 -20px;padding-right:20px;padding-left:20px"><span>נכסים נזילים (ניתן למשיכה מיידית)</span></div>
         ${liqRowsHtml}
-
-        <div style="display:flex;justify-content:space-between;padding:10px 0 14px;font-size:.875rem;font-weight:700;border-bottom:2px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:.875rem;font-weight:700">
           <span style="color:var(--ink)">סה"כ נזיל</span>
           <span style="font-family:var(--mono);color:var(--green)">${fmt(liquid)}</span>
         </div>
 
         ${nonLiqRowsHtml ? `
-          <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-4);margin-top:14px;margin-bottom:4px">
-            נכסים לא נזילים
-          </div>
+          <div class="chb-history-header" style="margin:8px -20px 0;padding-right:20px;padding-left:20px"><span>נכסים לא נזילים</span></div>
           ${nonLiqRowsHtml}` : ''}
 
-        <p style="font-size:.68rem;color:var(--ink-4);margin-top:14px;line-height:1.6">
-          * נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס.
-        </p>
+        <p style="font-size:.68rem;color:var(--ink-4);line-height:1.6;margin:12px 0 0">* נזיל = ניתן למשיכה תוך ימים ספורים ללא קנס.</p>
       </div>
+
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
+
+  // Animate ticker
+  setTimeout(() => {
+    const track = document.getElementById('liq-tkr-track');
+    if (!track) return;
+    const oneWidth = track.scrollWidth / 2;
+    if (oneWidth > 0) {
+      track.style.animationDuration = `${(oneWidth / 60).toFixed(2)}s`;
+      track.style.animationPlayState = 'running';
+    }
+  }, 60);
 }
 
 /* ══ GENERIC INFO MODAL ═══════════════════════════════ */
@@ -3219,106 +3224,118 @@ function showTaxBreakdown() {
   const nonPensionTotal = calc.totalAssets - pensionTotal;
   const pensionAfterTax = pensionTotal - tax;
 
-  // Compute max value across all rows for proportional bar widths
-  const allVals = categories.map(c => calc[c.key] || 0);
-  const maxVal  = Math.max(...allVals, 1);
+  // Pills
+  const totalForPills = nonPensionTotal + pensionAfterTax;
+  const liqPct = totalForPills ? Math.round(nonPensionTotal / totalForPills * 100) : 0;
+  const penPct = totalForPills ? Math.round(pensionAfterTax / totalForPills * 100) : 0;
 
-  // Helper: mini progress bar row
-  function barRow(label, val, isAmber) {
+  // Simple row: label + value, no bar
+  function simpleRow(label, val, valColor) {
     if (!val) return '';
-    const pct = Math.round((val / maxVal) * 100);
-    const barColor = isAmber ? 'var(--amber,#f59e0b)' : 'var(--green)';
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
-        <div style="flex:1;padding-left:12px">
-          <div style="font-size:.875rem;color:var(--ink-2);margin-bottom:4px">${label}</div>
-          <div style="height:3px;background:var(--border);border-radius:2px">
-            <div style="height:3px;border-radius:2px;background:${barColor};width:${pct}%;transition:width .4s ease"></div>
-          </div>
-        </div>
-        <span style="font-family:var(--mono);font-size:.875rem;font-weight:600;color:var(--ink);white-space:nowrap">${fmt(val)}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
+        <span style="font-size:.875rem;color:var(--ink-2)">${label}</span>
+        <span style="font-family:var(--mono);font-size:.875rem;font-weight:700;color:${valColor || 'var(--ink)'};white-space:nowrap">${fmt(val)}</span>
       </div>`;
   }
 
   const nonPensionRows = categories
     .filter(c => !isPensionCat(c))
-    .map(cat => barRow(cat.label, calc[cat.key] || 0, false))
+    .map(cat => simpleRow(cat.label, calc[cat.key] || 0, 'var(--ink)'))
     .join('');
 
   const pensionRows = categories
     .filter(isPensionCat)
-    .map(cat => barRow(cat.label, calc[cat.key] || 0, true))
+    .map(cat => simpleRow(cat.label, calc[cat.key] || 0, 'var(--ink)'))
     .join('');
 
-  // Pills: liquid% and pension%
-  const totalForPills = nonPensionTotal + pensionAfterTax;
-  const liqPct     = totalForPills ? Math.round(nonPensionTotal  / totalForPills * 100) : 0;
-  const penPct     = totalForPills ? Math.round(pensionAfterTax  / totalForPills * 100) : 0;
+  // Ticker
+  const SVG_TAX = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+  const tickerItems = [
+    `<span class="tkr-item">${SVG_TAX} <bdi dir="rtl" class="tkr-text">שווי נקי: <strong>${fmt(netAfterTax)}</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">נזיל: <strong>${liqPct}%</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.piggy} <bdi dir="rtl" class="tkr-text">פנסיה נטו: <strong>${penPct}%</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">מס פנסיה: <strong style="color:var(--red)">− ${fmt(tax)}</strong></bdi></span>`,
+  ];
+  const SEP      = `<span class="tkr-sep">·</span>`;
+  const LOOP_SEP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
+  const tickerHtml = `<div class="tkr-track" id="tax-tkr-track">${tickerItems.join(SEP) + LOOP_SEP + tickerItems.join(SEP) + LOOP_SEP}</div>`;
 
   document.getElementById('tax-breakdown-modal')?.remove();
   const modal = document.createElement('div');
   modal.id = 'tax-breakdown-modal';
-  modal.className = 'info-modal-overlay';
+  modal.className = 'info-modal-overlay cat-history-overlay';
   modal.innerHTML = `
-    <div class="info-modal-box" style="overflow:hidden">
+    <div class="modal-box">
 
-      <!-- ── Green Header ── -->
-      <div style="background:linear-gradient(135deg,var(--green),var(--green-dark));padding:13px 18px 15px;flex-shrink:0;direction:rtl">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <span style="font-size:.82rem;font-weight:600;color:rgba(255,255,255,.85)">פירוט שווי נקי אחרי מס</span>
-          <button onclick="document.getElementById('tax-breakdown-modal').remove()"
-            style="background:rgba(255,255,255,.2);border:none;cursor:pointer;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ICONS_JS.x}</button>
+      <!-- Header -->
+      <div class="chb-header">
+        <div class="chb-title">${SVG_TAX} שווי נקי אחרי מס</div>
+        <button onclick="document.getElementById('tax-breakdown-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+
+      <!-- Ticker -->
+      <div class="chb-ticker-row">${tickerHtml}</div>
+
+      <!-- Summary strip -->
+      <div class="chb-top" style="padding:14px 20px 16px;direction:rtl">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+          <span style="font-family:var(--mono);font-size:2rem;font-weight:800;color:var(--ink);line-height:1">${fmt(netAfterTax)}</span>
         </div>
-        <div style="font-family:var(--font);font-size:1.75rem;font-weight:800;color:#fff;letter-spacing:-.03em;line-height:1">
-          ${fmt(netAfterTax)}
-        </div>
-        <div style="font-size:.72rem;color:rgba(255,255,255,.7);margin-top:4px">
+        <div style="font-size:.72rem;color:var(--ink-4);margin-bottom:10px">
           נזיל ${fmt(nonPensionTotal)} + פנסיה נטו ${fmt(pensionAfterTax)}
         </div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">נזיל ${liqPct}%</span>
-          <span style="background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:.72rem;color:rgba(255,255,255,.95)">פנסיה ${penPct}%</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--green);font-weight:700">נזיל ${liqPct}%</span>
+          <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--amber,#f59e0b);font-weight:700">פנסיה ${penPct}%</span>
+          <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.72rem;color:var(--red);font-weight:700">מס − ${fmt(tax)}</span>
         </div>
       </div>
 
-      <!-- ── Scrollable Body ── -->
-      <div id="tax-modal-body" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 28px;direction:rtl">
+      <!-- Scrollable body — single container -->
+      <div class="chb-body">
 
         ${nonPensionRows ? `
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:6px;margin-top:2px">
-            נכסים נזילים (ללא מס)
-          </div>
+          <div class="chb-history-header" style="margin:0 -20px;padding-right:20px;padding-left:20px"><span>נכסים נזילים (ללא מס)</span></div>
           ${nonPensionRows}
-          <div style="display:flex;justify-content:space-between;padding:10px 0 14px;font-size:.875rem;font-weight:700;border-bottom:2px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:.875rem;font-weight:700">
             <span style="color:var(--ink)">סה"כ נזיל</span>
             <span style="font-family:var(--mono);color:var(--green)">${fmt(nonPensionTotal)}</span>
           </div>` : ''}
 
         ${pensionRows ? `
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-4);margin-bottom:6px;margin-top:14px">
-            פנסיה (חייבת במס 35%)
-          </div>
+          <div class="chb-history-header" style="margin:8px -20px 0;padding-right:20px;padding-left:20px"><span>פנסיה (חייבת במס 35%)</span></div>
           ${pensionRows}
-          <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem">
             <span style="color:var(--ink-2)">סה"כ פנסיה (ברוטו)</span>
-            <span style="font-family:var(--mono);font-weight:600;color:var(--ink)">${fmt(pensionTotal)}</span>
+            <span style="font-family:var(--mono);font-weight:700;color:var(--ink)">${fmt(pensionTotal)}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+          <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem">
             <span style="color:var(--ink-2)">מס 35%</span>
-            <span style="font-family:var(--mono);font-weight:600;color:var(--red)">− ${fmt(tax)}</span>
+            <span style="font-family:var(--mono);font-weight:700;color:var(--red)">− ${fmt(tax)}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:10px 0 14px;font-size:.875rem;font-weight:700;border-bottom:2px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:.875rem;font-weight:700">
             <span style="color:var(--ink)">פנסיה נטו</span>
             <span style="font-family:var(--mono);color:var(--green)">${fmt(pensionAfterTax)}</span>
           </div>` : ''}
 
-        <p style="font-size:.7rem;color:var(--ink-4);margin-top:14px;line-height:1.6">
-          * 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס.
-        </p>
+        <p style="font-size:.68rem;color:var(--ink-4);line-height:1.6;margin:12px 0 0">* 35% מס על משיכה מוקדמת של פנסיה. מומלץ להתייעץ עם יועץ מס.</p>
       </div>
+
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
+
+  // Animate ticker
+  setTimeout(() => {
+    const track = document.getElementById('tax-tkr-track');
+    if (!track) return;
+    const oneWidth = track.scrollWidth / 2;
+    if (oneWidth > 0) {
+      track.style.animationDuration = `${(oneWidth / 60).toFixed(2)}s`;
+      track.style.animationPlayState = 'running';
+    }
+  }, 60);
 }
 
 /* ══ PORTFOLIO TAB ════════════════════════════════════ */

@@ -1618,6 +1618,14 @@ function renderCurrentReport() {
       ${growthBadge}
     </div>`;
   }).join('');
+
+  const addCatTile = `
+    <div class="cat-tile cat-tile-add" style="animation-delay:${.05*(categories.length+1)}s;cursor:pointer" onclick="openAddCatFromMain()">
+      <span class="ct-icon" style="color:var(--ink-4)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </span>
+      <div class="ct-label" style="text-align:center;color:var(--ink-4);margin-top:4px">קטגוריה חדשה</div>
+    </div>`;
  
   const notesHtml = latest.notes
     ? `<div class="notes-bar ${latest.notes.includes('✔️')?'pos':'neg'}">${latest.notes}</div>` : '';
@@ -1638,7 +1646,7 @@ function renderCurrentReport() {
       ${mortgageHero}
     </div>
     <div class="section-header">פירוט נכסים – ${dateLabel}</div>
-    <div class="cat-grid">${catTiles}</div>
+    <div class="cat-grid">${catTiles}${addCatTile}</div>
     ${growthHtml}
     ${notesHtml}`;
   applyBlur();
@@ -4122,11 +4130,21 @@ function openCatHistory(catKey, catLabel) {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
     rows += `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+    <div class="chb-hist-row${!isMortgage ? ' chb-hist-row-edit' : ''}"
+      ${!isMortgage ? `
+        data-record-id="${cur.id}"
+        data-cat-id="${cat?.id||''}"
+        data-cat-key="${catKey}"
+        data-cat-label="${catLabel.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
+        data-cur-val="${curVal}"
+        data-prev-val="${prevVal}"
+        onclick="openQuickCatEntryFromRow(this)"` : ''}
+      style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem">
       <span style="color:var(--ink-3)">${dateLabel}</span>
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-2)" class="blur-text">${fmt(curVal)}</span>
         ${deltaHtml}
+        ${!isMortgage ? `<span class="chb-edit-hint">${ICONS_JS.edit}</span>` : ''}
       </div>
     </div>`;
   }
@@ -4440,6 +4458,105 @@ function buildBackupObject(cats, recs) {
   };
 }
 
+
+/* ══ QUICK CATEGORY VALUE ENTRY ══════════════════════ */
+
+function openQuickCatEntryFromRow(el) {
+  const d = el.dataset;
+  openQuickCatEntry(d.catId, d.catKey, d.catLabel, parseFloat(d.curVal)||0, d.recordId, parseFloat(d.prevVal)||0);
+}
+
+function openQuickCatEntry(catId, catKey, catLabel, currentVal, recordId, prevValOverride) {
+  if (!records.length) return showToast('⚠️ אין חודש קיים — הוסף חודש קודם');
+
+  // Use the specified record or fall back to latest
+  const targetRecord = recordId ? records.find(r => r.id === recordId) : records[records.length - 1];
+  if (!targetRecord) return showToast('⚠️ לא נמצאה הרשומה');
+
+  const dateLabel = new Date(targetRecord.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+  const cat       = categories.find(c => c.id === catId);
+  const inst      = cat?.institution_id ? getInstitution(cat.institution_id) : null;
+
+  // Logo / icon — same as wizard step
+  const logoHtml = inst
+    ? `<img src="${logoUrl(inst.domain)}" alt="${inst.name}" style="width:48px;height:48px;border-radius:12px;object-fit:contain;margin-bottom:4px;display:block" onerror="this.style.display='none'"/>`
+    : `<div style="color:var(--ink-3);margin-bottom:4px">${getCatSvg(cat || {key:catKey})}</div>`;
+  const instSubHtml = inst
+    ? `<div class="wz-step-sub" style="color:var(--green)">${inst.name}</div>`
+    : `<div class="wz-step-sub">ללא גוף מנהל</div>`;
+
+  // Previous month hint: use override if provided, otherwise find previous record
+  let prevHint = '';
+  const prevVal = prevValOverride != null ? prevValOverride : (() => {
+    const idx = records.findIndex(r => r.id === targetRecord.id);
+    if (idx > 0) return (records[idx - 1].values || {})[catKey] || 0;
+    return 0;
+  })();
+  if (prevVal) {
+    prevHint = `<div class="wz-prev-hint" style="color:var(--ink-3);display:flex;align-items:center;justify-content:center;gap:4px;font-family:var(--font);font-size:.8rem">${ICONS_JS.clock} חודש שעבר: <span style="font-family:var(--mono);font-weight:600">${fmt(prevVal)}</span></div>`;
+  }
+
+  document.getElementById('quick-cat-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id    = 'quick-cat-modal';
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '1200';
+  modal.innerHTML = `
+    <div class="wz-card">
+      <div class="wz-header">
+        <span style="font-size:.9rem;font-weight:700;color:var(--ink)">${dateLabel}</span>
+        <button onclick="document.getElementById('quick-cat-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px 24px 4px;display:flex;flex-direction:column;align-items:center;text-align:center">
+        <div class="wz-step-icon">${logoHtml}</div>
+        <div class="wz-step-title">${catLabel}</div>
+        ${instSubHtml}
+        <div class="wz-amount-wrap">
+          <span class="wz-currency">₪</span>
+          <input type="number" id="quick-cat-input" class="form-input wz-amount-input"
+            value="${currentVal || ''}" placeholder="0" inputmode="numeric"
+            onkeydown="if(event.key==='Enter')saveQuickCatEntry('${catId}','${catKey}')"/>
+        </div>
+        ${prevHint}
+      </div>
+      <div class="wz-footer">
+        <button class="wz-btn-secondary" onclick="document.getElementById('quick-cat-modal').remove()">ביטול</button>
+        <button class="wz-btn-primary" style="display:flex;align-items:center;justify-content:center;gap:7px"
+          onclick="saveQuickCatEntry('${catId}','${catKey}','${targetRecord.id}')">
+          שמור ${ICONS_JS.save}
+        </button>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+  setTimeout(() => { const inp = document.getElementById('quick-cat-input'); inp?.focus(); inp?.select(); }, 80);
+}
+
+async function saveQuickCatEntry(catId, catKey, recordId) {
+  const target = recordId ? records.find(r => r.id === recordId) : records[records.length - 1];
+  if (!target) return;
+  const val       = parseFloat(document.getElementById('quick-cat-input')?.value || 0) || 0;
+  const newValues = { ...(target.values || {}), [catKey]: val };
+  showLoader('שומר...');
+  const { error } = await db.from('monthly_records')
+    .update({ values: newValues })
+    .eq('id', target.id)
+    .eq('user_id', currentUser.id);
+  hideLoader();
+  if (error) return showToast('שגיאה: ' + error.message);
+  document.getElementById('quick-cat-modal')?.remove();
+  await loadRecords();
+  renderCurrentReport();
+  showToast('✅ עודכן!');
+}
+
+function openAddCatFromMain() {
+  showSettings('categories');
+  setTimeout(() => {
+    const addSection = document.getElementById('add-cat-section');
+    if (addSection) addSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
+}
 
 /* ══ DARK MODE ═══════════════════════════════════════ */
 function applyDarkMode(on) {

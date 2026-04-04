@@ -1015,6 +1015,87 @@ select option{background:var(--surface)}
   box-shadow: 0 0 0 2px #f59e0b, 0 4px 14px rgba(245,158,11,.22);
 }
 
+/* ── Clickable history rows in cat-history panel ─────── */
+.chb-hist-row { transition: background .12s; border-radius: 6px; padding-right: 4px; padding-left: 4px; margin: 0 -4px; }
+.chb-hist-row-edit { cursor: pointer; }
+.chb-hist-row-edit:hover { background: var(--surface2); }
+.chb-edit-hint {
+  opacity: 0;
+  color: var(--ink-4);
+  display: flex;
+  align-items: center;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+.chb-hist-row-edit:hover .chb-edit-hint { opacity: 1; }
+@media (hover: none) { .chb-edit-hint { opacity: 0.4; } }
+
+/* ── "Add category" dashed tile ─────────────────────── */
+.cat-tile.cat-tile-add {
+  border: 2px dashed var(--border) !important;
+  background: transparent !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  box-shadow: none !important;
+}
+.cat-tile.cat-tile-add:hover {
+  border-color: var(--green) !important;
+  background: rgba(14,158,126,.04) !important;
+  transform: translateY(-1px);
+}
+.cat-tile.cat-tile-add:hover .ct-label,
+.cat-tile.cat-tile-add:hover .ct-icon {
+  color: var(--green) !important;
+}
+
+/* ── Quick "+" button on category tiles ─────────────── */
+.cat-quick-add-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity .15s, background .15s, color .15s, border-color .15s;
+  padding: 0;
+  flex-shrink: 0;
+}
+.cat-tile:hover .cat-quick-add-btn {
+  opacity: 1;
+}
+.cat-quick-add-btn:hover {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  color: #fff !important;
+}
+/* Always visible on touch devices */
+@media (hover: none) {
+  .cat-quick-add-btn { opacity: 1; }
+}
+
+/* ── "Add month" accent button in topbar ─────────────── */
+.icon-btn-new-month {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  color: #fff;
+}
+.icon-btn-new-month svg { stroke: #fff !important; }
+.icon-btn-new-month:hover {
+  background: var(--green-mid, #13b891) !important;
+  border-color: var(--green-mid, #13b891) !important;
+}
+
 /* ── Custom fields block inside cat-history panel ────── */
 /* ── Custom fields block inside cat-history panel ────── */
 .ch-cf-block {
@@ -1545,6 +1626,17 @@ select option{background:var(--surface)}
 }
 [data-theme="dark"] .icon-btn:hover svg {
   stroke: var(--green);
+}
+[data-theme="dark"] .icon-btn-new-month,
+[data-theme="dark"] .icon-btn-new-month:hover {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+}
+[data-theme="dark"] .icon-btn-new-month svg { stroke: #fff !important; }
+[data-theme="dark"] .cat-quick-add-btn {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--ink-3);
 }
 
 /* ══ SHORTCUTS OVERLAY ═══════════════════════════════ */

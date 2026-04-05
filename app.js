@@ -691,7 +691,7 @@ function toggleCatNameDropdown() {
   modal.style.display = 'flex';
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   modal.innerHTML = `
-    <div class="modal-box" style="max-height:70vh;">
+    <div class="modal-box">
       <div class="modal-header">
         <h2>${ICONS_JS.note} בחר סוג חשבון / נכס</h2>
         <button onclick="document.getElementById('cat-name-modal').remove()" class="modal-close">${ICONS_JS.x}</button>
@@ -3912,7 +3912,15 @@ async function handleRecoveryIfNeeded() {
   return false;
 }
 
+function setModalHeight() {
+  document.documentElement.style.setProperty('--modal-h', window.innerHeight + 'px');
+}
+setModalHeight();
+window.addEventListener('resize', setModalHeight);
+window.addEventListener('orientationchange', () => setTimeout(setModalHeight, 300));
+
 document.addEventListener('DOMContentLoaded', async () => {
+  setModalHeight();
   const wasRecovery = await handleRecoveryIfNeeded();
   if (!wasRecovery) init();
 });

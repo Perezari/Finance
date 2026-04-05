@@ -1527,9 +1527,12 @@ select option{background:var(--surface)}
 }
 
 /* ══ QUICK LOGOUT — topbar ═══════════════════════════ */
-.icon-btn-logout svg { stroke: var(--ink-3); transition: stroke .15s; }
-.icon-btn-logout:hover { border-color: var(--red) !important; background: var(--red-light) !important; }
-.icon-btn-logout:hover svg { stroke: var(--red); }
+.icon-btn-logout svg { stroke: rgba(255,255,255,.85); transition: none; }
+.icon-btn-logout { border-color: #9b2a1f !important; background: radial-gradient(circle at 50% 35%, #d95a4a 0%, #b83428 55%, #922319 100%) !important; box-shadow: 0 0 6px rgba(180,50,35,.3) !important; }
+.icon-btn-logout:hover { border-color: #9b2a1f !important; background: radial-gradient(circle at 50% 35%, #e06050 0%, #c23a2e 55%, #9b2319 100%) !important; box-shadow: 0 0 10px rgba(180,50,35,.45) !important; }
+.icon-btn-logout:hover svg { stroke: #fff !important; }
+
+.topbar-avatar-btn { background: linear-gradient(135deg,var(--green),var(--green-mid,#0b8a6e)) !important; border-color: transparent !important; font-size: .8rem; font-weight: 700; color: #fff !important; }
 
 /* ══ PASSWORD CHANGE FORM ════════════════════════════ */
 .pwd-form {
@@ -2189,4 +2192,10 @@ input[type="date"]::-webkit-date-and-time-value {
 
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
+  .mobile-only  { display: flex !important; }
 }
+@media (min-width: 769px) {
+  .mobile-only  { display: none !important; }
+}
+
+.sidebar-user:hover { background: var(--surface2); }

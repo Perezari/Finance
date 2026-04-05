@@ -175,6 +175,8 @@ function updateUserUI() {
 
   const av = document.getElementById('user-avatar-char');
   if (av) av.textContent = (displayName[0] || '?').toUpperCase();
+  const av2 = document.getElementById('topbar-avatar-char');
+  if (av2) av2.textContent = (displayName[0] || '?').toUpperCase();
 
   // Always prefill from Supabase metadata (overwrite any stale value)
   const input = document.getElementById('settings-display-name');

@@ -3912,15 +3912,7 @@ async function handleRecoveryIfNeeded() {
   return false;
 }
 
-function setModalHeight() {
-  document.documentElement.style.setProperty('--modal-h', window.innerHeight + 'px');
-}
-setModalHeight();
-window.addEventListener('resize', setModalHeight);
-window.addEventListener('orientationchange', () => setTimeout(setModalHeight, 300));
-
 document.addEventListener('DOMContentLoaded', async () => {
-  setModalHeight();
   const wasRecovery = await handleRecoveryIfNeeded();
   if (!wasRecovery) init();
 });
@@ -4138,21 +4130,22 @@ function openCatHistory(catKey, catLabel) {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
     rows += `
-    <div class="chb-hist-row${!isMortgage ? ' chb-hist-row-edit' : ''}"
+    <div class="chb-hist-row chb-hist-row-edit"
+      data-record-id="${cur.id}"
+      data-cur-val="${curVal}"
+      data-prev-val="${prevVal}"
       ${!isMortgage ? `
-        data-record-id="${cur.id}"
         data-cat-id="${cat?.id||''}"
         data-cat-key="${catKey}"
         data-cat-label="${catLabel.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
-        data-cur-val="${curVal}"
-        data-prev-val="${prevVal}"
-        onclick="openQuickCatEntryFromRow(this)"` : ''}
+        onclick="openQuickCatEntryFromRow(this)"` : `
+        onclick="openQuickMortgageEntry(this)"`}
       style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem">
       <span style="color:var(--ink-3)">${dateLabel}</span>
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-2)" class="blur-text">${fmt(curVal)}</span>
         ${deltaHtml}
-        ${!isMortgage ? `<span class="chb-edit-hint">${ICONS_JS.edit}</span>` : ''}
+        <span class="chb-edit-hint">${ICONS_JS.edit}</span>
       </div>
     </div>`;
   }
@@ -4469,6 +4462,91 @@ function buildBackupObject(cats, recs) {
 
 /* ══ QUICK CATEGORY VALUE ENTRY ══════════════════════ */
 
+
+function openQuickMortgageEntry(el) {
+  const d        = el.dataset;
+  const recordId = d.recordId;
+  const curVal   = parseFloat(d.curVal) || 0;
+  const prevVal  = parseFloat(d.prevVal) || 0;
+
+  const targetRecord = records.find(r => r.id === recordId);
+  if (!targetRecord) return showToast('⚠️ לא נמצאה הרשומה');
+
+  const dateLabel  = new Date(targetRecord.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+  const mortInstId = localStorage.getItem('mortgage_inst_v1') || targetRecord.values?._mortgage_inst;
+  const mortInst   = mortInstId ? getInstitution(mortInstId) : null;
+
+  const logoHtml = mortInst
+    ? `<img src="${logoUrl(mortInst.domain)}" alt="${mortInst.name}" style="width:48px;height:48px;border-radius:12px;object-fit:contain;margin-bottom:4px;display:block" onerror="this.style.display='none'"/>`
+    : `<div style="color:var(--red);margin-bottom:4px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`;
+  const instSubHtml = mortInst
+    ? `<div class="wz-step-sub" style="color:var(--green)">${mortInst.name}</div>`
+    : `<div class="wz-step-sub">ללא גוף מנהל</div>`;
+
+  const prevHint = prevVal
+    ? `<div class="wz-prev-hint" style="color:var(--ink-3);display:flex;align-items:center;justify-content:center;gap:4px;font-family:var(--font);font-size:.8rem">${ICONS_JS.clock} חודש שעבר: <span style="font-family:var(--mono);font-weight:600">${fmt(prevVal)}</span></div>`
+    : '';
+
+  document.getElementById('quick-mortgage-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id        = 'quick-mortgage-modal';
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '1200';
+  modal.innerHTML = `
+    <div class="wz-card">
+      <div class="wz-header">
+        <span style="font-size:.9rem;font-weight:700;color:var(--ink)">${dateLabel}</span>
+        <button onclick="document.getElementById('quick-mortgage-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px 24px 4px;display:flex;flex-direction:column;align-items:center;text-align:center">
+        <div class="wz-step-icon">${logoHtml}</div>
+        <div class="wz-step-title">יתרת משכנתא</div>
+        ${instSubHtml}
+        <div class="wz-amount-wrap">
+          <span class="wz-currency">₪</span>
+          <input type="number" id="quick-mortgage-input" class="form-input wz-amount-input"
+            value="${curVal || ''}" placeholder="0" inputmode="numeric"
+            onkeydown="if(event.key==='Enter')saveQuickMortgageEntry('${recordId}')"/>
+        </div>
+        ${prevHint}
+      </div>
+      <div class="wz-footer">
+        <button class="wz-btn-secondary" onclick="document.getElementById('quick-mortgage-modal').remove()">ביטול</button>
+        <button class="wz-btn-primary" style="display:flex;align-items:center;justify-content:center;gap:7px"
+          onclick="saveQuickMortgageEntry('${recordId}')">
+          שמור ${ICONS_JS.save}
+        </button>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => {
+    const inp = document.getElementById('quick-mortgage-input');
+    if (!inp) return;
+    inp.readOnly = true;
+    inp.focus();
+    inp.readOnly = false;
+    inp.select();
+  });
+}
+
+async function saveQuickMortgageEntry(recordId) {
+  const target = records.find(r => r.id === recordId);
+  if (!target) return;
+  const val = parseFloat(document.getElementById('quick-mortgage-input')?.value || 0) || 0;
+  showLoader('שומר...');
+  const { error } = await db.from('monthly_records')
+    .update({ mortgage_balance: val })
+    .eq('id', target.id)
+    .eq('user_id', currentUser.id);
+  hideLoader();
+  if (error) return showToast('שגיאה: ' + error.message);
+  document.getElementById('quick-mortgage-modal')?.remove();
+  await loadRecords();
+  renderCurrentReport();
+  showToast('✅ עודכן!');
+}
+
 function openQuickCatEntryFromRow(el) {
   const d = el.dataset;
   openQuickCatEntry(d.catId, d.catKey, d.catLabel, parseFloat(d.curVal)||0, d.recordId, parseFloat(d.prevVal)||0);
@@ -4537,7 +4615,14 @@ function openQuickCatEntry(catId, catKey, catLabel, currentVal, recordId, prevVa
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
-  setTimeout(() => { const inp = document.getElementById('quick-cat-input'); inp?.focus(); inp?.select(); }, 80);
+  requestAnimationFrame(() => {
+    const inp = document.getElementById('quick-cat-input');
+    if (!inp) return;
+    inp.readOnly = true;          // trick iOS into not scrolling on focus
+    inp.focus();
+    inp.readOnly = false;
+    inp.select();
+  });
 }
 
 async function saveQuickCatEntry(catId, catKey, recordId) {

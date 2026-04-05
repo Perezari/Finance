@@ -308,8 +308,8 @@ html, body {
 .hero-tile.accent{background:linear-gradient(135deg,#0b7a62,#0e9e7e);border-color:transparent}
 .hero-tile.accent .ht-label,.hero-tile.accent .ht-sub{color:rgba(255,255,255,.8)}
 .hero-tile.accent .ht-value{color:#fff}
-.hero-tile.danger{border-color:#fecaca}
-.hero-tile.warning{border-color:#fde68a}
+.hero-tile.danger{border-color:var(--border)}
+.hero-tile.warning{border-color:var(--border)}
 .ht-label{font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
 .ht-value{font-size:1.65rem;font-weight:800;color:var(--ink);font-family:var(--mono);letter-spacing:-.03em;line-height:1;margin-bottom:8px;transition:filter .3s}
 .ht-sub{font-size:.78rem;font-weight:600;color:var(--ink-3);display:inline-flex;align-items:center;gap:4px;font-family:var(--font);}
@@ -2193,6 +2193,8 @@ input[type="date"]::-webkit-date-and-time-value {
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
   .mobile-only  { display: flex !important; }
+  .icon-btn-logout { display: none !important; }
+  #blur-btn { display: none !important; }
 }
 @media (min-width: 769px) {
   .mobile-only  { display: none !important; }

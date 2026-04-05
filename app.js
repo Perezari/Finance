@@ -93,6 +93,7 @@ let instTargetMode   = 'cat';
 let selectedMortgageInst = null;
 let wizardStep    = 0;
 let wizardData    = {}; // holds values across steps
+let viewMode      = 'grid'; // 'grid' | 'list'
 
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
@@ -139,6 +140,7 @@ async function loadApp() {
   renderCurrentReport();
   updateUserUI();
   syncDarkModeFromCloud();
+  syncViewModeFromCloud();
   initColorTheme();
   checkAutoBackup();
   // Fix stale _share_invite row if owner name wasn't stored correctly
@@ -1621,6 +1623,76 @@ function renderCurrentReport() {
     </div>`;
   }).join('');
 
+  // ── Sparkline for list view ──────────────────────────
+  function listSpark(catKey) {
+    const vals = records.slice(-10).map(r => (r.values || {})[catKey] || 0);
+    if (vals.length < 3 || vals.filter(v => v > 0).length < 3) return '<div class="cat-row-spark-empty"></div>';
+    const min = Math.min(...vals), max = Math.max(...vals);
+    if (max - min === 0) return '<div class="cat-row-spark-empty"></div>';
+    const W = 100, H = 24, pad = 2;
+    const pts = vals.map((v, i) => {
+      const x = pad + (i / (vals.length - 1)) * (W - pad * 2);
+      const y = pad + (1 - (v - min) / (max - min)) * (H - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const isPos = vals[vals.length - 1] >= vals[0];
+    const col   = isPos ? 'var(--green,#0e9e7e)' : '#ef4444';
+    const allPts = pts.split(' ');
+    const first = allPts[0].split(','), last = allPts[allPts.length-1].split(',');
+    const fillPath = `M ${pts.split(' ').join(' L ')} L ${last[0]},${H} L ${first[0]},${H} Z`;
+    const gid = 'ls_' + catKey.replace(/[^a-z0-9]/gi,'_');
+    return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="cat-row-spark" aria-hidden="true">
+      <defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="${col}" stop-opacity="0.2"/>
+        <stop offset="100%" stop-color="${col}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${fillPath}" fill="url(#${gid})"/>
+      <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  // ── List view rows ─────────────────────────────────────
+  const catListRows = categories.map((cat, i) => {
+    const inst    = cat.institution_id ? getInstitution(cat.institution_id) : null;
+    const val     = calc[cat.key] || 0;
+    const pct     = calc.totalAssets ? (val / calc.totalAssets * 100).toFixed(1) : '0.0';
+    const bar     = Math.min(Math.round(parseFloat(pct)), 100);
+    const liq     = isLiquidCat(cat);
+    const barCol  = liq ? 'var(--green)' : 'var(--amber,#f59e0b)';
+
+    const logoHtml = inst
+      ? `<img src="${logoUrl(inst.domain)}" width="34" height="34" style="border-radius:8px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'"/>`
+      : `<span class="cat-row-icon">${getCatSvg(cat)}</span>`;
+
+    let growthBadge = '';
+    if (prevCalc) {
+      const cur = val, prev = prevCalc[cat.key] || 0;
+      if (prev > 0) {
+        const delta = cur - prev, dpct = (delta / prev * 100).toFixed(1), pos = delta >= 0;
+        growthBadge = `<span class="crg ${pos?'pos':'neg'}">${pos?'+':''}${dpct}%</span>`;
+      } else if (cur > 0 && prev === 0) {
+        growthBadge = `<span class="crg pos" style="font-family:var(--font)">חדש</span>`;
+      }
+    }
+
+    return `
+    <div class="cat-row" style="animation-delay:${.04*(i+1)}s" onclick="openCatHistory('${cat.key}','${cat.label}')">
+      ${logoHtml}
+      <div class="cat-row-info">
+        <div class="cat-row-name">${cat.label}</div>
+        ${inst ? `<div class="cat-row-inst">${inst.name}</div>` : ''}
+      </div>
+      <div class="cat-row-spark-col">
+        ${listSpark(cat.key)}
+        <div class="cat-row-bar-wrap"><div class="cat-row-bar" style="width:${bar}%;background:${barCol}"></div></div>
+      </div>
+      <div class="cat-row-right">
+        <div class="cat-row-val blur-text" data-countup="${val}">${fmt(val)}</div>
+        <div class="cat-row-meta">${growthBadge}<span class="cat-row-pct">${pct}%</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
   const addCatTile = `
     <div class="cat-tile cat-tile-add" style="animation-delay:${.05*(categories.length+1)}s;cursor:pointer" onclick="openAddCatFromMain()">
       <span class="ct-icon" style="color:var(--ink-4)">
@@ -1628,6 +1700,15 @@ function renderCurrentReport() {
       </span>
       <div class="ct-label" style="text-align:center;color:var(--ink-4);margin-top:4px">קטגוריה חדשה</div>
     </div>`;
+
+  const catSection = viewMode === 'list'
+    ? `<div class="cat-list">${catListRows}
+         <div class="cat-row cat-row-add" onclick="openAddCatFromMain()">
+           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+           קטגוריה חדשה
+         </div>
+       </div>`
+    : `<div class="cat-grid">${catTiles}${addCatTile}</div>`;
  
   const notesHtml = latest.notes
     ? `<div class="notes-bar ${latest.notes.includes('✔️')?'pos':'neg'}">${latest.notes}</div>` : '';
@@ -1648,7 +1729,7 @@ function renderCurrentReport() {
       ${mortgageHero}
     </div>
     <div class="section-header">פירוט נכסים – ${dateLabel}</div>
-    <div class="cat-grid">${catTiles}${addCatTile}</div>
+    ${catSection}
     ${growthHtml}
     ${notesHtml}`;
   applyBlur();
@@ -4650,6 +4731,7 @@ function openAddCatFromMain() {
   setTimeout(() => {
     const addSection = document.getElementById('add-cat-section');
     if (addSection) addSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toggleCatNameDropdown();
   }, 200);
 }
 
@@ -4690,6 +4772,32 @@ function syncDarkModeFromCloud() {
     localStorage.setItem('dark_mode_v1', cloudPref);
     applyDarkMode(on);
   }
+}
+
+/* ══ VIEW MODE (grid / list) ════════════════════════════ */
+function applyViewMode(mode) {
+  viewMode = mode;
+  const toggle = document.getElementById('list-view-toggle');
+  if (toggle) toggle.checked = (mode === 'list');
+  renderCurrentReport();
+}
+
+async function toggleViewMode(isListView) {
+  const mode = isListView ? 'list' : 'grid';
+  localStorage.setItem('view_mode_v1', mode);
+  applyViewMode(mode);
+  if (currentUser) {
+    await db.auth.updateUser({ data: { view_mode: mode } });
+  }
+}
+
+function syncViewModeFromCloud() {
+  if (!currentUser) return;
+  const cloudPref = currentUser.user_metadata?.view_mode;
+  const local     = localStorage.getItem('view_mode_v1');
+  const mode      = cloudPref || local || 'grid';
+  localStorage.setItem('view_mode_v1', mode);
+  applyViewMode(mode);
 }
 
 /* ══ COUNT-UP ANIMATION ══════════════════════════════ */

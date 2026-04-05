@@ -4784,19 +4784,16 @@ function applyViewMode(mode) {
 
 async function toggleViewMode(isListView) {
   const mode = isListView ? 'list' : 'grid';
-  localStorage.setItem('view_mode_v1', mode);
   applyViewMode(mode);
   if (currentUser) {
-    await db.auth.updateUser({ data: { view_mode: mode } });
+    const { data } = await db.auth.updateUser({ data: { view_mode: mode } });
+    if (data?.user) currentUser = data.user;
   }
 }
 
 function syncViewModeFromCloud() {
   if (!currentUser) return;
-  const cloudPref = currentUser.user_metadata?.view_mode;
-  const local     = localStorage.getItem('view_mode_v1');
-  const mode      = cloudPref || local || 'grid';
-  localStorage.setItem('view_mode_v1', mode);
+  const mode = currentUser.user_metadata?.view_mode || 'grid';
   applyViewMode(mode);
 }
 

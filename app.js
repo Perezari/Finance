@@ -2166,10 +2166,13 @@ function applyColorTheme(themeId) {
   const theme = COLOR_THEMES.find(t => t.id === themeId) || COLOR_THEMES[0];
   const root  = document.documentElement;
   root.style.setProperty('--green',       theme.primary);
+  root.style.setProperty('--green-mid',   theme.dark);
   root.style.setProperty('--green-dark',  theme.dark);
   root.style.setProperty('--green-light', theme.light);
+  root.style.setProperty('--green-glow',  theme.light);
+  root.style.setProperty('--shadow-green', `0 6px 24px ${theme.light.replace('.12)', '.35)')}`);
+  root.style.setProperty('--green-shadow-sm', `0 4px 14px ${theme.light.replace('.12)', '.5)')}`);
   localStorage.setItem('color_theme_v1', themeId);
-  // Sync to Supabase
   if (currentUser) db.auth.updateUser({ data: { color_theme: themeId } });
   renderThemePicker();
 }

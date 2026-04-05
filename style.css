@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Heebo:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --green:       #0e9e7e; --green-mid:#13b891; --green-light:#e6f7f3; --green-glow:rgba(14,158,126,.18);
+  --green:       #0e9e7e; --green-mid:#13b891; --green-light:#e6f7f3; --green-glow:rgba(14,158,126,.18); --shadow-green:0 6px 24px rgba(14,158,126,.35); --green-shadow-sm:0 4px 14px rgba(14,158,126,.5);
   --blue:        #4f8ef7; --blue-light:#eff6ff;
   --amber:       #f59e0b; --red:#ef4444; --red-light:#fef2f2;
   --bg:#ffffff; --surface:#ffffff; --surface2:#f8f9fb;
@@ -193,10 +193,10 @@ html, body {
   font-weight: 700;
   cursor: pointer;
   letter-spacing: -.01em;
-  box-shadow: 0 4px 20px rgba(14,158,126,.3);
+  box-shadow: 0 4px 20px var(--green-shadow-sm, rgba(14,158,126,.3));
   transition: all .2s;
 }
-.auth-btn-primary:hover  { background: var(--green-mid); transform: translateY(-1px); box-shadow: 0 8px 28px rgba(14,158,126,.35); }
+.auth-btn-primary:hover  { background: var(--green-mid); transform: translateY(-1px); box-shadow: var(--shadow-green); }
 .auth-btn-primary:active { transform: scale(.99); }
 
 /* Link button */
@@ -564,7 +564,7 @@ select option{background:var(--surface)}
     height: 44px;
     margin: 0 4px;
     margin-bottom: 2px;
-    box-shadow: 0 4px 16px rgba(14,158,126,.5);
+    box-shadow: 0 4px 16px var(--green-shadow-sm, rgba(14,158,126,.5));
   }
   [data-nav="classic"] .app-content::after { display: none; }
   [data-nav="classic"] .app-main { padding-bottom: 80px; }
@@ -625,14 +625,14 @@ select option{background:var(--surface)}
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(14,158,126,.5);
+    box-shadow: var(--green-shadow-sm, 0 4px 14px rgba(14,158,126,.5));
     transition: transform .18s, box-shadow .18s;
     flex-shrink: 0;
     margin: 0 2px;
   }
   .bottom-nav-add:hover {
     transform: scale(1.08);
-    box-shadow: 0 6px 18px rgba(14,158,126,.6);
+    box-shadow: var(--shadow-green);
   }
   .bottom-nav-add:active { transform: scale(.94); }
   .bottom-nav-add svg { stroke: #fff; }
@@ -759,7 +759,7 @@ select option{background:var(--surface)}
   transition: all .2s;
   margin-bottom: 32px;
 }
-.es-cta-btn:hover  { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(14,158,126,.35); }
+.es-cta-btn:hover  { transform: translateY(-2px); box-shadow: var(--shadow-green); }
 .es-cta-btn:active { transform: scale(.99); }
 .es-steps {
   display: flex;
@@ -891,7 +891,7 @@ select option{background:var(--surface)}
   box-shadow: var(--shadow-green);
   transition: all .2s;
 }
-.ob-next-btn:hover  { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(14,158,126,.35); }
+.ob-next-btn:hover  { transform: translateY(-1px); box-shadow: var(--shadow-green); }
 .ob-next-btn:active { transform: scale(.99); }
 
 /* ── DELETE ACCOUNT ───────────────────────────────────── */

@@ -94,6 +94,7 @@ let selectedMortgageInst = null;
 let wizardStep    = 0;
 let wizardData    = {}; // holds values across steps
 let viewMode      = 'grid'; // 'grid' | 'list'
+let navStyle      = 'floating'; // 'floating' | 'classic'
 
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
@@ -141,6 +142,7 @@ async function loadApp() {
   updateUserUI();
   syncDarkModeFromCloud();
   syncViewModeFromCloud();
+  syncNavStyleFromCloud();
   initColorTheme();
   checkAutoBackup();
   // Fix stale _share_invite row if owner name wasn't stored correctly
@@ -4795,6 +4797,29 @@ function syncViewModeFromCloud() {
   if (!currentUser) return;
   const mode = currentUser.user_metadata?.view_mode || 'grid';
   applyViewMode(mode);
+}
+
+/* ══ NAV STYLE (floating / classic) ════════════════════ */
+function applyNavStyle(style) {
+  navStyle = style;
+  document.body.setAttribute('data-nav', style);
+  const toggle = document.getElementById('nav-style-toggle');
+  if (toggle) toggle.checked = (style === 'floating');
+}
+
+async function toggleNavStyle(isFloating) {
+  const style = isFloating ? 'floating' : 'classic';
+  applyNavStyle(style);
+  if (currentUser) {
+    const { data } = await db.auth.updateUser({ data: { nav_style: style } });
+    if (data?.user) currentUser = data.user;
+  }
+}
+
+function syncNavStyleFromCloud() {
+  if (!currentUser) return;
+  const style = currentUser.user_metadata?.nav_style || 'floating';
+  applyNavStyle(style);
 }
 
 /* ══ COUNT-UP ANIMATION ══════════════════════════════ */

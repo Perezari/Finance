@@ -1820,152 +1820,66 @@ function renderYearVsYear() {
 }
 
 /* ── Main chart with best-month highlight ───────────── */
+/* ══ CROSSHAIR + BUBBLE PLUGIN (category modal) ════ */
 const crosshairPlugin = {
   id: 'crosshairBubble',
   _rafId: null,
   afterDraw(chart) {
-    const { ctx, chartArea: { top, bottom, left, right } } = chart;
+    const { ctx, chartArea:{ top, bottom, left, right } } = chart;
     const activeEls = chart._active;
-    if (!activeEls || !activeEls.length) return;
-
+    if (!activeEls?.length) return;
     const el    = activeEls[0];
     const xi    = el.element.x;
     const yi    = el.element.y;
     const idx   = el.index;
     const val   = chart.data.datasets[0].data[idx];
-    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
-    const color     = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
-
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const color  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
     ctx.save();
-
-    // Dashed vertical line — adapts to theme
-    ctx.beginPath();
-    ctx.setLineDash([4, 5]);
+    // Crosshair
+    ctx.beginPath(); ctx.setLineDash([4,5]);
     ctx.strokeStyle = isDark ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.18)';
-    ctx.lineWidth   = 1.5;
-    ctx.moveTo(xi, top);
-    ctx.lineTo(xi, bottom);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Glowing dot
-    ctx.beginPath();
-    ctx.arc(xi, yi, 7, 0, Math.PI * 2);
-    ctx.fillStyle   = color;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth   = 2.5;
-    ctx.shadowColor = color;
-    ctx.shadowBlur  = 10;
-    ctx.fill();
-    ctx.stroke();
-    ctx.shadowBlur  = 0;
-
-    // Professional frosted pill tooltip
-    const text  = fmt(val);
-    ctx.font    = "700 13px 'JetBrains Mono', monospace";
-    const tw    = ctx.measureText(text).width;
-    const bw    = tw + 36, bh = 32, br = 8;
-    const dotR  = 7; // matches the drawn dot radius
-    const gap   = dotR + 3;
+    ctx.lineWidth = 1.5; ctx.moveTo(xi, top); ctx.lineTo(xi, bottom); ctx.stroke(); ctx.setLineDash([]);
+    // Dot
+    ctx.beginPath(); ctx.arc(xi, yi, 7, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+    ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+    // Bubble
+    const text = fmt(val);
+    ctx.font = "700 13px 'JetBrains Mono', monospace";
+    const tw = ctx.measureText(text).width;
+    const bw = tw + 36, bh = 32, br = 8, dotR = 8, gap = dotR + 3;
     const goLeft = xi + gap + bw > right;
-    const bx     = goLeft ? xi - gap - bw : xi + gap;
-    const by     = Math.max(top + 4, Math.min(yi - bh / 2, bottom - bh));
-
-    ctx.save();
-
-    // Drop shadow
-    ctx.shadowColor   = 'rgba(0,0,0,.45)';
-    ctx.shadowBlur    = 18;
-    ctx.shadowOffsetY = 4;
-
-    // Glass background
-    ctx.beginPath();
-    ctx.moveTo(bx + br, by);
-    ctx.lineTo(bx + bw - br, by);
-    ctx.arcTo(bx + bw, by,      bx + bw, by + br,      br);
-    ctx.lineTo(bx + bw, by + bh - br);
-    ctx.arcTo(bx + bw, by + bh, bx + bw - br, by + bh, br);
-    ctx.lineTo(bx + br, by + bh);
-    ctx.arcTo(bx,       by + bh, bx, by + bh - br,     br);
-    ctx.lineTo(bx,      by + br);
-    ctx.arcTo(bx,       by,      bx + br, by,           br);
-    ctx.closePath();
-    ctx.fillStyle = isDark ? 'rgba(15,18,25,.92)' : 'rgba(255,255,255,.95)';
-    ctx.fill();
-    ctx.shadowBlur = ctx.shadowOffsetY = 0;
-
-    // Accent left bar
-    const barW = 3, barPad = 6;
-    ctx.beginPath();
-    ctx.roundRect
-      ? ctx.roundRect(bx + barPad, by + 6, barW, bh - 12, 2)
-      : (() => {
-          ctx.rect(bx + barPad, by + 6, barW, bh - 12);
-        })();
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // Thin border
-    ctx.beginPath();
-    ctx.moveTo(bx + br, by);
-    ctx.lineTo(bx + bw - br, by);
-    ctx.arcTo(bx + bw, by,      bx + bw, by + br,      br);
-    ctx.lineTo(bx + bw, by + bh - br);
-    ctx.arcTo(bx + bw, by + bh, bx + bw - br, by + bh, br);
-    ctx.lineTo(bx + br, by + bh);
-    ctx.arcTo(bx,       by + bh, bx, by + bh - br,     br);
-    ctx.lineTo(bx,      by + br);
-    ctx.arcTo(bx,       by,      bx + br, by,           br);
-    ctx.closePath();
-    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)';
-    ctx.lineWidth   = 1;
-    ctx.stroke();
-
-    // Side pointer arrow — always points at yi (dot center)
-    const arrowY  = Math.max(by + 8, Math.min(yi, by + bh - 8));
+    const bx = goLeft ? xi - gap - bw : xi + gap;
+    const byIdeal = yi - bh/2, byLo = Math.max(top+2, yi-bh+8), byHi = Math.min(bottom-bh, yi-8);
+    const by = Math.max(byLo, Math.min(byIdeal, byHi));
+    ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=18; ctx.shadowOffsetY=4;
+    const path = () => { ctx.beginPath(); ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by); ctx.arcTo(bx+bw,by,bx+bw,by+br,br); ctx.lineTo(bx+bw,by+bh-br); ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br); ctx.lineTo(bx+br,by+bh); ctx.arcTo(bx,by+bh,bx,by+bh-br,br); ctx.lineTo(bx,by+br); ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath(); };
+    path(); ctx.fillStyle = isDark ? 'rgba(15,18,25,.92)' : 'rgba(255,255,255,.95)'; ctx.fill();
+    ctx.shadowBlur=ctx.shadowOffsetY=0;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx+6,by+6,3,bh-12,2) : ctx.rect(bx+6,by+6,3,bh-12); ctx.fillStyle=color; ctx.fill();
+    path(); ctx.strokeStyle = isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)'; ctx.lineWidth=1; ctx.stroke();
+    const arrowY = yi;
     const arrowBg = isDark ? 'rgba(15,18,25,.92)' : 'rgba(255,255,255,.95)';
     ctx.beginPath();
-    if (goLeft) {
-      // Arrow pointing right (toward dot)
-      ctx.moveTo(bx + bw,     arrowY - 5);
-      ctx.lineTo(bx + bw,     arrowY + 5);
-      ctx.lineTo(bx + bw + 6, arrowY);
-    } else {
-      // Arrow pointing left (toward dot)
-      ctx.moveTo(bx,     arrowY - 5);
-      ctx.lineTo(bx,     arrowY + 5);
-      ctx.lineTo(bx - 6, arrowY);
-    }
-    ctx.fillStyle = arrowBg;
-    ctx.fill();
-
-    // Value text
-    ctx.fillStyle    = isDark ? '#f9fafb' : '#111827';
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font         = "700 13px 'JetBrains Mono', monospace";
-    ctx.fillText(text, bx + bw / 2 + 4, by + bh / 2);
-
-    ctx.restore();
-
+    if (goLeft) { ctx.moveTo(bx+bw,arrowY-5); ctx.lineTo(bx+bw,arrowY+5); ctx.lineTo(bx+bw+6,arrowY); }
+    else        { ctx.moveTo(bx,arrowY-5); ctx.lineTo(bx,arrowY+5); ctx.lineTo(bx-6,arrowY); }
+    ctx.fillStyle=arrowBg; ctx.fill();
+    ctx.fillStyle=isDark?'#f9fafb':'#111827'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font="700 13px 'JetBrains Mono', monospace"; ctx.fillText(text, bx+bw/2+4, by+bh/2);
     ctx.restore();
   },
-
   afterEvent(chart, args) {
     const e = args.event;
-    if (e.type !== 'mousemove' && e.type !== 'touchmove') return;
-    if (crosshairPlugin._rafId) return; // skip if frame pending
+    if (e.type!=='mousemove' && e.type!=='touchmove') return;
+    if (crosshairPlugin._rafId) return;
     crosshairPlugin._rafId = requestAnimationFrame(() => {
       crosshairPlugin._rafId = null;
-      const xScale  = chart.scales.x;
-      const rawX    = e.x;
-      if (rawX == null) return;
-      const idx     = Math.round(xScale.getValueForPixel(rawX));
-      const clamped = Math.max(0, Math.min(idx, chart.data.labels.length - 1));
-      const prev    = chart._active?.[0]?.index;
-      if (prev === clamped) return; // same point — skip redraw
-      chart.setActiveElements([{ datasetIndex: 0, index: clamped }]);
-      chart.update('none');
+      const xScale = chart.scales.x; const rawX = e.x; if (rawX==null) return;
+      const idx = Math.round(xScale.getValueForPixel(rawX));
+      const clamped = Math.max(0, Math.min(idx, chart.data.labels.length-1));
+      if (chart._active?.[0]?.index===clamped) return;
+      chart.setActiveElements([{datasetIndex:0, index:clamped}]); chart.update('none');
     });
   }
 };
@@ -1974,42 +1888,25 @@ const crosshairPlugin = {
 const lastPointPlugin = {
   id: 'lastPointLabel',
   afterDraw(chart) {
-    const ds   = chart.data.datasets[0];
-    const meta = chart.getDatasetMeta(0);
-    const last = meta.data[meta.data.length - 1];
-    if (!last) return;
+    const ds = chart.data.datasets[0], meta = chart.getDatasetMeta(0);
+    const last = meta.data[meta.data.length-1]; if (!last) return;
     const { ctx } = chart;
-    const val    = ds.data[ds.data.length - 1];
-    const color  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
+    const val = ds.data[ds.data.length-1];
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     ctx.save();
-
-    // Pill — only when not hovering
     if (!chart._active?.length) {
-      const text = fmt(val);
-      ctx.font = "600 10px 'JetBrains Mono', monospace";
-      const tw = ctx.measureText(text).width;
-      const bw = tw + 14, bh = 18;
-      const bx = last.x - bw - 10, by = last.y - bh / 2;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 5) : ctx.rect(bx, by, bw, bh);
-      ctx.fillStyle = isDark ? 'rgba(15,18,25,.9)' : 'rgba(255,255,255,.9)';
-      ctx.fill();
-      ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(text, bx + bw / 2, by + bh / 2);
+      const text = fmt(val); ctx.font = "600 10px 'JetBrains Mono', monospace";
+      const tw = ctx.measureText(text).width, bw = tw+14, bh = 18;
+      const bx = last.x-bw-10, by = last.y-bh/2;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(bx,by,bw,bh,5) : ctx.rect(bx,by,bw,bh);
+      ctx.fillStyle = isDark ? 'rgba(15,18,25,.9)' : 'rgba(255,255,255,.9)'; ctx.fill();
+      ctx.strokeStyle=color; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle=color; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,bx+bw/2,by+bh/2);
     }
-
-    // Always draw dot on top
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 5.5, 0, Math.PI * 2);
-    ctx.fillStyle   = color;
-    ctx.strokeStyle = isDark ? '#1a1d26' : '#fff';
-    ctx.lineWidth   = 2.5;
-    ctx.shadowColor = color;
-    ctx.shadowBlur  = 8;
-    ctx.fill(); ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(last.x, last.y, 5.5, 0, Math.PI*2);
+    ctx.fillStyle=color; ctx.strokeStyle=isDark?'#1a1d26':'#fff'; ctx.lineWidth=2.5;
+    ctx.shadowColor=color; ctx.shadowBlur=8; ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
     ctx.restore();
   }
 };
@@ -2023,215 +1920,118 @@ function renderChart() {
   const labels      = records.map(r=>new Date(r.record_date).toLocaleDateString('he-IL',{month:'short',year:'2-digit'}));
   const totals      = records.map(r=>calcRecord(r).totalAssets);
   const mortgages   = records.map(r=>r.mortgage_balance||0);
-  const nets        = records.map(r=>calcRecord(r).netWorth);
   const hasMort     = mortgages.some(m=>m>0);
   const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
 
-  // Best month
   let bestIdx = -1, bestGrowth = -Infinity;
   totals.forEach((v,i)=>{ if(i>0){ const g=v-totals[i-1]; if(g>bestGrowth){bestGrowth=g;bestIdx=i;} } });
 
-  // Gradient fill — use fixed height estimate since canvas isn't rendered yet
-  const chartH  = canvas.parentElement?.offsetHeight || 280;
-  const ctx2    = canvas.getContext('2d');
-  const gradFill = ctx2.createLinearGradient(0, 0, 0, chartH);
-  gradFill.addColorStop(0,   accentColor + (isDark ? '38' : '28'));
-  gradFill.addColorStop(0.65, accentColor + '0a');
-  gradFill.addColorStop(1,   accentColor + '00');
+  const chartH = canvas.parentElement?.offsetHeight || 280;
+  const ctx2   = canvas.getContext('2d');
+  const gradFill = ctx2.createLinearGradient(0,0,0,chartH);
+  gradFill.addColorStop(0,   accentColor+(isDark?'38':'28'));
+  gradFill.addColorStop(0.65,accentColor+'0a');
+  gradFill.addColorStop(1,   accentColor+'00');
 
-  const lastIdx = totals.length - 1;
+  const lastIdx  = totals.length-1;
+  const gridCol  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.08)';
+  const tickCol  = isDark ? '#4b5563' : '#9ca3af';
 
   const datasets = [{
     label:'סה"כ נכסים', data:totals,
-    borderColor: accentColor, borderWidth: 2,
-    backgroundColor: gradFill, fill: true, tension: 0.4,
-    pointRadius:     totals.map((_,i) => i===bestIdx ? 7 : i===lastIdx ? 5 : 3),
-    pointStyle:      totals.map((_,i) => i===bestIdx ? 'star' : 'circle'),
-    pointBackgroundColor: totals.map((_,i) => i===bestIdx ? '#f59e0b' : i===lastIdx ? accentColor : accentColor),
-    pointBorderColor: isDark ? '#1a1d26' : '#ffffff',
-    pointBorderWidth: totals.map((_,i) => i===lastIdx ? 2.5 : 1.5),
-    pointHoverRadius: 0,
+    borderColor:accentColor, borderWidth:2,
+    backgroundColor:gradFill, fill:true, tension:0.4,
+    pointRadius:     totals.map((_,i)=>i===bestIdx?7:i===lastIdx?5:3),
+    pointStyle:      totals.map((_,i)=>i===bestIdx?'star':'circle'),
+    pointBackgroundColor: totals.map((_,i)=>i===bestIdx?'#f59e0b':accentColor),
+    pointBorderColor: isDark?'#1a1d26':'#ffffff', pointBorderWidth:totals.map((_,i)=>i===lastIdx?2.5:1.5),
+    pointHoverRadius:0,
   }];
 
-  const gridCol = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.04)';
-  const tickCol = isDark ? '#4b5563' : '#9ca3af';
-
   if (hasMort) {
-    datasets.push({
-      label:'יתרת משכנתא', data:mortgages,
-      borderColor:'#ef4444', borderWidth:1.5,
+    datasets.push({ label:'יתרת משכנתא', data:mortgages, borderColor:'#ef4444', borderWidth:1.5,
       backgroundColor:'transparent', fill:false, tension:.4,
       pointRadius:3, pointBackgroundColor:'#ef4444',
-      pointBorderColor: isDark ? '#1a1d26' : '#fff', pointBorderWidth:1.5,
-      pointHoverRadius:0
-    });
+      pointBorderColor:isDark?'#1a1d26':'#fff', pointBorderWidth:1.5, pointHoverRadius:0 });
   }
 
-  const opts = {
-    responsive: true, maintainAspectRatio: false,
-    animation: { duration:600, easing:'easeOutQuart' },
-    plugins: {
-      legend: { position:'bottom', labels:{ font:{family:"'Outfit','Heebo',sans-serif",size:11}, color:tickCol, padding:16, boxWidth:10, usePointStyle:true } },
-      tooltip: { enabled:false },
-    },
-    interaction: { mode:'index', intersect:false, axis:'x' },
-    scales: {
-      y: { grid:{ color:gridCol }, border:{ display:false },
-           ticks:{ font:{family:"'JetBrains Mono',monospace",size:10}, color:tickCol, maxTicksLimit:5,
-                   callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } },
-      x: { grid:{ display:false }, border:{ display:false },
-           ticks:{ font:{family:"'Outfit','Heebo',sans-serif",size:10}, color:tickCol, maxRotation:0 } }
-    }
-  };
-
-  // Extended crosshair plugin for main chart — shows all active datasets
+  // Extended crosshair for main chart (multi-dataset bubbles)
   const mainCrosshairPlugin = {
-    ...crosshairPlugin,
-    id: 'mainCrosshair',
+    id:'mainCrosshair',
     afterDraw(chart) {
-      const { ctx, chartArea:{ top,bottom,left,right }, scales:{ x, y } } = chart;
-      const activeEls = chart._active;
-      if (!activeEls?.length) return;
-      const idx      = activeEls[0].index;
-      const xi       = activeEls[0].element.x;
-      const color    = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
-      const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
-
+      const {ctx, chartArea:{top,bottom,left,right}} = chart;
+      const activeEls = chart._active; if (!activeEls?.length) return;
+      const idx = activeEls[0].index, xi = activeEls[0].element.x;
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--green').trim()||'#0e9e7e';
+      const isDarkNow = document.documentElement.getAttribute('data-theme')==='dark';
       ctx.save();
-
-      // Dashed line
-      ctx.beginPath();
-      ctx.setLineDash([4,5]);
-      ctx.strokeStyle = isDarkNow ? 'rgba(255,255,255,.18)' : 'rgba(0,0,0,.15)';
-      ctx.lineWidth   = 1.5;
-      ctx.moveTo(xi, top); ctx.lineTo(xi, bottom);
-      ctx.stroke(); ctx.setLineDash([]);
-
-      // One bubble per visible dataset
-      const dsColors = [color, '#ef4444', '#f59e0b'];
-      const dsLabels = [null, null, null];
-      chart.data.datasets.forEach((ds, di) => {
-        const meta = chart.getDatasetMeta(di);
-        if (meta.hidden) return;
-        const el  = meta.data[idx];
-        if (!el) return;
-        const yi  = el.y;
-        const val = ds.data[idx];
-        const col = dsColors[di] || color;
-
-        // Dot
+      ctx.beginPath(); ctx.setLineDash([4,5]);
+      ctx.strokeStyle = isDarkNow?'rgba(255,255,255,.18)':'rgba(0,0,0,.15)';
+      ctx.lineWidth=1.5; ctx.moveTo(xi,top); ctx.lineTo(xi,bottom); ctx.stroke(); ctx.setLineDash([]);
+      const dsColors = [color,'#ef4444'];
+      chart.data.datasets.forEach((ds,di) => {
+        const meta = chart.getDatasetMeta(di); if (meta.hidden) return;
+        const el = meta.data[idx]; if (!el) return;
+        const yi = el.y, val = ds.data[idx], col = dsColors[di]||color;
+        ctx.beginPath(); ctx.arc(xi,yi,6,0,Math.PI*2);
+        ctx.fillStyle=col; ctx.strokeStyle=isDarkNow?'#1a1d26':'#fff'; ctx.lineWidth=2;
+        ctx.shadowColor=col; ctx.shadowBlur=8; ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+        const text=fmt(val); ctx.font="700 13px 'JetBrains Mono', monospace";
+        const tw=ctx.measureText(text).width, bw=tw+36, bh=32, br=8, dotR=8;
+        const goLeft=xi+dotR+bw+4>right, bx=goLeft?xi-dotR-bw:xi+dotR;
+        const byIdeal=yi-bh/2, byLo=Math.max(top+2,yi-bh+8), byHi=Math.min(bottom-bh,yi-8);
+        const by=Math.max(byLo,Math.min(byIdeal,byHi));
+        const path=()=>{ctx.beginPath();ctx.moveTo(bx+br,by);ctx.lineTo(bx+bw-br,by);ctx.arcTo(bx+bw,by,bx+bw,by+br,br);ctx.lineTo(bx+bw,by+bh-br);ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br);ctx.lineTo(bx+br,by+bh);ctx.arcTo(bx,by+bh,bx,by+bh-br,br);ctx.lineTo(bx,by+br);ctx.arcTo(bx,by,bx+br,by,br);ctx.closePath();};
+        ctx.shadowColor='rgba(0,0,0,.45)';ctx.shadowBlur=18;ctx.shadowOffsetY=4;
+        path();ctx.fillStyle=isDarkNow?'rgba(15,18,25,.92)':'rgba(255,255,255,.95)';ctx.fill();ctx.shadowBlur=ctx.shadowOffsetY=0;
+        ctx.beginPath();ctx.roundRect?ctx.roundRect(bx+6,by+6,3,bh-12,2):ctx.rect(bx+6,by+6,3,bh-12);ctx.fillStyle=col;ctx.fill();
+        path();ctx.strokeStyle=isDarkNow?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)';ctx.lineWidth=1;ctx.stroke();
+        const arrowY=yi, arrowBg=isDarkNow?'rgba(15,18,25,.92)':'rgba(255,255,255,.95)';
         ctx.beginPath();
-        ctx.arc(xi, yi, 6, 0, Math.PI * 2);
-        ctx.fillStyle   = col;
-        ctx.strokeStyle = isDarkNow ? '#1a1d26' : '#fff';
-        ctx.lineWidth   = 2;
-        ctx.shadowColor = col; ctx.shadowBlur = 8;
-        ctx.fill(); ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Bubble
-        const text  = fmt(val);
-        ctx.font    = "600 12px 'JetBrains Mono', monospace";
-        const tw    = ctx.measureText(text).width;
-        const bw    = tw + 32, bh = 30, br = 8;
-        const dotR  = 8;
-        const goLeft = xi + dotR + bw + 4 > right;
-        const bx    = goLeft ? xi - dotR - bw : xi + dotR;
-        const by    = Math.max(top + 2, Math.min(yi - bh/2, bottom - bh));
-
-        ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
-        ctx.beginPath();
-        ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by);
-        ctx.arcTo(bx+bw,by,bx+bw,by+br,br); ctx.lineTo(bx+bw,by+bh-br);
-        ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br); ctx.lineTo(bx+br,by+bh);
-        ctx.arcTo(bx,by+bh,bx,by+bh-br,br); ctx.lineTo(bx,by+br);
-        ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath();
-        ctx.fillStyle = isDarkNow ? 'rgba(15,18,25,.93)' : 'rgba(255,255,255,.97)';
-        ctx.fill();
-        ctx.shadowBlur = ctx.shadowOffsetY = 0;
-
-        // Accent bar
-        ctx.fillStyle = col;
-        ctx.fillRect(bx + (goLeft ? bw-5 : 2), by+6, 3, bh-12);
-
-        // Border
-        ctx.beginPath();
-        ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by);
-        ctx.arcTo(bx+bw,by,bx+bw,by+br,br); ctx.lineTo(bx+bw,by+bh-br);
-        ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br); ctx.lineTo(bx+br,by+bh);
-        ctx.arcTo(bx,by+bh,bx,by+bh-br,br); ctx.lineTo(bx,by+br);
-        ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath();
-        ctx.strokeStyle = isDarkNow ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
-        ctx.lineWidth = 1; ctx.stroke();
-
-        // Arrow
-        const arrowY = Math.max(by+8, Math.min(yi, by+bh-8));
-        ctx.beginPath();
-        if (goLeft) {
-          ctx.moveTo(bx+bw, arrowY-4); ctx.lineTo(bx+bw, arrowY+4); ctx.lineTo(bx+bw+5, arrowY);
-        } else {
-          ctx.moveTo(bx, arrowY-4); ctx.lineTo(bx, arrowY+4); ctx.lineTo(bx-5, arrowY);
-        }
-        ctx.fillStyle = isDarkNow ? 'rgba(15,18,25,.93)' : 'rgba(255,255,255,.97)';
-        ctx.fill();
-
-        // Value
-        ctx.fillStyle = isDarkNow ? '#f9fafb' : '#111827';
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.font = "600 12px 'JetBrains Mono', monospace";
-        ctx.fillText(text, bx+bw/2, by+bh/2);
+        if(goLeft){ctx.moveTo(bx+bw,arrowY-5);ctx.lineTo(bx+bw,arrowY+5);ctx.lineTo(bx+bw+6,arrowY);}
+        else{ctx.moveTo(bx,arrowY-5);ctx.lineTo(bx,arrowY+5);ctx.lineTo(bx-6,arrowY);}
+        ctx.fillStyle=arrowBg;ctx.fill();
+        ctx.fillStyle=isDarkNow?'#f9fafb':'#111827';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font="700 13px 'JetBrains Mono', monospace";ctx.fillText(text,bx+bw/2+4,by+bh/2);
       });
-
       ctx.restore();
     }
   };
 
-  mainChart = new Chart(canvas, {
-    type:'line', data:{labels, datasets}, options:opts,
-    plugins:[mainCrosshairPlugin, lastPointPlugin]
-  });
-
-  // RAF-throttled mouse hover
-  let _rafId = null;
-  const updateChartAt = (clientX) => {
-    if (!mainChart) return;
-    const rect = canvas.getBoundingClientRect();
-    const xPos = clientX - rect.left;
-    const idx  = Math.round(mainChart.scales.x.getValueForPixel(xPos));
-    const cl   = Math.max(0, Math.min(idx, labels.length - 1));
-    if (mainChart._active?.[0]?.index === cl) return;
-    const els  = mainChart.data.datasets.map((_, di) => ({ datasetIndex: di, index: cl }));
-    mainChart.setActiveElements(els);
-    mainChart.update('none');
+  const opts = {
+    responsive:true, maintainAspectRatio:false,
+    animation:{duration:600,easing:'easeOutQuart'},
+    plugins:{
+      legend:{position:'bottom',labels:{font:{family:"'Outfit','Heebo',sans-serif",size:11},color:tickCol,padding:16,boxWidth:10,usePointStyle:true}},
+      tooltip:{enabled:false},
+    },
+    interaction:{mode:'index',intersect:false,axis:'x'},
+    scales:{
+      y:{grid:{color:gridCol},border:{display:false},
+         ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:tickCol,maxTicksLimit:5,
+                callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v}},
+      x:{grid:{display:false},border:{display:false},
+         ticks:{font:{family:"'Outfit','Heebo',sans-serif",size:10},color:tickCol,maxRotation:0}}
+    }
   };
 
-  canvas.addEventListener('mousemove', e => {
-    if (_rafId) return;
-    _rafId = requestAnimationFrame(() => { _rafId = null; updateChartAt(e.clientX); });
-  });
-  canvas.addEventListener('mouseleave', () => {
-    mainChart?.setActiveElements([]);
-    mainChart?.update('none');
-  });
+  mainChart = new Chart(canvas, {type:'line', data:{labels,datasets}, options:opts, plugins:[mainCrosshairPlugin,lastPointPlugin]});
 
-  // Touch — direct, no MouseEvent re-dispatch
-  let _touchRaf = null, _touchEndTimer = null;
-  canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (_touchRaf) return;
-    _touchRaf = requestAnimationFrame(() => {
-      _touchRaf = null;
-      updateChartAt(e.touches[0].clientX);
-    });
-  }, { passive: false });
-
-  canvas.addEventListener('touchend', () => {
-    clearTimeout(_touchEndTimer);
-    _touchEndTimer = setTimeout(() => {
-      mainChart?.setActiveElements([]);
-      mainChart?.update('none');
-    }, 800); // small delay so user can see the bubble before it disappears
-  });
+  let _rafId=null, _touchEndTimer=null;
+  const updateChartAt = (clientX) => {
+    if (!mainChart) return;
+    const rect=canvas.getBoundingClientRect(), xPos=clientX-rect.left;
+    const idx=Math.round(mainChart.scales.x.getValueForPixel(xPos));
+    const cl=Math.max(0,Math.min(idx,labels.length-1));
+    if (mainChart._active?.[0]?.index===cl) return;
+    mainChart.setActiveElements(datasets.map((_,di)=>({datasetIndex:di,index:cl})));
+    mainChart.update('none');
+  };
+  canvas.addEventListener('mousemove',e=>{if(_rafId)return;_rafId=requestAnimationFrame(()=>{_rafId=null;updateChartAt(e.clientX);});});
+  canvas.addEventListener('mouseleave',()=>{mainChart?.setActiveElements([]);mainChart?.update('none');});
+  let _touchRaf=null;
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(_touchRaf)return;_touchRaf=requestAnimationFrame(()=>{_touchRaf=null;updateChartAt(e.touches[0].clientX);});},{passive:false});
+  canvas.addEventListener('touchend',()=>{clearTimeout(_touchEndTimer);_touchEndTimer=setTimeout(()=>{mainChart?.setActiveElements([]);mainChart?.update('none');},800);});
 }
 
 function populateDateSelect() {
@@ -4058,90 +3858,149 @@ function renderPortfolioTab() {
   const latest = records[records.length - 1];
   const calc   = calcRecord(latest);
   const total  = calc.totalAssets;
+  const highlighted = el.dataset.highlight || '';
 
-  // Assign each category to a bucket
-  const savingKeys  = ['deposit','savingsFund','hishtalmut'];
+  const colorsRaw = { liquid:'#0e9e7e', savings:'#4f8ef7', pension:'#f59e0b', invest:'#8b5cf6' };
+  const labels    = { liquid:'נזיל', savings:'חיסכון', pension:'פנסיוני', invest:'השקעות' };
+  const savingKeys = ['deposit','savingsFund','hishtalmut'];
+
   const buckets = { liquid:0, savings:0, pension:0, invest:0 };
-  const colors  = { liquid:'#0e9e7e', savings:'#4f8ef7', pension:'#f59e0b', invest:'#8b5cf6' };
-  const labels  = { liquid:'נזיל', savings:'חיסכון', pension:'פנסיוני', invest:'השקעות' };
-
   categories.forEach(cat => {
     const val = calc[cat.key] || 0;
     if (!val) return;
-    if (isPensionCat(cat))                         buckets.pension += val;
-    else if (cat.key.startsWith('invest_'))         buckets.invest  += val;
-    else if (cat.key.startsWith('liquid_'))         buckets.liquid  += val;
-    else if (cat.key.startsWith('savings_'))        buckets.savings += val;
-    else if (savingKeys.includes(cat.key))          buckets.savings += val;
-    else if (isLiquidCat(cat))                      buckets.liquid  += val;
-    else                                            buckets.invest  += val;
+    if (isPensionCat(cat))               buckets.pension += val;
+    else if (cat.key.startsWith('invest_'))  buckets.invest  += val;
+    else if (cat.key.startsWith('liquid_'))  buckets.liquid  += val;
+    else if (cat.key.startsWith('savings_')) buckets.savings += val;
+    else if (savingKeys.includes(cat.key))   buckets.savings += val;
+    else if (isLiquidCat(cat))               buckets.liquid  += val;
+    else                                     buckets.invest  += val;
   });
 
-  // Ideal allocation by age
-  const userAge     = parseInt(document.getElementById('ret-current-age')?.value) || 35;
-  const iPension    = Math.min(50, Math.max(20, userAge - 10));
-  const iLiquid     = 15;
-  const iSavings    = Math.min(30, Math.max(10, 60 - userAge));
-  const iInvest     = Math.max(0, 100 - iPension - iLiquid - iSavings);
-  const ideal       = { liquid:iLiquid, savings:iSavings, pension:iPension, invest:iInvest };
+  const userAge  = parseInt(document.getElementById('ret-current-age')?.value) || 35;
+  const ideal    = {
+    liquid:  15,
+    savings: Math.min(30, Math.max(10, 60 - userAge)),
+    pension: Math.min(50, Math.max(20, userAge - 10)),
+    invest:  0
+  };
+  ideal.invest = Math.max(0, 100 - ideal.liquid - ideal.savings - ideal.pension);
 
-  // Donut SVG
-  const r = 85, cx = 105, cy = 105, sw = 34, circ = 2*Math.PI*r;
+  // ── Interactive donut ──────────────────────────────
+  const r = 88, cx = 110, cy = 110, sw = 32, circ = 2 * Math.PI * r;
   let off = 0;
-  const arcs = Object.entries(buckets).map(([k,v]) => {
+  const arcs = Object.entries(buckets).map(([k, v]) => {
     if (!v) return '';
-    const dash = (v/total) * circ;
-    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[k]}"
-      stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}"
-      stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    const pct  = v / total;
+    const dash = pct * circ;
+    const isHL = highlighted === k;
+    const op   = highlighted && !isHL ? '0.35' : '1';
+    const rr   = isHL ? r : r;
+    const sww  = isHL ? sw + 6 : sw;
+    const arc  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+      stroke="${colorsRaw[k]}" stroke-width="${sww}" stroke-linecap="butt" opacity="${op}"
+      stroke-dasharray="${(dash - 2).toFixed(2)} ${(circ - dash + 2).toFixed(2)}"
+      stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"
+      style="cursor:pointer;transition:all .2s"
+      onclick="portfolioHighlight('${k}')"/>`;
     off += dash;
     return arc;
   }).join('');
 
-  const catRows = Object.entries(buckets).map(([k,v]) => {
+  const centerVal = highlighted && buckets[highlighted]
+    ? buckets[highlighted] : total;
+  const centerLbl = highlighted ? labels[highlighted] : 'סה"כ נכסים';
+
+  // ── Bucket rows ────────────────────────────────────
+  const rows = Object.entries(buckets).map(([k, v]) => {
     if (!v) return '';
-    const pct  = total ? (v/total*100).toFixed(1) : '0';
-    const diff = parseFloat(pct) - ideal[k];
-    const dClr = Math.abs(diff) <= 5 ? 'var(--green)' : 'var(--amber)';
-    const dTxt = `${diff>0?'+':''}${diff.toFixed(1)}% מהאידיאלי (${ideal[k]}%)`;
-    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-      <div style="width:12px;height:12px;border-radius:50%;background:${colors[k]};flex-shrink:0"></div>
-      <div style="flex:1">
-        <div style="font-size:.875rem;font-weight:600;color:var(--ink)">${labels[k]}</div>
-        <div style="font-size:.72rem;color:${dClr};margin-top:2px">${dTxt}</div>
+    const pct  = total ? v / total * 100 : 0;
+    const diff = pct - ideal[k];
+    const ok   = Math.abs(diff) <= 5;
+    const over = diff > 5;
+    const statusIcon = ok
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+      : over
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--amber,#f59e0b)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+    const statusCol = ok ? 'var(--green)' : over ? 'var(--amber,#f59e0b)' : 'var(--red)';
+    const isHL = highlighted === k;
+    const op   = highlighted && !isHL ? '.4' : '1';
+    return `
+    <div onclick="portfolioHighlight('${k}')"
+      style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:10px;cursor:pointer;
+             transition:background .15s,opacity .15s;opacity:${op};
+             background:${isHL ? 'var(--surface2)' : 'transparent'}"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${isHL ? 'var(--surface2)' : 'transparent'}'">
+      <div style="width:10px;height:10px;border-radius:50%;background:${colorsRaw[k]};flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+          <span style="font-size:.875rem;font-weight:700;color:var(--ink)">${labels[k]}</span>
+          <span style="display:inline-flex;align-items:center;gap:3px;font-size:.7rem;color:${statusCol}">
+            ${statusIcon}${diff > 0 ? '+' : ''}${diff.toFixed(1)}% מהמטרה (${ideal[k]}%)
+          </span>
+        </div>
+        <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100, pct)}%;background:${colorsRaw[k]};border-radius:2px"></div>
+        </div>
       </div>
-      <div style="text-align:left;margin-left:8px">
-        <div style="font-family:var(--mono);font-weight:700;color:var(--ink)">${fmt(v)}</div>
-        <div style="font-size:.72rem;color:var(--ink-4)">${pct}%</div>
+      <div style="text-align:left;flex-shrink:0">
+        <div style="font-family:var(--mono);font-size:.875rem;font-weight:700;color:var(--ink)">${fmt(v)}</div>
+        <div style="font-size:.72rem;color:var(--ink-3);text-align:right">${pct.toFixed(1)}%</div>
       </div>
     </div>`;
   }).join('');
 
+  // ── Ideal pills ────────────────────────────────────
+  const pills = Object.entries(ideal).map(([k,v]) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;background:var(--surface2);border:1px solid var(--border)">
+      <div style="width:7px;height:7px;border-radius:50%;background:${colorsRaw[k]}"></div>
+      <span style="font-size:.75rem;color:var(--ink-3)">${labels[k]}</span>
+      <span style="font-size:.78rem;font-weight:700;font-family:var(--mono);color:var(--ink)">${v}%</span>
+    </div>`).join('');
+
   el.innerHTML = `
-    <div class="card" style="margin-bottom:16px">
-      <div class="section-header" style="margin-bottom:16px">פיזור תיק ההשקעות</div>
-      <div style="display:flex;justify-content:center;margin-bottom:8px">
-        <svg width="210" height="210" viewBox="0 0 210 210">
+    <div class="card" style="margin-bottom:14px;padding:20px">
+      <div style="font-size:.68rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px">פיזור תיק ההשקעות</div>
+
+      <!-- Donut -->
+      <div style="display:flex;justify-content:center;margin-bottom:20px">
+        <svg width="220" height="220" viewBox="0 0 220 220">
           <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${sw}"/>
           ${arcs}
-          <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink)">${fmt(total)}</text>
-          <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="10" fill="var(--ink-4)">סה"כ נכסים</text>
+          <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="15" font-weight="800"
+                fill="var(--ink)" font-family="'JetBrains Mono',monospace"
+                style="pointer-events:none">${fmt(centerVal)}</text>
+          <text x="${cx}" y="${cy + 11}" text-anchor="middle" font-size="10"
+                fill="var(--ink-4)" font-family="'Heebo',sans-serif"
+                style="pointer-events:none">${centerLbl}</text>
+          ${highlighted ? `<text x="${cx}" y="${cy + 26}" text-anchor="middle" font-size="9"
+                fill="var(--ink-4)" font-family="'Heebo',sans-serif"
+                style="pointer-events:none;cursor:pointer" onclick="portfolioHighlight('')">✕ בטל סינון</text>` : ''}
         </svg>
       </div>
-      ${catRows}
+
+      <!-- Rows -->
+      <div style="margin:0 -6px">${rows}</div>
     </div>
+
+    <!-- Ideal -->
     <div class="card" style="padding:16px">
-      <div style="font-size:.78rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">פיזור אידיאלי לגיל ${userAge}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${Object.entries(ideal).map(([k,v])=>`
-        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface2);border-radius:99px">
-          <div style="width:8px;height:8px;border-radius:50%;background:${colors[k]}"></div>
-          <span style="font-size:.78rem;color:var(--ink-3)">${labels[k]}: </span>
-          <span style="font-size:.78rem;font-weight:700;color:var(--ink)">${v}%</span>
-        </div>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:.68rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em">פיזור מטרה לגיל ${userAge}</div>
+        <div style="font-size:.7rem;color:var(--ink-4)">לפי תכנון פרישה</div>
       </div>
-      <p style="font-size:.72rem;color:var(--ink-4);margin-top:10px;line-height:1.6">* המלצה כללית בלבד — לא ייעוץ פיננסי. עדכן גילך בטאב תכנון פרישה לדיוק טוב יותר.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${pills}</div>
+      <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+      <p style="font-size:.7rem;color:var(--ink-4);line-height:1.6;margin:0">* המלצה כללית בלבד — לא ייעוץ פיננסי. עדכן גילך בטאב תכנון פרישה לדיוק.</p>
     </div>`;
+}
+
+function portfolioHighlight(key) {
+  const el = document.getElementById('portfolio-content');
+  if (!el) return;
+  el.dataset.highlight = el.dataset.highlight === key ? '' : key;
+  renderPortfolioTab();
 }
 
 /* ══ ANNUAL SUMMARY TAB ══════════════════════════════ */
@@ -4577,13 +4436,12 @@ function openCatHistory(catKey, catLabel) {
     } else {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
-    const chartIdx = labels.length - 1 - (last12.length - 1 - i); // map row to chart index
+    const chartIdx = i; // index into labels array
     rows += `
     <div class="chb-hist-row chb-hist-row-edit"
       data-record-id="${cur.id}"
       data-cur-val="${curVal}"
       data-prev-val="${prevVal}"
-      data-chart-idx="${chartIdx}"
       onmouseenter="highlightChartPoint(${chartIdx})"
       onmouseleave="clearChartHighlight()"
       ${!isMortgage ? `
@@ -4605,10 +4463,11 @@ function openCatHistory(catKey, catLabel) {
 
   // Show panel FIRST so canvas gets real dimensions, then draw chart
   panel.style.display = 'flex';
-  setTimeout(() => requestAnimationFrame(() => {
+  setTimeout(() => {
     applyBlur();
     const canvasEl = document.getElementById('cat-history-chart');
     if (canvasEl) {
+      // Force canvas dimensions explicitly for iOS Safari
       canvasEl.width  = canvasEl.offsetWidth  || 400;
       canvasEl.height = 180;
       const ctx2 = canvasEl.getContext('2d');
@@ -4624,47 +4483,31 @@ function openCatHistory(catKey, catLabel) {
               data: values,
               borderColor: lineColor,
               backgroundColor: grad,
-              fill: true,
-              tension: 0.35,
+              fill: true, tension: 0.35,
               pointRadius: 4,
               pointBackgroundColor: lineColor,
               pointBorderColor: isDark ? '#1f2937' : '#ffffff',
-              pointBorderWidth: 2,
-              borderWidth: 2.5,
+              pointBorderWidth: 2, borderWidth: 2.5,
               pointHoverRadius: 0,
             }]
           },
           options: {
-            animation: { duration: 400, easing: 'easeOutQuart' },
+            animation: { duration:400, easing:'easeOutQuart' },
             responsive: true, maintainAspectRatio: false,
             interaction: { mode:'index', intersect:false, axis:'x' },
-            plugins: {
-              legend: { display: false },
-              tooltip: { enabled: false }
-            },
+            plugins: { legend:{ display:false }, tooltip:{ enabled:false } },
             scales: {
-              x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10, family: "'Heebo',sans-serif" } } },
-              y: { grid: { color: gridColor }, border: { display: false },
-                   ticks: { color: tickColor, font: { size: 10, family: "'JetBrains Mono',monospace" },
-                            callback: v => Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } }
+              x: { grid:{display:false}, ticks:{color:tickColor,font:{size:10,family:"'Heebo',sans-serif"}} },
+              y: { grid:{color:gridColor}, border:{display:false},
+                   ticks:{color:tickColor,font:{size:10,family:"'JetBrains Mono',monospace"},
+                          callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v} }
             }
           },
           plugins: [crosshairPlugin]
         });
       }
     }
-  }), 32);
-}
-
-function highlightChartPoint(idx) {
-  if (!catHistoryChart) return;
-  catHistoryChart.setActiveElements([{ datasetIndex:0, index:idx }]);
-  catHistoryChart.update('none');
-}
-function clearChartHighlight() {
-  if (!catHistoryChart) return;
-  catHistoryChart.setActiveElements([]);
-  catHistoryChart.update('none');
+  }, 32);
 }
 
 function closeCatHistory() {
@@ -5106,13 +4949,11 @@ async function saveQuickCatEntry(catId, catKey, recordId) {
 
 function openAddCatFromMain() {
   const modal = document.getElementById('settings-modal');
-  // Open invisibly first
   modal.style.opacity = '0';
   modal.style.pointerEvents = 'none';
   showSettings('categories');
   setTimeout(() => {
     toggleCatNameDropdown();
-    // Fade in after dropdown is open
     requestAnimationFrame(() => {
       modal.style.transition = 'opacity .18s';
       modal.style.opacity = '1';
@@ -5120,6 +4961,17 @@ function openAddCatFromMain() {
       setTimeout(() => { modal.style.transition = ''; }, 200);
     });
   }, 60);
+}
+
+function highlightChartPoint(idx) {
+  if (!catHistoryChart) return;
+  catHistoryChart.setActiveElements([{datasetIndex:0, index:idx}]);
+  catHistoryChart.update('none');
+}
+function clearChartHighlight() {
+  if (!catHistoryChart) return;
+  catHistoryChart.setActiveElements([]);
+  catHistoryChart.update('none');
 }
 
 /* ══ DARK MODE ═══════════════════════════════════════ */

@@ -1173,16 +1173,10 @@ select option{background:var(--surface)}
 /* ── Clickable history rows in cat-history panel ─────── */
 .chb-hist-row { transition: background .12s; border-radius: 6px; padding-right: 4px; padding-left: 4px; margin: 0 -4px; }
 .chb-hist-row-edit { cursor: pointer; }
-.chb-hist-row-edit:hover { background: var(--surface2); }
-.chb-edit-hint {
-  opacity: 0;
-  color: var(--ink-4);
-  display: flex;
-  align-items: center;
-  transition: opacity .15s;
-  flex-shrink: 0;
+@media (hover: hover) {
+  .chb-hist-row-edit:hover { background: var(--surface2); }
+  .chb-hist-row-edit:hover .chb-edit-hint { opacity: 1; }
 }
-.chb-hist-row-edit:hover .chb-edit-hint { opacity: 1; }
 @media (hover: none) { .chb-edit-hint { opacity: 0.4; } }
 
 /* ── "Add category" dashed tile ─────────────────────── */

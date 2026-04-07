@@ -254,6 +254,8 @@ async function renderPartnerBanner() {
 function showPasswordResetModal() {
   const m = document.getElementById('pwd-reset-modal');
   m.style.display = 'flex';
+  const u = document.getElementById('reset-username');
+  if (u && currentUser?.email) u.value = currentUser.email;
 }
 
 function closePasswordResetModal() {

@@ -505,6 +505,7 @@
       <div style="font-size:.88rem;color:var(--ink-3);line-height:1.65;margin-bottom:24px;">בחר סיסמה חזקה לחשבונך</div>
     </div>
     <form style="padding:0 28px 32px;display:flex;flex-direction:column;gap:12px;" onsubmit="confirmPasswordReset();return false;">
+      <input type="email" autocomplete="username" id="reset-username" style="display:none" aria-hidden="true"/>
       <input type="password" id="reset-pwd-new"     placeholder="סיסמה חדשה (לפחות 6 תווים)" class="auth-input" autocomplete="new-password"/>
       <input type="password" id="reset-pwd-confirm" placeholder="אישור סיסמה"                  class="auth-input" autocomplete="new-password"/>
       <button type="submit" class="auth-button primary" style="margin-top:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> עדכן סיסמה</button>

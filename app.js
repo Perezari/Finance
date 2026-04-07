@@ -1833,14 +1833,15 @@ const crosshairPlugin = {
     const yi    = el.element.y;
     const idx   = el.index;
     const val   = chart.data.datasets[0].data[idx];
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
+    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    const color     = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
 
     ctx.save();
 
-    // Dashed vertical line
+    // Dashed vertical line — adapts to theme
     ctx.beginPath();
     ctx.setLineDash([4, 5]);
-    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.18)';
     ctx.lineWidth   = 1.5;
     ctx.moveTo(xi, top);
     ctx.lineTo(xi, bottom);
@@ -1859,48 +1860,93 @@ const crosshairPlugin = {
     ctx.stroke();
     ctx.shadowBlur  = 0;
 
-    // Bubble
-    const text = fmt(val);
-    ctx.font   = "bold 13px 'JetBrains Mono', monospace";
-    const tw   = ctx.measureText(text).width;
-    const bw   = tw + 28, bh = 34, br = 9;
-    let bx     = Math.max(left, Math.min(xi - bw / 2, right - bw));
-    const by   = Math.max(top + 2, yi - bh - 14);
+    // Professional frosted pill tooltip
+    const text  = fmt(val);
+    ctx.font    = "700 13px 'JetBrains Mono', monospace";
+    const tw    = ctx.measureText(text).width;
+    const bw    = tw + 36, bh = 32, br = 8;
+    const dotR  = 7; // matches the drawn dot radius
+    const gap   = dotR + 3;
+    const goLeft = xi + gap + bw > right;
+    const bx     = goLeft ? xi - gap - bw : xi + gap;
+    const by     = Math.max(top + 4, Math.min(yi - bh / 2, bottom - bh));
 
-    ctx.shadowColor = 'rgba(0,0,0,.3)';
-    ctx.shadowBlur  = 12;
-    ctx.shadowOffsetY = 3;
+    ctx.save();
 
+    // Drop shadow
+    ctx.shadowColor   = 'rgba(0,0,0,.45)';
+    ctx.shadowBlur    = 18;
+    ctx.shadowOffsetY = 4;
+
+    // Glass background
     ctx.beginPath();
     ctx.moveTo(bx + br, by);
     ctx.lineTo(bx + bw - br, by);
-    ctx.arcTo(bx + bw, by, bx + bw, by + br, br);
+    ctx.arcTo(bx + bw, by,      bx + bw, by + br,      br);
     ctx.lineTo(bx + bw, by + bh - br);
     ctx.arcTo(bx + bw, by + bh, bx + bw - br, by + bh, br);
     ctx.lineTo(bx + br, by + bh);
-    ctx.arcTo(bx, by + bh, bx, by + bh - br, br);
-    ctx.lineTo(bx, by + br);
-    ctx.arcTo(bx, by, bx + br, by, br);
+    ctx.arcTo(bx,       by + bh, bx, by + bh - br,     br);
+    ctx.lineTo(bx,      by + br);
+    ctx.arcTo(bx,       by,      bx + br, by,           br);
     ctx.closePath();
-    ctx.fillStyle = color;
+    ctx.fillStyle = isDark ? 'rgba(15,18,25,.92)' : 'rgba(255,255,255,.95)';
     ctx.fill();
     ctx.shadowBlur = ctx.shadowOffsetY = 0;
 
-    // Pointer triangle
-    const tipX = Math.max(bx + 12, Math.min(xi, bx + bw - 12));
+    // Accent left bar
+    const barW = 3, barPad = 6;
     ctx.beginPath();
-    ctx.moveTo(tipX - 6, by + bh);
-    ctx.lineTo(tipX + 6, by + bh);
-    ctx.lineTo(tipX,     by + bh + 7);
+    ctx.roundRect
+      ? ctx.roundRect(bx + barPad, by + 6, barW, bh - 12, 2)
+      : (() => {
+          ctx.rect(bx + barPad, by + 6, barW, bh - 12);
+        })();
     ctx.fillStyle = color;
     ctx.fill();
 
+    // Thin border
+    ctx.beginPath();
+    ctx.moveTo(bx + br, by);
+    ctx.lineTo(bx + bw - br, by);
+    ctx.arcTo(bx + bw, by,      bx + bw, by + br,      br);
+    ctx.lineTo(bx + bw, by + bh - br);
+    ctx.arcTo(bx + bw, by + bh, bx + bw - br, by + bh, br);
+    ctx.lineTo(bx + br, by + bh);
+    ctx.arcTo(bx,       by + bh, bx, by + bh - br,     br);
+    ctx.lineTo(bx,      by + br);
+    ctx.arcTo(bx,       by,      bx + br, by,           br);
+    ctx.closePath();
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+
+    // Side pointer arrow — always points at yi (dot center)
+    const arrowY  = Math.max(by + 8, Math.min(yi, by + bh - 8));
+    const arrowBg = isDark ? 'rgba(15,18,25,.92)' : 'rgba(255,255,255,.95)';
+    ctx.beginPath();
+    if (goLeft) {
+      // Arrow pointing right (toward dot)
+      ctx.moveTo(bx + bw,     arrowY - 5);
+      ctx.lineTo(bx + bw,     arrowY + 5);
+      ctx.lineTo(bx + bw + 6, arrowY);
+    } else {
+      // Arrow pointing left (toward dot)
+      ctx.moveTo(bx,     arrowY - 5);
+      ctx.lineTo(bx,     arrowY + 5);
+      ctx.lineTo(bx - 6, arrowY);
+    }
+    ctx.fillStyle = arrowBg;
+    ctx.fill();
+
     // Value text
-    ctx.fillStyle    = '#fff';
+    ctx.fillStyle    = isDark ? '#f9fafb' : '#111827';
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font         = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillText(text, bx + bw / 2, by + bh / 2);
+    ctx.font         = "700 13px 'JetBrains Mono', monospace";
+    ctx.fillText(text, bx + bw / 2 + 4, by + bh / 2);
+
+    ctx.restore();
 
     ctx.restore();
   },
@@ -1924,75 +1970,267 @@ const crosshairPlugin = {
   }
 };
 
+/* ══ LAST POINT LABEL PLUGIN ═══════════════════════ */
+const lastPointPlugin = {
+  id: 'lastPointLabel',
+  afterDraw(chart) {
+    const ds   = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    const last = meta.data[meta.data.length - 1];
+    if (!last) return;
+    const { ctx } = chart;
+    const val    = ds.data[ds.data.length - 1];
+    const color  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    ctx.save();
+
+    // Pill — only when not hovering
+    if (!chart._active?.length) {
+      const text = fmt(val);
+      ctx.font = "600 10px 'JetBrains Mono', monospace";
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 14, bh = 18;
+      const bx = last.x - bw - 10, by = last.y - bh / 2;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, 5) : ctx.rect(bx, by, bw, bh);
+      ctx.fillStyle = isDark ? 'rgba(15,18,25,.9)' : 'rgba(255,255,255,.9)';
+      ctx.fill();
+      ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, bx + bw / 2, by + bh / 2);
+    }
+
+    // Always draw dot on top
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle   = color;
+    ctx.strokeStyle = isDark ? '#1a1d26' : '#fff';
+    ctx.lineWidth   = 2.5;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 8;
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+};
+
 function renderChart() {
   const canvas = document.getElementById('main-chart'); if(!canvas) return;
   if (mainChart) { mainChart.destroy(); mainChart=null; }
   if (!records.length) return;
 
-  const labels    = records.map(r=>new Date(r.record_date).toLocaleDateString('he-IL',{month:'short',year:'2-digit'}));
-  const totals    = records.map(r=>calcRecord(r).totalAssets);
-  const mortgages = records.map(r=>r.mortgage_balance||0);
-  const nets      = records.map(r=>calcRecord(r).netWorth);
-  const hasMort   = mortgages.some(m=>m>0);
+  const isDark      = document.documentElement.getAttribute('data-theme') === 'dark';
+  const labels      = records.map(r=>new Date(r.record_date).toLocaleDateString('he-IL',{month:'short',year:'2-digit'}));
+  const totals      = records.map(r=>calcRecord(r).totalAssets);
+  const mortgages   = records.map(r=>r.mortgage_balance||0);
+  const nets        = records.map(r=>calcRecord(r).netWorth);
+  const hasMort     = mortgages.some(m=>m>0);
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
 
-  // Find best month
+  // Best month
   let bestIdx = -1, bestGrowth = -Infinity;
   totals.forEach((v,i)=>{ if(i>0){ const g=v-totals[i-1]; if(g>bestGrowth){bestGrowth=g;bestIdx=i;} } });
 
-  const pointStyles = totals.map((_,i)=> i===bestIdx ? 'star'   : 'circle');
-  const pointSizes  = totals.map((_,i)=> i===bestIdx ? 10       : 4);
-  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
-  const pointColors = totals.map((_,i)=> i===bestIdx ? '#f59e0b' : accentColor);
+  // Gradient fill — use fixed height estimate since canvas isn't rendered yet
+  const chartH  = canvas.parentElement?.offsetHeight || 280;
+  const ctx2    = canvas.getContext('2d');
+  const gradFill = ctx2.createLinearGradient(0, 0, 0, chartH);
+  gradFill.addColorStop(0,   accentColor + (isDark ? '38' : '28'));
+  gradFill.addColorStop(0.65, accentColor + '0a');
+  gradFill.addColorStop(1,   accentColor + '00');
+
+  const lastIdx = totals.length - 1;
 
   const datasets = [{
     label:'סה"כ נכסים', data:totals,
-    borderColor: accentColor,
-    backgroundColor: accentColor.startsWith('#')
-      ? accentColor + '14'
-      : accentColor.replace(')', ', .08)').replace('rgb(', 'rgba('),
-    fill:true, tension:.4,
-    pointRadius: pointSizes, pointStyle: pointStyles,
-    pointBackgroundColor: pointColors,
-    pointBorderColor:'#fff', pointBorderWidth:2,
-    pointHoverRadius: 0, // handled by plugin
+    borderColor: accentColor, borderWidth: 2,
+    backgroundColor: gradFill, fill: true, tension: 0.4,
+    pointRadius:     totals.map((_,i) => i===bestIdx ? 7 : i===lastIdx ? 5 : 3),
+    pointStyle:      totals.map((_,i) => i===bestIdx ? 'star' : 'circle'),
+    pointBackgroundColor: totals.map((_,i) => i===bestIdx ? '#f59e0b' : i===lastIdx ? accentColor : accentColor),
+    pointBorderColor: isDark ? '#1a1d26' : '#ffffff',
+    pointBorderWidth: totals.map((_,i) => i===lastIdx ? 2.5 : 1.5),
+    pointHoverRadius: 0,
   }];
 
+  const gridCol = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.04)';
+  const tickCol = isDark ? '#4b5563' : '#9ca3af';
+
   if (hasMort) {
-    datasets.push({ label:'יתרת משכנתא', data:mortgages, borderColor:'#ef4444',
+    datasets.push({
+      label:'יתרת משכנתא', data:mortgages,
+      borderColor:'#ef4444', borderWidth:1.5,
       backgroundColor:'transparent', fill:false, tension:.4,
-      pointRadius:4, pointBackgroundColor:'#ef4444', pointBorderColor:'#fff', pointBorderWidth:2,
-      pointHoverRadius:0 });
-    datasets.push({ label:'שווי נקי', data:nets, borderColor:'#f59e0b',
-      backgroundColor:'rgba(245,158,11,.06)', fill:false, tension:.4, borderDash:[5,4],
-      pointRadius:4, pointBackgroundColor:'#f59e0b', pointBorderColor:'#fff', pointBorderWidth:2,
-      pointHoverRadius:0 });
+      pointRadius:3, pointBackgroundColor:'#ef4444',
+      pointBorderColor: isDark ? '#1a1d26' : '#fff', pointBorderWidth:1.5,
+      pointHoverRadius:0
+    });
   }
 
-  const opts = chartOptions();
-  opts.plugins.tooltip.enabled = false; // custom bubble replaces tooltip
-  opts.interaction = { mode:'index', intersect:false, axis:'x' };
-  opts.plugins.crosshairBubble = true;
+  const opts = {
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration:600, easing:'easeOutQuart' },
+    plugins: {
+      legend: { position:'bottom', labels:{ font:{family:"'Outfit','Heebo',sans-serif",size:11}, color:tickCol, padding:16, boxWidth:10, usePointStyle:true } },
+      tooltip: { enabled:false },
+    },
+    interaction: { mode:'index', intersect:false, axis:'x' },
+    scales: {
+      y: { grid:{ color:gridCol }, border:{ display:false },
+           ticks:{ font:{family:"'JetBrains Mono',monospace",size:10}, color:tickCol, maxTicksLimit:5,
+                   callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } },
+      x: { grid:{ display:false }, border:{ display:false },
+           ticks:{ font:{family:"'Outfit','Heebo',sans-serif",size:10}, color:tickCol, maxRotation:0 } }
+    }
+  };
+
+  // Extended crosshair plugin for main chart — shows all active datasets
+  const mainCrosshairPlugin = {
+    ...crosshairPlugin,
+    id: 'mainCrosshair',
+    afterDraw(chart) {
+      const { ctx, chartArea:{ top,bottom,left,right }, scales:{ x, y } } = chart;
+      const activeEls = chart._active;
+      if (!activeEls?.length) return;
+      const idx      = activeEls[0].index;
+      const xi       = activeEls[0].element.x;
+      const color    = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
+      const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
+
+      ctx.save();
+
+      // Dashed line
+      ctx.beginPath();
+      ctx.setLineDash([4,5]);
+      ctx.strokeStyle = isDarkNow ? 'rgba(255,255,255,.18)' : 'rgba(0,0,0,.15)';
+      ctx.lineWidth   = 1.5;
+      ctx.moveTo(xi, top); ctx.lineTo(xi, bottom);
+      ctx.stroke(); ctx.setLineDash([]);
+
+      // One bubble per visible dataset
+      const dsColors = [color, '#ef4444', '#f59e0b'];
+      const dsLabels = [null, null, null];
+      chart.data.datasets.forEach((ds, di) => {
+        const meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        const el  = meta.data[idx];
+        if (!el) return;
+        const yi  = el.y;
+        const val = ds.data[idx];
+        const col = dsColors[di] || color;
+
+        // Dot
+        ctx.beginPath();
+        ctx.arc(xi, yi, 6, 0, Math.PI * 2);
+        ctx.fillStyle   = col;
+        ctx.strokeStyle = isDarkNow ? '#1a1d26' : '#fff';
+        ctx.lineWidth   = 2;
+        ctx.shadowColor = col; ctx.shadowBlur = 8;
+        ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Bubble
+        const text  = fmt(val);
+        ctx.font    = "600 12px 'JetBrains Mono', monospace";
+        const tw    = ctx.measureText(text).width;
+        const bw    = tw + 32, bh = 30, br = 8;
+        const dotR  = 8;
+        const goLeft = xi + dotR + bw + 4 > right;
+        const bx    = goLeft ? xi - dotR - bw : xi + dotR;
+        const by    = Math.max(top + 2, Math.min(yi - bh/2, bottom - bh));
+
+        ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+        ctx.beginPath();
+        ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by);
+        ctx.arcTo(bx+bw,by,bx+bw,by+br,br); ctx.lineTo(bx+bw,by+bh-br);
+        ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br); ctx.lineTo(bx+br,by+bh);
+        ctx.arcTo(bx,by+bh,bx,by+bh-br,br); ctx.lineTo(bx,by+br);
+        ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath();
+        ctx.fillStyle = isDarkNow ? 'rgba(15,18,25,.93)' : 'rgba(255,255,255,.97)';
+        ctx.fill();
+        ctx.shadowBlur = ctx.shadowOffsetY = 0;
+
+        // Accent bar
+        ctx.fillStyle = col;
+        ctx.fillRect(bx + (goLeft ? bw-5 : 2), by+6, 3, bh-12);
+
+        // Border
+        ctx.beginPath();
+        ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by);
+        ctx.arcTo(bx+bw,by,bx+bw,by+br,br); ctx.lineTo(bx+bw,by+bh-br);
+        ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br); ctx.lineTo(bx+br,by+bh);
+        ctx.arcTo(bx,by+bh,bx,by+bh-br,br); ctx.lineTo(bx,by+br);
+        ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath();
+        ctx.strokeStyle = isDarkNow ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
+        ctx.lineWidth = 1; ctx.stroke();
+
+        // Arrow
+        const arrowY = Math.max(by+8, Math.min(yi, by+bh-8));
+        ctx.beginPath();
+        if (goLeft) {
+          ctx.moveTo(bx+bw, arrowY-4); ctx.lineTo(bx+bw, arrowY+4); ctx.lineTo(bx+bw+5, arrowY);
+        } else {
+          ctx.moveTo(bx, arrowY-4); ctx.lineTo(bx, arrowY+4); ctx.lineTo(bx-5, arrowY);
+        }
+        ctx.fillStyle = isDarkNow ? 'rgba(15,18,25,.93)' : 'rgba(255,255,255,.97)';
+        ctx.fill();
+
+        // Value
+        ctx.fillStyle = isDarkNow ? '#f9fafb' : '#111827';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.font = "600 12px 'JetBrains Mono', monospace";
+        ctx.fillText(text, bx+bw/2, by+bh/2);
+      });
+
+      ctx.restore();
+    }
+  };
 
   mainChart = new Chart(canvas, {
-    type:'line', data:{labels,datasets}, options:opts,
-    plugins:[crosshairPlugin]
+    type:'line', data:{labels, datasets}, options:opts,
+    plugins:[mainCrosshairPlugin, lastPointPlugin]
   });
 
-  // Touch events
+  // RAF-throttled mouse hover
+  let _rafId = null;
+  const updateChartAt = (clientX) => {
+    if (!mainChart) return;
+    const rect = canvas.getBoundingClientRect();
+    const xPos = clientX - rect.left;
+    const idx  = Math.round(mainChart.scales.x.getValueForPixel(xPos));
+    const cl   = Math.max(0, Math.min(idx, labels.length - 1));
+    if (mainChart._active?.[0]?.index === cl) return;
+    const els  = mainChart.data.datasets.map((_, di) => ({ datasetIndex: di, index: cl }));
+    mainChart.setActiveElements(els);
+    mainChart.update('none');
+  };
+
+  canvas.addEventListener('mousemove', e => {
+    if (_rafId) return;
+    _rafId = requestAnimationFrame(() => { _rafId = null; updateChartAt(e.clientX); });
+  });
+  canvas.addEventListener('mouseleave', () => {
+    mainChart?.setActiveElements([]);
+    mainChart?.update('none');
+  });
+
+  // Touch — direct, no MouseEvent re-dispatch
+  let _touchRaf = null, _touchEndTimer = null;
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-    const touch = e.touches[0];
-    const rect  = canvas.getBoundingClientRect();
-    const x     = touch.clientX - rect.left;
-    mainChart._active && mainChart.tooltip && mainChart.update('none');
-    const evt = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
-    canvas.dispatchEvent(evt);
-  }, { passive:false });
+    if (_touchRaf) return;
+    _touchRaf = requestAnimationFrame(() => {
+      _touchRaf = null;
+      updateChartAt(e.touches[0].clientX);
+    });
+  }, { passive: false });
 
   canvas.addEventListener('touchend', () => {
-    mainChart.setActiveElements([]);
-    mainChart.tooltip.setActiveElements([]);
-    mainChart.update('none');
+    clearTimeout(_touchEndTimer);
+    _touchEndTimer = setTimeout(() => {
+      mainChart?.setActiveElements([]);
+      mainChart?.update('none');
+    }, 800); // small delay so user can see the bubble before it disappears
   });
 }
 
@@ -4339,18 +4577,22 @@ function openCatHistory(catKey, catLabel) {
     } else {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
+    const chartIdx = labels.length - 1 - (last12.length - 1 - i); // map row to chart index
     rows += `
     <div class="chb-hist-row chb-hist-row-edit"
       data-record-id="${cur.id}"
       data-cur-val="${curVal}"
       data-prev-val="${prevVal}"
+      data-chart-idx="${chartIdx}"
+      onmouseenter="highlightChartPoint(${chartIdx})"
+      onmouseleave="clearChartHighlight()"
       ${!isMortgage ? `
         data-cat-id="${cat?.id||''}"
         data-cat-key="${catKey}"
         data-cat-label="${catLabel.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
         onclick="openQuickCatEntryFromRow(this)"` : `
         onclick="openQuickMortgageEntry(this)"`}
-      style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem">
+      style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.875rem;cursor:pointer">
       <span style="color:var(--ink-3)">${dateLabel}</span>
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-family:var(--mono);font-size:.82rem;color:var(--ink-2)" class="blur-text">${fmt(curVal)}</span>
@@ -4363,11 +4605,10 @@ function openCatHistory(catKey, catLabel) {
 
   // Show panel FIRST so canvas gets real dimensions, then draw chart
   panel.style.display = 'flex';
-  setTimeout(() => {
+  setTimeout(() => requestAnimationFrame(() => {
     applyBlur();
     const canvasEl = document.getElementById('cat-history-chart');
     if (canvasEl) {
-      // Force canvas dimensions explicitly for iOS Safari
       canvasEl.width  = canvasEl.offsetWidth  || 400;
       canvasEl.height = 180;
       const ctx2 = canvasEl.getContext('2d');
@@ -4394,6 +4635,7 @@ function openCatHistory(catKey, catLabel) {
             }]
           },
           options: {
+            animation: { duration: 400, easing: 'easeOutQuart' },
             responsive: true, maintainAspectRatio: false,
             interaction: { mode:'index', intersect:false, axis:'x' },
             plugins: {
@@ -4411,7 +4653,18 @@ function openCatHistory(catKey, catLabel) {
         });
       }
     }
-  }, 80);
+  }), 32);
+}
+
+function highlightChartPoint(idx) {
+  if (!catHistoryChart) return;
+  catHistoryChart.setActiveElements([{ datasetIndex:0, index:idx }]);
+  catHistoryChart.update('none');
+}
+function clearChartHighlight() {
+  if (!catHistoryChart) return;
+  catHistoryChart.setActiveElements([]);
+  catHistoryChart.update('none');
 }
 
 function closeCatHistory() {

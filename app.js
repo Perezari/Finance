@@ -5138,8 +5138,9 @@ function applyDarkMode(on) {
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = on;
   const themeColor = on ? '#0d0f14' : '#ffffff';
-  const metaTag = document.getElementById('theme-color-meta');
-  if (metaTag) metaTag.setAttribute('content', themeColor);
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+  meta.content = themeColor;
 }
 
 async function toggleDarkMode(on) {

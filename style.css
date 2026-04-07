@@ -1503,6 +1503,10 @@ select option{background:var(--surface)}
 .nav-item:hover .nav-icon svg  { stroke: var(--ink-2); }
 .nav-item.active .nav-icon svg,
 .nav-item:hover  .nav-icon svg { stroke-width: 2.2; }
+.nav-item.nav-item-logout { color: var(--red, #ef4444); }
+.nav-item.nav-item-logout .nav-icon svg { stroke: var(--red, #ef4444); }
+.nav-item.nav-item-logout:hover { background: var(--red-light, rgba(239,68,68,.1)); color: var(--red, #ef4444); }
+.nav-item.nav-item-logout:hover .nav-icon svg { stroke: var(--red, #ef4444); }
 
 /* Bottom nav SVG */
 .bottom-nav-item .nav-icon { display: flex; align-items: center; justify-content: center; }

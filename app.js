@@ -5105,12 +5105,21 @@ async function saveQuickCatEntry(catId, catKey, recordId) {
 }
 
 function openAddCatFromMain() {
+  const modal = document.getElementById('settings-modal');
+  // Open invisibly first
+  modal.style.opacity = '0';
+  modal.style.pointerEvents = 'none';
   showSettings('categories');
   setTimeout(() => {
-    const addSection = document.getElementById('add-cat-section');
-    if (addSection) addSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     toggleCatNameDropdown();
-  }, 200);
+    // Fade in after dropdown is open
+    requestAnimationFrame(() => {
+      modal.style.transition = 'opacity .18s';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = '';
+      setTimeout(() => { modal.style.transition = ''; }, 200);
+    });
+  }, 60);
 }
 
 /* ══ DARK MODE ═══════════════════════════════════════ */

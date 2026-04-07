@@ -1820,6 +1820,110 @@ function renderYearVsYear() {
 }
 
 /* ── Main chart with best-month highlight ───────────── */
+const crosshairPlugin = {
+  id: 'crosshairBubble',
+  _rafId: null,
+  afterDraw(chart) {
+    const { ctx, chartArea: { top, bottom, left, right } } = chart;
+    const activeEls = chart._active;
+    if (!activeEls || !activeEls.length) return;
+
+    const el    = activeEls[0];
+    const xi    = el.element.x;
+    const yi    = el.element.y;
+    const idx   = el.index;
+    const val   = chart.data.datasets[0].data[idx];
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
+
+    ctx.save();
+
+    // Dashed vertical line
+    ctx.beginPath();
+    ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth   = 1.5;
+    ctx.moveTo(xi, top);
+    ctx.lineTo(xi, bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Glowing dot
+    ctx.beginPath();
+    ctx.arc(xi, yi, 7, 0, Math.PI * 2);
+    ctx.fillStyle   = color;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth   = 2.5;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 10;
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+
+    // Bubble
+    const text = fmt(val);
+    ctx.font   = "bold 13px 'JetBrains Mono', monospace";
+    const tw   = ctx.measureText(text).width;
+    const bw   = tw + 28, bh = 34, br = 9;
+    let bx     = Math.max(left, Math.min(xi - bw / 2, right - bw));
+    const by   = Math.max(top + 2, yi - bh - 14);
+
+    ctx.shadowColor = 'rgba(0,0,0,.3)';
+    ctx.shadowBlur  = 12;
+    ctx.shadowOffsetY = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(bx + br, by);
+    ctx.lineTo(bx + bw - br, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + br, br);
+    ctx.lineTo(bx + bw, by + bh - br);
+    ctx.arcTo(bx + bw, by + bh, bx + bw - br, by + bh, br);
+    ctx.lineTo(bx + br, by + bh);
+    ctx.arcTo(bx, by + bh, bx, by + bh - br, br);
+    ctx.lineTo(bx, by + br);
+    ctx.arcTo(bx, by, bx + br, by, br);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.shadowBlur = ctx.shadowOffsetY = 0;
+
+    // Pointer triangle
+    const tipX = Math.max(bx + 12, Math.min(xi, bx + bw - 12));
+    ctx.beginPath();
+    ctx.moveTo(tipX - 6, by + bh);
+    ctx.lineTo(tipX + 6, by + bh);
+    ctx.lineTo(tipX,     by + bh + 7);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Value text
+    ctx.fillStyle    = '#fff';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font         = "bold 13px 'JetBrains Mono', monospace";
+    ctx.fillText(text, bx + bw / 2, by + bh / 2);
+
+    ctx.restore();
+  },
+
+  afterEvent(chart, args) {
+    const e = args.event;
+    if (e.type !== 'mousemove' && e.type !== 'touchmove') return;
+    if (crosshairPlugin._rafId) return; // skip if frame pending
+    crosshairPlugin._rafId = requestAnimationFrame(() => {
+      crosshairPlugin._rafId = null;
+      const xScale  = chart.scales.x;
+      const rawX    = e.x;
+      if (rawX == null) return;
+      const idx     = Math.round(xScale.getValueForPixel(rawX));
+      const clamped = Math.max(0, Math.min(idx, chart.data.labels.length - 1));
+      const prev    = chart._active?.[0]?.index;
+      if (prev === clamped) return; // same point — skip redraw
+      chart.setActiveElements([{ datasetIndex: 0, index: clamped }]);
+      chart.update('none');
+    });
+  }
+};
+
 function renderChart() {
   const canvas = document.getElementById('main-chart'); if(!canvas) return;
   if (mainChart) { mainChart.destroy(); mainChart=null; }
@@ -1831,44 +1935,65 @@ function renderChart() {
   const nets      = records.map(r=>calcRecord(r).netWorth);
   const hasMort   = mortgages.some(m=>m>0);
 
-  // Find best month (highest growth)
+  // Find best month
   let bestIdx = -1, bestGrowth = -Infinity;
   totals.forEach((v,i)=>{ if(i>0){ const g=v-totals[i-1]; if(g>bestGrowth){bestGrowth=g;bestIdx=i;} } });
 
-  // Point styles – golden star for best month
-  const pointStyles  = totals.map((_,i)=> i===bestIdx ? 'star'   : 'circle');
-  const pointSizes   = totals.map((_,i)=> i===bestIdx ? 10       : 5);
-  const pointColors  = totals.map((_,i)=> i===bestIdx ? '#f59e0b' : '#0e9e7e');
+  const pointStyles = totals.map((_,i)=> i===bestIdx ? 'star'   : 'circle');
+  const pointSizes  = totals.map((_,i)=> i===bestIdx ? 10       : 4);
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#0e9e7e';
+  const pointColors = totals.map((_,i)=> i===bestIdx ? '#f59e0b' : accentColor);
 
   const datasets = [{
     label:'סה"כ נכסים', data:totals,
-    borderColor:'#0e9e7e', backgroundColor:'rgba(14,158,126,.08)',
+    borderColor: accentColor,
+    backgroundColor: accentColor.startsWith('#')
+      ? accentColor + '14'
+      : accentColor.replace(')', ', .08)').replace('rgb(', 'rgba('),
     fill:true, tension:.4,
-    pointRadius:pointSizes, pointStyle:pointStyles,
-    pointBackgroundColor:pointColors,
+    pointRadius: pointSizes, pointStyle: pointStyles,
+    pointBackgroundColor: pointColors,
     pointBorderColor:'#fff', pointBorderWidth:2,
+    pointHoverRadius: 0, // handled by plugin
   }];
 
   if (hasMort) {
     datasets.push({ label:'יתרת משכנתא', data:mortgages, borderColor:'#ef4444',
       backgroundColor:'transparent', fill:false, tension:.4,
-      pointRadius:5, pointBackgroundColor:'#ef4444', pointBorderColor:'#fff', pointBorderWidth:2 });
+      pointRadius:4, pointBackgroundColor:'#ef4444', pointBorderColor:'#fff', pointBorderWidth:2,
+      pointHoverRadius:0 });
     datasets.push({ label:'שווי נקי', data:nets, borderColor:'#f59e0b',
       backgroundColor:'rgba(245,158,11,.06)', fill:false, tension:.4, borderDash:[5,4],
-      pointRadius:5, pointBackgroundColor:'#f59e0b', pointBorderColor:'#fff', pointBorderWidth:2 });
+      pointRadius:4, pointBackgroundColor:'#f59e0b', pointBorderColor:'#fff', pointBorderWidth:2,
+      pointHoverRadius:0 });
   }
 
   const opts = chartOptions();
-  // Add best-month tooltip note
-  const origLabel = opts.plugins.tooltip.callbacks.label;
-  opts.plugins.tooltip.callbacks.label = function(ctx) {
-    const base = ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
-    if (ctx.datasetIndex===0 && ctx.dataIndex===bestIdx)
-      return [base, ` · החודש הטוב ביותר! (+${fmt(bestGrowth)})`];
-    return base;
-  };
+  opts.plugins.tooltip.enabled = false; // custom bubble replaces tooltip
+  opts.interaction = { mode:'index', intersect:false, axis:'x' };
+  opts.plugins.crosshairBubble = true;
 
-  mainChart = new Chart(canvas,{type:'line',data:{labels,datasets},options:opts});
+  mainChart = new Chart(canvas, {
+    type:'line', data:{labels,datasets}, options:opts,
+    plugins:[crosshairPlugin]
+  });
+
+  // Touch events
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect  = canvas.getBoundingClientRect();
+    const x     = touch.clientX - rect.left;
+    mainChart._active && mainChart.tooltip && mainChart.update('none');
+    const evt = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+    canvas.dispatchEvent(evt);
+  }, { passive:false });
+
+  canvas.addEventListener('touchend', () => {
+    mainChart.setActiveElements([]);
+    mainChart.tooltip.setActiveElements([]);
+    mainChart.update('none');
+  });
 }
 
 function populateDateSelect() {
@@ -2166,13 +2291,10 @@ function applyColorTheme(themeId) {
   const theme = COLOR_THEMES.find(t => t.id === themeId) || COLOR_THEMES[0];
   const root  = document.documentElement;
   root.style.setProperty('--green',       theme.primary);
-  root.style.setProperty('--green-mid',   theme.dark);
   root.style.setProperty('--green-dark',  theme.dark);
   root.style.setProperty('--green-light', theme.light);
-  root.style.setProperty('--green-glow',  theme.light);
-  root.style.setProperty('--shadow-green', `0 6px 24px ${theme.light.replace('.12)', '.35)')}`);
-  root.style.setProperty('--green-shadow-sm', `0 4px 14px ${theme.light.replace('.12)', '.5)')}`);
   localStorage.setItem('color_theme_v1', themeId);
+  // Sync to Supabase
   if (currentUser) db.auth.updateUser({ data: { color_theme: themeId } });
   renderThemePicker();
 }
@@ -4268,18 +4390,15 @@ function openCatHistory(catKey, catLabel) {
               pointBorderColor: isDark ? '#1f2937' : '#ffffff',
               pointBorderWidth: 2,
               borderWidth: 2.5,
+              pointHoverRadius: 0,
             }]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
+            interaction: { mode:'index', intersect:false, axis:'x' },
             plugins: {
               legend: { display: false },
-              tooltip: {
-                rtl: true, backgroundColor: isDark ? '#1f2937' : '#111827',
-                titleColor: '#f9fafb', bodyColor: '#9ca3af',
-                borderColor: '#374151', borderWidth: 1, padding: 10,
-                callbacks: { label: c => ` ${fmt(c.raw)}` }
-              }
+              tooltip: { enabled: false }
             },
             scales: {
               x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 10, family: "'Heebo',sans-serif" } } },
@@ -4287,7 +4406,8 @@ function openCatHistory(catKey, catLabel) {
                    ticks: { color: tickColor, font: { size: 10, family: "'JetBrains Mono',monospace" },
                             callback: v => Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v } }
             }
-          }
+          },
+          plugins: [crosshairPlugin]
         });
       }
     }

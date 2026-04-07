@@ -52,7 +52,7 @@
     </div>
 
     <!-- Login form -->
-    <div id="login-form" class="auth-form-ul">
+    <form id="login-form" class="auth-form-ul" onsubmit="handleLogin();return false;">
       <div class="auth-field-ul">
         <label class="auth-field-label">כתובת אימייל</label>
         <input type="email" id="login-email" class="auth-input-ul" autocomplete="email" placeholder=""/>
@@ -61,12 +61,12 @@
         <label class="auth-field-label">סיסמה</label>
         <input type="password" id="login-password" class="auth-input-ul" autocomplete="current-password" placeholder=""/>
       </div>
-      <button onclick="handleLogin()" class="auth-btn-primary">כניסה לחשבון</button>
-      <button onclick="handleMagicLink()" class="auth-btn-link">שכחתי סיסמה / שלח קישור כניסה</button>
-    </div>
+      <button type="submit" class="auth-btn-primary">כניסה לחשבון</button>
+      <button type="button" onclick="handleMagicLink()" class="auth-btn-link">שכחתי סיסמה / שלח קישור כניסה</button>
+    </form>
 
     <!-- Register form -->
-    <div id="register-form" class="auth-form-ul" style="display:none;">
+    <form id="register-form" class="auth-form-ul" style="display:none;" onsubmit="handleRegister();return false;">
       <div class="auth-field-ul">
         <label class="auth-field-label">שם מלא</label>
         <input type="text" id="reg-name" class="auth-input-ul" autocomplete="name" placeholder=""/>
@@ -79,8 +79,8 @@
         <label class="auth-field-label">סיסמה (לפחות 6 תווים)</label>
         <input type="password" id="reg-password" class="auth-input-ul" autocomplete="new-password" placeholder=""/>
       </div>
-      <button onclick="handleRegister()" class="auth-btn-primary">יצירת חשבון</button>
-    </div>
+      <button type="submit" class="auth-btn-primary">יצירת חשבון</button>
+    </form>
 
     <div id="auth-message" class="auth-message" style="display:none;"></div>
 
@@ -504,11 +504,11 @@
       <div style="font-size:1.2rem;font-weight:800;color:var(--ink);letter-spacing:-.03em;margin-bottom:8px;">הגדרת סיסמה חדשה</div>
       <div style="font-size:.88rem;color:var(--ink-3);line-height:1.65;margin-bottom:24px;">בחר סיסמה חזקה לחשבונך</div>
     </div>
-    <div style="padding:0 28px 32px;display:flex;flex-direction:column;gap:12px;">
+    <form style="padding:0 28px 32px;display:flex;flex-direction:column;gap:12px;" onsubmit="confirmPasswordReset();return false;">
       <input type="password" id="reset-pwd-new"     placeholder="סיסמה חדשה (לפחות 6 תווים)" class="auth-input" autocomplete="new-password"/>
       <input type="password" id="reset-pwd-confirm" placeholder="אישור סיסמה"                  class="auth-input" autocomplete="new-password"/>
-      <button onclick="confirmPasswordReset()" class="auth-button primary" style="margin-top:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> עדכן סיסמה</button>
-    </div>
+      <button type="submit" class="auth-button primary" style="margin-top:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> עדכן סיסמה</button>
+    </form>
   </div>
 </div>
 

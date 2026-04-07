@@ -4436,6 +4436,7 @@ function openCatHistory(catKey, catLabel) {
     } else {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
+    const chartIdx = i;
     const hoverAttrs = window.matchMedia('(hover: hover)').matches
       ? `onmouseenter="highlightChartPoint(${chartIdx})" onmouseleave="clearChartHighlight()"`
       : '';

@@ -95,6 +95,7 @@ let wizardStep    = 0;
 let wizardData    = {}; // holds values across steps
 let viewMode      = 'grid'; // 'grid' | 'list'
 let navStyle      = 'floating'; // 'floating' | 'classic'
+let currentRecordIndex = -1; // -1 = latest
 
 /* ── INIT ──────────────────────────────────────────── */
 async function init() {
@@ -1490,9 +1491,12 @@ function renderCurrentReport() {
     return;
   }
  
-  const latest    = records[records.length-1];
+  const idx       = currentRecordIndex < 0 ? records.length - 1 : Math.min(currentRecordIndex, records.length - 1);
+  const latest    = records[idx];
   const calc      = calcRecord(latest);
   const dateLabel = new Date(latest.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+  const isFirst   = idx === 0;
+  const isLast    = idx === records.length - 1;
  
   const SVG_TOTAL    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>`;
   const SVG_DROP = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`;
@@ -1500,13 +1504,13 @@ function renderCurrentReport() {
   const SVG_NETWORTH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
   const SVG_GROWTH   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
   let growthSub='', growthHtml='';
-  if (records.length>=2) {
-    const prev  = calcRecord(records[records.length-2]);
+  if (idx >= 1) {
+    const prev  = calcRecord(records[idx-1]);
     const delta = calc.totalAssets - prev.totalAssets;
     const pct   = prev.totalAssets ? (delta/prev.totalAssets*100).toFixed(2) : '0.00';
     const sign  = delta>=0?'+':'';
     const cls   = delta>=0?'pos':'neg';
-    const avg   = (calc.totalAssets - calcRecord(records[0]).totalAssets) / (records.length-1);
+    const avg   = idx > 0 ? (calc.totalAssets - calcRecord(records[0]).totalAssets) / idx : 0;
     growthSub   = `<span class="ht-sub ${cls}">${sign}${pct}% מחודש קודם</span>`;
     growthHtml  = `
       <div class="growth-card">
@@ -1547,7 +1551,7 @@ function renderCurrentReport() {
   const liquidPct  = calc.totalAssets ? ((liquid/calc.totalAssets)*100).toFixed(1) : '0';
  
   // Previous month calc (used for mortgage delta + cat badges)
-  const prevCalc = records.length >= 2 ? calcRecord(records[records.length-2]) : null;
+  const prevCalc = idx >= 1 ? calcRecord(records[idx-1]) : null;
 
   const _mortInstId = localStorage.getItem('mortgage_inst_v1') || latest.values?._mortgage_inst;
   const mortInst = _mortInstId ? getInstitution(_mortInstId) : null;
@@ -1732,7 +1736,33 @@ function renderCurrentReport() {
       </div>
       ${mortgageHero}
     </div>
-    <div class="section-header">פירוט נכסים – ${dateLabel}</div>
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between;position:relative">
+      <button onclick="navigateRecord(-1)" style="background:none;border:none;cursor:pointer;color:${isFirst?'var(--ink-4)':'var(--ink-2)'};display:flex;padding:4px 6px;border-radius:6px;transition:background .15s,color .15s" ${isFirst?'disabled':''} onmouseover="if(!this.disabled)this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <div style="position:relative">
+        <button id="month-picker-btn" onclick="toggleMonthPicker()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--ink);font-size:.875rem;font-weight:600;font-family:var(--font);padding:4px 8px;border-radius:8px;transition:background .15s" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">
+          ${dateLabel}${isLast?' <span style="font-size:.68rem;color:var(--green);font-weight:700;margin-right:2px">· נוכחי</span>':''}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="month-picker-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);z-index:200;min-width:190px;max-height:280px;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:var(--border) transparent">
+          ${[...records].reverse().map((r, ri) => {
+            const rIdx = records.length - 1 - ri;
+            const lbl  = new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+            const isSelected = rIdx === idx;
+            const isNewest   = rIdx === records.length - 1;
+            return `<button onclick="selectRecord(${rIdx})" style="display:flex;align-items:center;justify-content:space-between;width:100%;text-align:right;padding:8px 12px;border:none;border-radius:8px;cursor:pointer;background:${isSelected?'var(--green-light)':'transparent'};color:${isSelected?'var(--green)':'var(--ink)'};font-family:var(--font);font-size:.82rem;font-weight:${isSelected?'700':'500'};gap:8px;transition:background .12s" onmouseover="this.style.background='${isSelected?'var(--green-light)':'var(--border)'}'" onmouseout="this.style.background='${isSelected?'var(--green-light)':'transparent'}'">
+              <span>${lbl}</span>
+              ${isNewest ? `<span style="font-size:.65rem;font-weight:700;color:var(--green);background:var(--green-light);padding:2px 6px;border-radius:99px">נוכחי</span>` : ''}
+              ${isSelected && !isNewest ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+      <button onclick="navigateRecord(1)" style="background:none;border:none;cursor:pointer;color:${isLast?'var(--ink-4)':'var(--ink-2)'};display:flex;padding:4px 6px;border-radius:6px;transition:background .15s,color .15s" ${isLast?'disabled':''} onmouseover="if(!this.disabled)this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
     ${catSection}
     ${growthHtml}
     ${notesHtml}`;
@@ -4969,6 +4999,39 @@ function openAddCatFromMain() {
 
 let _lastTouchTime = 0;
 document.addEventListener('touchstart', () => { _lastTouchTime = Date.now(); }, { passive: true });
+
+function toggleMonthPicker() {
+  const dd = document.getElementById('month-picker-dropdown');
+  if (!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function closePicker(e) {
+        if (!dd.contains(e.target) && e.target.id !== 'month-picker-btn') {
+          dd.style.display = 'none';
+          document.removeEventListener('click', closePicker);
+        }
+      });
+    }, 0);
+  }
+}
+
+function selectRecord(idx) {
+  currentRecordIndex = idx === records.length - 1 ? -1 : idx;
+  const dd = document.getElementById('month-picker-dropdown');
+  if (dd) dd.style.display = 'none';
+  renderCurrentReport();
+}
+
+function navigateRecord(dir) {
+  const cur = currentRecordIndex < 0 ? records.length - 1 : currentRecordIndex;
+  const next = cur + dir;
+  if (next < 0 || next >= records.length) return;
+  currentRecordIndex = next;
+  renderCurrentReport();
+}
 
 function highlightChartPoint(idx) {
   if (Date.now() - _lastTouchTime < 500) return; // ignore mouseenter fired by iOS touch

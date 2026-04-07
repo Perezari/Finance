@@ -1338,7 +1338,8 @@ select option{background:var(--surface)}
 .modal-body::-webkit-scrollbar,
 #cat-history-body::-webkit-scrollbar,
 #tax-modal-body::-webkit-scrollbar,
-#liquid-modal-body::-webkit-scrollbar {
+#liquid-modal-body::-webkit-scrollbar,
+#month-picker-dropdown::-webkit-scrollbar {
   width: 4px;
 }
 #settings-panel-categories::-webkit-scrollbar-track,
@@ -1346,7 +1347,8 @@ select option{background:var(--surface)}
 .modal-body::-webkit-scrollbar-track,
 #cat-history-body::-webkit-scrollbar-track,
 #tax-modal-body::-webkit-scrollbar-track,
-#liquid-modal-body::-webkit-scrollbar-track {
+#liquid-modal-body::-webkit-scrollbar-track,
+#month-picker-dropdown::-webkit-scrollbar-track {
   background: transparent;
 }
 #settings-panel-categories::-webkit-scrollbar-thumb,
@@ -1354,7 +1356,8 @@ select option{background:var(--surface)}
 .modal-body::-webkit-scrollbar-thumb,
 #cat-history-body::-webkit-scrollbar-thumb,
 #tax-modal-body::-webkit-scrollbar-thumb,
-#liquid-modal-body::-webkit-scrollbar-thumb {
+#liquid-modal-body::-webkit-scrollbar-thumb,
+#month-picker-dropdown::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 99px;
 }

@@ -4436,14 +4436,15 @@ function openCatHistory(catKey, catLabel) {
     } else {
       deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
     }
-    const chartIdx = i; // index into labels array
+    const hoverAttrs = window.matchMedia('(hover: hover)').matches
+      ? `onmouseenter="highlightChartPoint(${chartIdx})" onmouseleave="clearChartHighlight()"`
+      : '';
     rows += `
     <div class="chb-hist-row chb-hist-row-edit"
       data-record-id="${cur.id}"
       data-cur-val="${curVal}"
       data-prev-val="${prevVal}"
-      onmouseenter="highlightChartPoint(${chartIdx})"
-      onmouseleave="clearChartHighlight()"
+      ${hoverAttrs}
       ${!isMortgage ? `
         data-cat-id="${cat?.id||''}"
         data-cat-key="${catKey}"

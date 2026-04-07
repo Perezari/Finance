@@ -2067,19 +2067,104 @@ function renderChart() {
 }
 
 function populateDateSelect() {
-  const sel=document.getElementById('dateSelect'); if(!sel) return;
-  sel.innerHTML='<option value="" disabled selected>בחר חודש לפירוט</option>';
-  [...records].reverse().forEach(r=>{
-    const o=document.createElement('option');
-    o.value=r.id;
-    o.textContent=new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
-    sel.appendChild(o);
-  });
+  // Native select (mobile)
+  const sel = document.getElementById('dateSelect');
+  if (sel) {
+    sel.innerHTML = '<option value="" disabled selected>בחר חודש לפירוט</option>';
+    [...records].reverse().forEach(r => {
+      const o = document.createElement('option');
+      o.value = r.id;
+      o.textContent = new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+      sel.appendChild(o);
+    });
+  }
+  // Custom dropdown (desktop)
+  const dd = document.getElementById('history-month-dropdown');
+  if (!dd) return;
+  dd.innerHTML = [...records].reverse().map(r => {
+    const lbl = new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+    return `<button onclick="selectHistoryMonth('${r.id}')" style="display:flex;width:100%;text-align:right;padding:9px 12px;border:none;border-radius:8px;cursor:pointer;background:transparent;color:var(--ink);font-family:var(--font);font-size:.82rem;font-weight:500;transition:background .12s" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='transparent'">${lbl}</button>`;
+  }).join('');
+}
+
+function toggleHistoryMonthPicker() {
+  const dd = document.getElementById('history-month-dropdown');
+  if (!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    setTimeout(() => {
+      document.addEventListener('click', function closePicker(e) {
+        const btn = document.getElementById('history-month-btn');
+        if (!dd.contains(e.target) && e.target !== btn && !btn?.contains(e.target)) {
+          dd.style.display = 'none';
+          document.removeEventListener('click', closePicker);
+        }
+      });
+    }, 0);
+  }
+}
+
+function selectHistoryMonth(id) {
+  const r = records.find(r => r.id === id);
+  if (!r) return;
+  const lbl = new Date(r.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+  const btn = document.getElementById('history-month-label');
+  if (btn) { btn.textContent = lbl; btn.style.color = 'var(--ink)'; }
+  const dd = document.getElementById('history-month-dropdown');
+  if (dd) dd.style.display = 'none';
+  openDetailModal(r);
 }
 
 function onDateChange() {
-  const r=records.find(r=>r.id===document.getElementById('dateSelect').value);
-  if(r) renderDetailCard(r);
+  const r = records.find(r => r.id === document.getElementById('dateSelect')?.value);
+  if (r) openDetailModal(r);
+}
+
+function openDetailModal(record) {
+  let overlay = document.getElementById('detail-modal-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'detail-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+    overlay.onclick = e => { if (e.target === overlay) closeDetailModal(); };
+    const box = document.createElement('div');
+    box.id = 'detail-modal-box';
+    box.style.cssText = `
+      background:var(--surface);
+      border-radius:16px;
+      width:100%;
+      max-width:480px;
+      max-height:85vh;
+      overflow-y:auto;
+      animation:fadeUp .22s ease;
+      scrollbar-width:thin;
+      scrollbar-color:var(--border) transparent;
+      margin:16px;
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  const box = document.getElementById('detail-modal-box');
+  const dateLabel = new Date(record.record_date).toLocaleDateString('he-IL',{year:'numeric',month:'long'});
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;border-radius:16px 16px 0 0">
+      <div style="font-size:.95rem;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px">${ICONS_JS.calendar} ${dateLabel}</div>
+      <button onclick="closeDetailModal()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="detail-modal-content" style="padding:4px 0 20px"></div>`;
+  const tmp = document.createElement('div');
+  tmp.id = 'history-detail';
+  document.getElementById('detail-modal-content').appendChild(tmp);
+  renderDetailCard(record);
+}
+
+function closeDetailModal() {
+  const o = document.getElementById('detail-modal-overlay');
+  if (o) o.style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function renderDetailCard(record) {
@@ -4331,9 +4416,9 @@ function openCatHistory(catKey, catLabel) {
   title.innerHTML = `${ICONS_JS.trending} <span>${catLabel}</span> ${instHtml}`;
 
   const sorted = [...records].sort((a,b) => new Date(a.record_date)-new Date(b.record_date));
-  const last12 = sorted.slice(-13);
+  const allRecords = sorted; // show all months
 
-  if (last12.length < 2) {
+  if (allRecords.length < 2) {
     body.innerHTML = '<div style="text-align:center;color:var(--ink-4);font-size:.875rem;padding:24px 0">אין מספיק נתונים היסטוריים</div>';
     document.getElementById('cat-history-insights').innerHTML = '';
     panel.style.display = 'flex';
@@ -4341,7 +4426,7 @@ function openCatHistory(catKey, catLabel) {
   }
 
   const labels = [], values = [];
-  last12.forEach(r => {
+  allRecords.forEach(r => {
     labels.push(new Date(r.record_date).toLocaleDateString('he-IL', { month: 'short', year: '2-digit' }));
     values.push(isMortgage ? (r.mortgage_balance || 0) : ((r.values || {})[catKey] || 0));
   });
@@ -4452,13 +4537,15 @@ function openCatHistory(catKey, catLabel) {
   }
 
   let rows = '';
-  for (let i = last12.length - 1; i >= 1; i--) {
-    const cur  = last12[i], prev = last12[i-1];
+  for (let i = allRecords.length - 1; i >= 0; i--) {
+    const cur  = allRecords[i], prev = i > 0 ? allRecords[i-1] : null;
     const curVal  = isMortgage ? (cur.mortgage_balance||0)  : ((cur.values||{})[catKey]||0);
-    const prevVal = isMortgage ? (prev.mortgage_balance||0) : ((prev.values||{})[catKey]||0);
+    const prevVal = prev ? (isMortgage ? (prev.mortgage_balance||0) : ((prev.values||{})[catKey]||0)) : null;
     const dateLabel = new Date(cur.record_date).toLocaleDateString('he-IL', { year:'numeric', month:'long' });
     let deltaHtml = '';
-    if (prevVal > 0) {
+    if (prevVal === null) {
+      deltaHtml = `<span style="font-size:.78rem;color:var(--ink-4)">—</span>`;
+    } else if (prevVal > 0) {
       const delta = curVal - prevVal;
       const pct   = (delta/prevVal*100).toFixed(1);
       const pos   = isMortgage ? delta<=0 : delta>=0;
@@ -4476,7 +4563,7 @@ function openCatHistory(catKey, catLabel) {
     <div class="chb-hist-row chb-hist-row-edit"
       data-record-id="${cur.id}"
       data-cur-val="${curVal}"
-      data-prev-val="${prevVal}"
+      data-prev-val="${prevVal ?? 0}"
       ${hoverAttrs}
       ${!isMortgage ? `
         data-cat-id="${cat?.id||''}"

@@ -408,7 +408,13 @@ select option{background:var(--surface)}
 .submit-btn:active{transform:scale(.98)}
 
 /* ══ HISTORY DETAIL ═══════════════════════════════════ */
-#history-detail{animation:fadeUp .25s ease both}
+#history-detail { display: none !important; }
+.mobile-hidden  { display: none; }
+.desktop-hidden { display: flex; }
+@media (min-width: 768px) {
+  .mobile-hidden  { display: block; }
+  .desktop-hidden { display: none; }
+}
 .hd-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-md);overflow:hidden}
 .hd-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}
 .hd-date{font-size:.875rem;font-weight:700;color:var(--green)}

@@ -479,7 +479,7 @@ function renderInstDropdownList(filter = '') {
 
   const groups = { bank:'בנקים', pension:'פנסיה וביטוח', invest:'השקעות', savings:'חסכון' };
   let html = `<div onclick="selectInstDropdown('','')" style="padding:9px 14px;font-size:.82rem;color:var(--ink-4);cursor:pointer;border-bottom:1px solid var(--border)"
-    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">ללא גוף מנהל</div>`;
+    >ללא גוף מנהל</div>`;
 
   Object.entries(groups).forEach(([type, label]) => {
     const items = allInsts.filter(i => i.type === type && (!filter || i.name.includes(filter)));
@@ -495,13 +495,13 @@ function renderInstDropdownList(filter = '') {
       html += `<div data-inst-id="${inst.id}" data-inst-name="${inst.name.replace(/"/g,'&quot;')}"
         onclick="selectInstDropdown(this.dataset.instId,this.dataset.instName)"
         style="padding:9px 14px;font-size:.85rem;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)"
-        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${logo}${inst.name}${delBtn}</div>`;
+        ${window.matchMedia('(hover: hover)').matches ? 'onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'"' : ''}>${logo}${inst.name}${delBtn}</div>`;
     });
   });
 
   // Add custom institution button at bottom
   html += `<div onclick="showAddCustomInst()" style="padding:11px 14px;font-size:.85rem;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1.5px solid var(--border)"
-    onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+    ${window.matchMedia('(hover: hover)').matches ? 'onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'"' : ''}>
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     הוסף גוף מנהל חדש
   </div>`;
@@ -680,7 +680,7 @@ function renderCatNameDropdownList(filter = '') {
     <div data-label="${item.label.replace(/"/g,'&quot;')}" data-type="${item.type}"
       onclick="selectCatName(this.dataset.label,this.dataset.type)"
       style="padding:10px 16px;font-size:.875rem;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border);direction:rtl"
-      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+>
       ${item.label}
     </div>`).join('');
   });
@@ -730,7 +730,7 @@ function renderCatNameModalList(filter) {
       <div data-label="${item.label.replace(/"/g,'&quot;')}" data-type="${item.type}"
         onclick="selectCatName(this.dataset.label,this.dataset.type)"
         style="padding:12px 16px;font-size:.88rem;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border);direction:rtl"
-        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+>
         ${item.label}
       </div>`).join('');
   });

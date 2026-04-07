@@ -4963,7 +4963,11 @@ function openAddCatFromMain() {
   }, 60);
 }
 
+let _lastTouchTime = 0;
+document.addEventListener('touchstart', () => { _lastTouchTime = Date.now(); }, { passive: true });
+
 function highlightChartPoint(idx) {
+  if (Date.now() - _lastTouchTime < 500) return; // ignore mouseenter fired by iOS touch
   if (!catHistoryChart) return;
   catHistoryChart.setActiveElements([{datasetIndex:0, index:idx}]);
   catHistoryChart.update('none');

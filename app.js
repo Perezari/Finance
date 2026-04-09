@@ -2440,6 +2440,14 @@ const COLOR_THEMES = [
   { id:'purple', label:'סגול',  primary:'#8b5cf6', mid:'#a78bfa', dark:'#6d28d9', light:'rgba(139,92,246,.12)', glow:'rgba(139,92,246,.18)', shadowSm:'0 4px 14px rgba(139,92,246,.5)', shadow:'0 6px 24px rgba(139,92,246,.25)' },
   { id:'rose',   label:'ורוד',  primary:'#f43f5e', mid:'#fb7185', dark:'#be123c', light:'rgba(244,63,94,.12)',  glow:'rgba(244,63,94,.18)',  shadowSm:'0 4px 14px rgba(244,63,94,.5)',  shadow:'0 6px 24px rgba(244,63,94,.25)'  },
   { id:'amber',  label:'זהב',   primary:'#f59e0b', mid:'#fbbf24', dark:'#b45309', light:'rgba(245,158,11,.12)', glow:'rgba(245,158,11,.18)', shadowSm:'0 4px 14px rgba(245,158,11,.5)', shadow:'0 6px 24px rgba(245,158,11,.25)' },
+  { id:'mocha',      label:'מוקה',       primary:'#9c6b4e', mid:'#b5856a', dark:'#75502a', light:'rgba(156,107,78,.12)',  glow:'rgba(156,107,78,.18)',  shadowSm:'0 4px 14px rgba(156,107,78,.5)',  shadow:'0 6px 24px rgba(156,107,78,.25)'  },
+  { id:'sand',       label:'חול',        primary:'#c8a26a', mid:'#d9bb8e', dark:'#a07842', light:'rgba(200,162,106,.12)', glow:'rgba(200,162,106,.18)', shadowSm:'0 4px 14px rgba(200,162,106,.5)', shadow:'0 6px 24px rgba(200,162,106,.25)' },
+  { id:'slate',      label:'פלדה',       primary:'#6c8eae', mid:'#8aaac8', dark:'#4d6e8c', light:'rgba(108,142,174,.12)', glow:'rgba(108,142,174,.18)', shadowSm:'0 4px 14px rgba(108,142,174,.5)', shadow:'0 6px 24px rgba(108,142,174,.25)' },
+  { id:'terracotta', label:'טרקוטה',     primary:'#c0614a', mid:'#d4806c', dark:'#963d2a', light:'rgba(192,97,74,.12)',  glow:'rgba(192,97,74,.18)',  shadowSm:'0 4px 14px rgba(192,97,74,.5)',  shadow:'0 6px 24px rgba(192,97,74,.25)'  },
+  { id:'sage',       label:'מרווה',      primary:'#6a9e78', mid:'#88b894', dark:'#4a7a58', light:'rgba(106,158,120,.12)', glow:'rgba(106,158,120,.18)', shadowSm:'0 4px 14px rgba(106,158,120,.5)', shadow:'0 6px 24px rgba(106,158,120,.25)' },
+  { id:'midnight',   label:'חצות',      primary:'#5c6bc0', mid:'#7986cb', dark:'#3949ab', light:'rgba(92,107,192,.12)',  glow:'rgba(92,107,192,.18)',  shadowSm:'0 4px 14px rgba(92,107,192,.5)',  shadow:'0 6px 24px rgba(92,107,192,.25)'  },
+  { id:'rosegold',   label:'זהב ורדרד', primary:'#c27080', mid:'#d4909e', dark:'#9a4d5e', light:'rgba(194,112,128,.12)', glow:'rgba(194,112,128,.18)', shadowSm:'0 4px 14px rgba(194,112,128,.5)', shadow:'0 6px 24px rgba(194,112,128,.25)' },
+  { id:'olive',      label:'זית',        primary:'#7d9240', mid:'#97ac5a', dark:'#5d6e2c', light:'rgba(125,146,64,.12)',  glow:'rgba(125,146,64,.18)',  shadowSm:'0 4px 14px rgba(125,146,64,.5)',  shadow:'0 6px 24px rgba(125,146,64,.25)'  },
 ];
 
 function applyColorTheme(themeId) {

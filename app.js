@@ -2435,19 +2435,23 @@ function exportExcel() {
 
 /* ══ COLOR THEMES ════════════════════════════════════ */
 const COLOR_THEMES = [
-  { id:'green',  label:'ירוק',  primary:'#0e9e7e', dark:'#0a7a62', light:'rgba(14,158,126,.12)' },
-  { id:'blue',   label:'כחול',  primary:'#3b82f6', dark:'#1d4ed8', light:'rgba(59,130,246,.12)' },
-  { id:'purple', label:'סגול',  primary:'#8b5cf6', dark:'#6d28d9', light:'rgba(139,92,246,.12)' },
-  { id:'rose',   label:'ורוד',  primary:'#f43f5e', dark:'#be123c', light:'rgba(244,63,94,.12)'  },
-  { id:'amber',  label:'זהב',   primary:'#f59e0b', dark:'#b45309', light:'rgba(245,158,11,.12)' },
+  { id:'green',  label:'ירוק',  primary:'#0e9e7e', mid:'#13b891', dark:'#0a7a62', light:'rgba(14,158,126,.12)',  glow:'rgba(14,158,126,.18)',  shadowSm:'0 4px 14px rgba(14,158,126,.5)',  shadow:'0 6px 24px rgba(14,158,126,.25)' },
+  { id:'blue',   label:'כחול',  primary:'#3b82f6', mid:'#60a5fa', dark:'#1d4ed8', light:'rgba(59,130,246,.12)', glow:'rgba(59,130,246,.18)', shadowSm:'0 4px 14px rgba(59,130,246,.5)', shadow:'0 6px 24px rgba(59,130,246,.25)' },
+  { id:'purple', label:'סגול',  primary:'#8b5cf6', mid:'#a78bfa', dark:'#6d28d9', light:'rgba(139,92,246,.12)', glow:'rgba(139,92,246,.18)', shadowSm:'0 4px 14px rgba(139,92,246,.5)', shadow:'0 6px 24px rgba(139,92,246,.25)' },
+  { id:'rose',   label:'ורוד',  primary:'#f43f5e', mid:'#fb7185', dark:'#be123c', light:'rgba(244,63,94,.12)',  glow:'rgba(244,63,94,.18)',  shadowSm:'0 4px 14px rgba(244,63,94,.5)',  shadow:'0 6px 24px rgba(244,63,94,.25)'  },
+  { id:'amber',  label:'זהב',   primary:'#f59e0b', mid:'#fbbf24', dark:'#b45309', light:'rgba(245,158,11,.12)', glow:'rgba(245,158,11,.18)', shadowSm:'0 4px 14px rgba(245,158,11,.5)', shadow:'0 6px 24px rgba(245,158,11,.25)' },
 ];
 
 function applyColorTheme(themeId) {
   const theme = COLOR_THEMES.find(t => t.id === themeId) || COLOR_THEMES[0];
   const root  = document.documentElement;
-  root.style.setProperty('--green',       theme.primary);
-  root.style.setProperty('--green-dark',  theme.dark);
-  root.style.setProperty('--green-light', theme.light);
+  root.style.setProperty('--green',          theme.primary);
+  root.style.setProperty('--green-mid',      theme.mid);
+  root.style.setProperty('--green-dark',     theme.dark);
+  root.style.setProperty('--green-light',    theme.light);
+  root.style.setProperty('--green-glow',     theme.glow);
+  root.style.setProperty('--green-shadow-sm',theme.shadowSm);
+  root.style.setProperty('--shadow-green',   theme.shadow);
   localStorage.setItem('color_theme_v1', themeId);
   // Sync to Supabase
   if (currentUser) db.auth.updateUser({ data: { color_theme: themeId } });

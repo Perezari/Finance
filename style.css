@@ -2379,59 +2379,93 @@ input[type="date"]::-webkit-date-and-time-value {
   #cat-name-list > div:hover { background: var(--surface2); }
 }
 
-/* ══ COSMIC ORB — כפתור הוספה בנב' מובייל ═══════════════ */
-@keyframes cosmicFlow {
-  0%   { background-position: 20% 30%; }
-  25%  { background-position: 82% 18%; }
-  50%  { background-position: 68% 82%; }
-  75%  { background-position: 14% 72%; }
-  100% { background-position: 20% 30%; }
+/* ══ COSMIC ORB — מבוסס על הקוד שסיפקת ═══════════════════
+
+   3 שכבות כמו המקור:
+   ─ ::before  — טבעת conic-gradient מסתובבת, blur, z-index:-1
+   ─ ::after   — שכבת זכוכית, בהק לבן עדין בחלק העליון
+   ─ background — ספירת זכוכית כהה עם עומק (radial-gradient)
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes cosmicSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes orbPulse {
+  0%,100% { transform: scale(1);    filter: brightness(1);    }
+  50%      { transform: scale(1.05); filter: brightness(1.25); }
 }
 
 @media (max-width:768px) {
-  /* מייצב את ה-nav עצמו — מונע תת-פיקסל shift בלחיצות */
   .bottom-nav { will-change: transform; }
 
   .bottom-nav-add {
-    background-color: #02040c !important;
-    background-image:
-      radial-gradient(ellipse 88% 72% at 24% 34%, var(--green) 0%, transparent 58%),
-      radial-gradient(ellipse 72% 88% at 76% 66%, rgba(108,50,234,.9) 0%, transparent 56%),
-      radial-gradient(ellipse 52% 38% at 56% 11%, rgba(142,212,255,.66) 0%, transparent 52%),
-      radial-gradient(ellipse 92% 70% at 7%  91%, rgba(4,14,102,.96)   0%, transparent 67%),
-      radial-gradient(ellipse 60% 52% at 84% 22%, rgba(182,68,242,.56) 0%, transparent 55%) !important;
-    background-size: 280% 280% !important;
-    background-repeat: no-repeat !important;
-    animation: cosmicFlow 18s ease-in-out infinite;
+    /* ספירת זכוכית כהה — כמו המקור אבל 48px */
+    background: radial-gradient(circle at 50% 35%,
+      rgba(255,255,255,.12),
+      rgba(0,0,0,.88) 70%) !important;
     border-radius: 50% !important;
     overflow: hidden;
     position: relative;
+    animation: orbPulse 3s ease-in-out infinite;
     box-shadow:
-      0 0 0 1.5px var(--green-glow),
-      0 0 16px var(--green-glow),
-      0 0 38px var(--green-glow),
-      0 6px 22px rgba(0,0,0,.55);
-    transition: transform .18s, box-shadow .2s;
+      0 0 10px rgba(120,70,255,.50),
+      0 0 22px rgba(0,200,255,.35),
+      inset 0 0 10px rgba(255,255,255,.10);
+    transition: transform .14s ease-out, box-shadow .2s;
   }
 
-  /* אין pseudo-elements — SVG ילד flex רגיל, לא זזה */
-  .bottom-nav-add::before,
-  .bottom-nav-add::after { display: none !important; }
+  /* טבעת האור הקוניקלית המסתובבת */
+  .bottom-nav-add::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: conic-gradient(
+      #ff00e6,
+      #7d00ff,
+      #0043ff,
+      #00f2ff,
+      #00ffcc,
+      #ff00e6
+    );
+    filter: blur(7px);
+    z-index: -1;
+    animation: cosmicSpin 6s linear infinite;
+  }
 
+  /* שכבת זכוכית — בהק לבן עדין בחלק העליון */
+  .bottom-nav-add::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 26%,
+      rgba(255,255,255,.24),
+      rgba(255,255,255,0) 55%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* ה-+ — מעל הכל, GPU layer עצמאי */
   .bottom-nav-add > svg {
+    z-index: 2;
     stroke: #fff;
-    filter: drop-shadow(0 0 5px rgba(255,255,255,.9));
+    filter:
+      drop-shadow(0 0 5px rgba(255,255,255,.92))
+      drop-shadow(0 0 10px rgba(0,200,255,.65));
     flex-shrink: 0;
+    transform: translateZ(0);
   }
 
   .bottom-nav-add:hover {
     box-shadow:
-      0 0 0 2px var(--green-glow),
-      0 0 26px var(--green-glow),
-      0 0 55px var(--green-glow),
-      0 6px 22px rgba(0,0,0,.4);
+      0 0 18px rgba(120,70,255,.70),
+      0 0 38px rgba(0,200,255,.50),
+      inset 0 0 14px rgba(255,255,255,.15);
   }
-  .bottom-nav-add:active { transform: scale(.92); }
+  .bottom-nav-add:active { transform: scale(.92) !important; }
 
-  [data-nav="classic"] .bottom-nav-add { background-size: 240% 240% !important; }
+  [data-nav="classic"] .bottom-nav-add { /* ירש את כל הסגנונות */ }
 }

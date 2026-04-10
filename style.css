@@ -525,18 +525,32 @@ select option{background:var(--surface)}
     transform: translateX(-50%);
     bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
     width: auto;
-    height: 60px;
-    padding: 0 8px;
+    height: 64px;
+    padding: 0 10px;
     gap: 0;
-    background: rgba(18,21,28,.55);
-    backdrop-filter: blur(30px) saturate(1.8);
-    -webkit-backdrop-filter: blur(30px) saturate(1.8);
-    border: 1px solid rgba(255,255,255,.11);
+    /* זכוכית בהירה — light mode */
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(28px) saturate(2.2);
+    -webkit-backdrop-filter: blur(28px) saturate(2.2);
+    border: 1px solid rgba(255,255,255,.9);
     border-radius: 100px;
-    box-shadow: 0 12px 36px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.1);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,.12),
+      0 2px 8px  rgba(0,0,0,.06),
+      inset 0 1px 0 rgba(255,255,255,.95);
     z-index: 100;
     align-items: center;
     justify-content: center;
+    will-change: transform;
+  }
+  /* dark mode — זכוכית כהה */
+  [data-theme="dark"] .bottom-nav {
+    background: rgba(24,27,36,.72);
+    border-color: rgba(255,255,255,.10);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,.45),
+      0 2px 8px  rgba(0,0,0,.25),
+      inset 0 1px 0 rgba(255,255,255,.08);
   }
 
   /* ── CLASSIC NAV ── */
@@ -603,8 +617,11 @@ select option{background:var(--surface)}
     transition: transform .2s;
   }
   .bottom-nav-item .nav-icon svg {
-    stroke: rgba(255,255,255,.38);
+    stroke: rgba(0,0,0,.35);         /* light mode — כהה עדין */
     transition: stroke .2s, stroke-width .2s;
+  }
+  [data-theme="dark"] .bottom-nav-item .nav-icon svg {
+    stroke: rgba(255,255,255,.38);   /* dark mode — בהיר עדין */
   }
   .bottom-nav-item.active .nav-icon svg {
     stroke: var(--green);
@@ -613,7 +630,8 @@ select option{background:var(--surface)}
   .bottom-nav-item.active .nav-icon {
     transform: translateY(-1px);
   }
-  .bottom-nav-item:hover .nav-icon svg { stroke: rgba(255,255,255,.65); }
+  .bottom-nav-item:hover .nav-icon svg { stroke: rgba(0,0,0,.65); }
+  [data-theme="dark"] .bottom-nav-item:hover .nav-icon svg { stroke: rgba(255,255,255,.65); }
   .bnav-dot {
     width: 4px;
     height: 4px;
@@ -1524,7 +1542,11 @@ select option{background:var(--surface)}
 
 /* Bottom nav SVG */
 .bottom-nav-item .nav-icon { display: flex; align-items: center; justify-content: center; }
-.bottom-nav-item .nav-icon svg { width: 20px; height: 20px; stroke: rgba(255,255,255,.5); transition: stroke .18s; }
+.bottom-nav-item .nav-icon svg { width: 20px; height: 20px; stroke: rgba(0,0,0,.32); transition: stroke .18s; }
+[data-theme="dark"] .bottom-nav-item .nav-icon svg { stroke: rgba(255,255,255,.5); }
+.bottom-nav-item.active .nav-icon svg { stroke: var(--green); }
+.bottom-nav-item:hover .nav-icon svg { stroke: rgba(0,0,0,.65); }
+[data-theme="dark"] .bottom-nav-item:hover .nav-icon svg { stroke: rgba(255,255,255,.8); }
 .bottom-nav-item.active .nav-icon svg { stroke: #fff; stroke-width: 2.2; }
 .bottom-nav-item:hover .nav-icon svg { stroke: rgba(255,255,255,.8); }
 
@@ -2379,93 +2401,76 @@ input[type="date"]::-webkit-date-and-time-value {
   #cat-name-list > div:hover { background: var(--surface2); }
 }
 
-/* ══ COSMIC ORB — מבוסס על הקוד שסיפקת ═══════════════════
-
-   3 שכבות כמו המקור:
-   ─ ::before  — טבעת conic-gradient מסתובבת, blur, z-index:-1
-   ─ ::after   — שכבת זכוכית, בהק לבן עדין בחלק העליון
-   ─ background — ספירת זכוכית כהה עם עומק (radial-gradient)
-   ═══════════════════════════════════════════════════════ */
-
-@keyframes cosmicSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-@keyframes orbPulse {
-  0%,100% { transform: scale(1);    filter: brightness(1);    }
-  50%      { transform: scale(1.05); filter: brightness(1.25); }
+/* ══ PILL BUTTON — כפתור הוספה מובייל ═══════════════════ */
+@keyframes pillPulse {
+  0%,100% { box-shadow:
+    0 0 0 0 var(--green-glow),
+    0 6px 20px var(--green-shadow-sm, rgba(14,158,126,.45)); }
+  50% { box-shadow:
+    0 0 0 6px transparent,
+    0 6px 28px var(--green-shadow-sm, rgba(14,158,126,.55)); }
 }
 
 @media (max-width:768px) {
-  .bottom-nav { will-change: transform; }
-
+  /* כפתור ה-+ — pill סגלגל */
   .bottom-nav-add {
-    /* ספירת זכוכית כהה — כמו המקור אבל 48px */
-    background: radial-gradient(circle at 50% 35%,
-      rgba(255,255,255,.12),
-      rgba(0,0,0,.88) 70%) !important;
-    border-radius: 50% !important;
-    overflow: hidden;
-    position: relative;
-    animation: orbPulse 3s ease-in-out infinite;
+    flex: 0 0 auto !important;
+    width: 72px !important;
+    height: 44px !important;
+    border-radius: 100px !important;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* gradient מהגוון הנבחר */
+    background: linear-gradient(145deg,
+      var(--green-mid),
+      var(--green),
+      var(--green-dark)) !important;
+    /* ניצוץ זכוכית */
     box-shadow:
-      0 0 10px rgba(120,70,255,.50),
-      0 0 22px rgba(0,200,255,.35),
-      inset 0 0 10px rgba(255,255,255,.10);
-    transition: transform .14s ease-out, box-shadow .2s;
+      0 6px 20px var(--green-shadow-sm, rgba(14,158,126,.45)),
+      inset 0 1px 0 rgba(255,255,255,.28),
+      inset 0 -1px 0 rgba(0,0,0,.12);
+    animation: pillPulse 3.2s ease-in-out infinite;
+    transition: transform .15s, filter .15s;
+    margin: 0 4px;
+    overflow: visible !important;
+    position: relative;
   }
 
-  /* טבעת האור הקוניקלית המסתובבת */
+  /* light-flare — ניצוץ לבן עדין בחלק העליון */
   .bottom-nav-add::before {
     content: '';
     position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    background: conic-gradient(
-      #ff00e6,
-      #7d00ff,
-      #0043ff,
-      #00f2ff,
-      #00ffcc,
-      #ff00e6
-    );
-    filter: blur(7px);
-    z-index: -1;
-    animation: cosmicSpin 6s linear infinite;
-  }
-
-  /* שכבת זכוכית — בהק לבן עדין בחלק העליון */
-  .bottom-nav-add::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 26%,
-      rgba(255,255,255,.24),
-      rgba(255,255,255,0) 55%);
-    z-index: 1;
+    top: 3px; left: 12px; right: 12px;
+    height: 40%;
+    border-radius: 100px;
+    background: linear-gradient(to bottom,
+      rgba(255,255,255,.32),
+      rgba(255,255,255,0));
     pointer-events: none;
   }
+  .bottom-nav-add::after { display: none !important; }
 
-  /* ה-+ — מעל הכל, GPU layer עצמאי */
   .bottom-nav-add > svg {
-    z-index: 2;
     stroke: #fff;
-    filter:
-      drop-shadow(0 0 5px rgba(255,255,255,.92))
-      drop-shadow(0 0 10px rgba(0,200,255,.65));
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,.25));
     flex-shrink: 0;
-    transform: translateZ(0);
+    position: relative;
+    z-index: 1;
   }
 
-  .bottom-nav-add:hover {
-    box-shadow:
-      0 0 18px rgba(120,70,255,.70),
-      0 0 38px rgba(0,200,255,.50),
-      inset 0 0 14px rgba(255,255,255,.15);
+  .bottom-nav-add:active {
+    transform: scale(.93);
+    filter: brightness(.92);
+    animation: none;
   }
-  .bottom-nav-add:active { transform: scale(.92) !important; }
 
-  [data-nav="classic"] .bottom-nav-add { /* ירש את כל הסגנונות */ }
+  /* classic nav — pill קטן יותר */
+  [data-nav="classic"] .bottom-nav-add {
+    width: 64px !important;
+    height: 40px !important;
+  }
 }

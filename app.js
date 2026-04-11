@@ -512,24 +512,24 @@ function renderInstDropdownList(filter = '') {
 function showAddCustomInst() {
   document.getElementById('inst-modal').style.display = 'none';
   document.getElementById('add-custom-inst-modal')?.remove();
-
   const modal = document.createElement('div');
   modal.id = 'add-custom-inst-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px';
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '1002';
   modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r-xl);width:100%;max-width:360px;box-shadow:var(--shadow-lg);animation:fadeUp .22s ease">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
-        <span style="font-size:.95rem;font-weight:700;color:var(--ink)">הוסף גוף מנהל חדש</span>
-        <button onclick="document.getElementById('add-custom-inst-modal').remove()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);display:flex">${ICONS_JS.x}</button>
+    <div class="modal-box" style="direction:rtl">
+      <div class="chb-header">
+        <div class="chb-title">${ICONS_JS.bank} הוסף גוף מנהל חדש</div>
+        <button onclick="document.getElementById('add-custom-inst-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
       </div>
-      <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px">
+      <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 18px 8px;flex:1;display:flex;flex-direction:column;gap:16px">
         <div>
-          <label style="font-size:.78rem;color:var(--ink-3);font-weight:600;display:block;margin-bottom:5px">שם הגוף המנהל</label>
+          <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">שם הגוף המנהל</div>
           <input type="text" id="custom-inst-name" class="form-input" placeholder="למשל: בית השקעות XYZ" style="direction:rtl;text-align:right;width:100%"/>
         </div>
         <div>
-          <label style="font-size:.78rem;color:var(--ink-3);font-weight:600;display:block;margin-bottom:5px">קטגוריה</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">קטגוריה</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <button type="button" class="cat-type-btn" data-insttype="bank"    onclick="selectInstType('bank')">בנקים</button>
             <button type="button" class="cat-type-btn" data-insttype="pension" onclick="selectInstType('pension')">פנסיה וביטוח</button>
             <button type="button" class="cat-type-btn" data-insttype="invest"  onclick="selectInstType('invest')">השקעות</button>
@@ -538,14 +538,17 @@ function showAddCustomInst() {
           <input type="hidden" id="custom-inst-type" value=""/>
         </div>
         <div>
-          <label style="font-size:.78rem;color:var(--ink-3);font-weight:600;display:block;margin-bottom:5px">כתובת אתר (לצורך לוגו)</label>
+          <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">כתובת אתר <span style="font-weight:400;color:var(--ink-4)">(לצורך לוגו)</span></div>
           <input type="text" id="custom-inst-domain" class="form-input" placeholder="example.co.il" style="direction:ltr;text-align:left;width:100%" oninput="previewCustomInstLogo()"/>
         </div>
         <div id="custom-inst-logo-preview" style="display:none;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--r-xs)">
           <img id="custom-inst-logo-img" width="32" height="32" style="border-radius:6px;object-fit:contain"/>
           <span id="custom-inst-logo-label" style="font-size:.82rem;color:var(--ink-3)">תצוגה מקדימה</span>
         </div>
-        <button onclick="saveCustomInst()" class="submit-btn" style="margin-top:4px">הוסף גוף מנהל</button>
+      </div>
+      <div style="display:flex;gap:8px;padding:14px 18px 18px;border-top:1px solid var(--border);flex-shrink:0">
+        <button class="cat-edit-save-btn" style="flex:1" onclick="saveCustomInst()">${ICONS_JS.plus} הוסף גוף מנהל</button>
+        <button class="cat-edit-cancel-btn" style="min-width:72px" onclick="document.getElementById('add-custom-inst-modal').remove()">ביטול</button>
       </div>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
@@ -739,23 +742,162 @@ function renderCatNameModalList(filter) {
 
 function filterCatNameModal(q) { renderCatNameModalList(q); }
 
+let catEditTargetId = null;
+
 function selectCatName(label, type) {
   document.getElementById('cat-name-modal')?.remove();
+
+  /* ── מצב עריכת קטגוריה קיימת ── */
+  if (catEditTargetId) {
+    const tid = catEditTargetId;
+    catEditTargetId = null;
+    if (type === 'custom') return;
+    const labelInput = document.getElementById(`cat-edit-label-${tid}`);
+    if (labelInput) labelInput.value = label;
+    const typeBtn = document.getElementById(`cat-edit-type-btn-${tid}`);
+    if (typeBtn) typeBtn.querySelector('span').textContent = label;
+    return;
+  }
+
   document.getElementById('cat-name-dropdown-label').textContent = label;
   document.getElementById('cat-name-dropdown-label').style.color = 'var(--ink)';
   document.getElementById('new-cat-type').value = type === 'custom' ? '' : type;
   const customField = document.getElementById('new-cat-label');
   if (type === 'custom') {
-    customField.style.display = 'block';
-    customField.value = '';
-    customField.focus();
-    customField.dataset.customType = '';
-    document.getElementById('cat-custom-type-wrap').style.display = 'grid';
+    /* פתח מודל מלא לקטגוריה מותאמת */
+    showCustomCatModal();
   } else {
     customField.style.display = 'none';
     customField.value = label;
     document.getElementById('cat-custom-type-wrap') && (document.getElementById('cat-custom-type-wrap').style.display = 'none');
   }
+}
+
+function openCatTypeForEdit(id) {
+  catEditTargetId = id;
+  document.getElementById('cat-name-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'cat-name-modal';
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '1002';
+  modal.onclick = e => { if (e.target === modal) { catEditTargetId = null; modal.remove(); } };
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>${ICONS_JS.note} בחר סוג חשבון / נכס</h2>
+        <button onclick="catEditTargetId=null;document.getElementById('cat-name-modal').remove()" class="modal-close">${ICONS_JS.x}</button>
+      </div>
+      <div class="modal-body" style="padding:12px 16px 32px;">
+        <input type="text" id="cat-name-search" placeholder="חפש קטגוריה..." class="form-input"
+          style="width:100%;margin-bottom:12px;direction:rtl;text-align:right"
+          oninput="filterCatNameModal(this.value)"/>
+        <div id="cat-name-modal-list"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  renderCatNameModalList('');
+  setTimeout(() => document.getElementById('cat-name-search')?.focus(), 80);
+}
+
+function showCustomCatModal() {
+  document.getElementById('custom-cat-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'custom-cat-modal';
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '1002';
+  modal.innerHTML = `
+    <div class="modal-box" style="direction:rtl">
+      <div class="chb-header">
+        <div class="chb-title">${ICONS_JS.plus} קטגוריה מותאמת אישית</div>
+        <button onclick="document.getElementById('custom-cat-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+      <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 18px 8px;flex:1;display:flex;flex-direction:column;gap:18px">
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">שם הקטגוריה</div>
+          <input type="text" id="ccm-label" placeholder='לדוגמה: נכס נדל"ן, קרן פרטית...'
+            class="form-input" style="width:100%;direction:rtl;text-align:right"/>
+        </div>
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">סוג קטגוריה</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button type="button" class="cat-type-btn ccm-type-btn" data-type="liquid" onclick="ccmSelectType('liquid')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>נזיל
+            </button>
+            <button type="button" class="cat-type-btn ccm-type-btn" data-type="savings" onclick="ccmSelectType('savings')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>בנק / חיסכון
+            </button>
+            <button type="button" class="cat-type-btn ccm-type-btn" data-type="pension" onclick="ccmSelectType('pension')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>פנסיוני
+            </button>
+            <button type="button" class="cat-type-btn ccm-type-btn" data-type="invest" onclick="ccmSelectType('invest')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>השקעות
+            </button>
+          </div>
+          <div id="ccm-type-err" style="display:none;font-size:.75rem;color:var(--red);margin-top:6px">נא לבחור סוג קטגוריה</div>
+        </div>
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">גוף מנהל <span style="font-weight:400;color:var(--ink-4)">(אופציונלי)</span></div>
+          <div id="ccm-inst-display" onclick="ccmOpenInst()"
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);cursor:pointer;transition:border-color .18s">
+            <span id="ccm-inst-label" style="color:var(--ink-4);flex:1;font-size:.875rem">${ICONS_JS.bank}&nbsp; בחר גוף מנהל</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <input type="hidden" id="ccm-inst-id" value=""/>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:14px 18px 18px;border-top:1px solid var(--border);flex-shrink:0">
+        <button class="cat-edit-save-btn" style="flex:1" onclick="confirmCustomCat()">${ICONS_JS.plus} הוסף קטגוריה</button>
+        <button class="cat-edit-cancel-btn" style="min-width:72px" onclick="document.getElementById('custom-cat-modal').remove()">ביטול</button>
+      </div>
+    </div>`;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('ccm-label')?.focus(), 80);
+}
+
+function ccmSelectType(type) {
+  document.querySelectorAll('.ccm-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.type === type));
+  document.getElementById('custom-cat-modal').dataset.type = type;
+  document.getElementById('ccm-type-err').style.display = 'none';
+}
+
+function ccmOpenInst() {
+  instTargetCatId = '__ccm__';
+  instTargetMode  = 'ccm';
+  renderInstGrid(INSTITUTIONS);
+  const el = document.getElementById('inst-modal');
+  el.style.display = 'flex';
+  el.style.zIndex  = '1003';
+  document.getElementById('inst-search').value = '';
+}
+
+function ccmSetInst(instId) {
+  document.getElementById('ccm-inst-id').value = instId || '';
+  const inst  = instId ? getInstitution(instId) : null;
+  const label = document.getElementById('ccm-inst-label');
+  if (inst) {
+    label.innerHTML = `<img src="${logoUrl(inst.domain)}" width="18" height="18" style="border-radius:4px;object-fit:contain;margin-left:6px"/><span style="color:var(--ink);font-weight:600">${inst.name}</span>`;
+  } else {
+    label.innerHTML = `${ICONS_JS.bank}&nbsp; בחר גוף מנהל`;
+    label.style.color = 'var(--ink-4)';
+  }
+}
+
+async function confirmCustomCat() {
+  const label  = document.getElementById('ccm-label')?.value.trim();
+  const type   = document.getElementById('custom-cat-modal')?.dataset.type || '';
+  const instId = document.getElementById('ccm-inst-id')?.value || null;
+  if (!label) { document.getElementById('ccm-label')?.focus(); showToast('נא להזין שם'); return; }
+  if (!type)  { document.getElementById('ccm-type-err').style.display = 'block'; return; }
+  document.getElementById('custom-cat-modal').remove();
+  const labelField = document.getElementById('new-cat-label');
+  labelField.style.display = 'block';
+  labelField.value = label;
+  document.getElementById('new-cat-type').value = type;
+  document.getElementById('new-cat-institution').value = instId || '';
+  document.getElementById('cat-name-dropdown-label').textContent = label;
+  document.getElementById('cat-name-dropdown-label').style.color = 'var(--ink)';
+  await addCategory();
 }
 
 document.addEventListener('click', e => {
@@ -893,6 +1035,11 @@ function renderInstGrid(list) {
 }
 
 async function pickInstitution(instId) {
+  if (instTargetMode === 'ccm') {
+    closeInstModal();
+    ccmSetInst(instId || null);
+    return;
+  }
   if (instTargetMode === 'new_cat') {
     closeInstModal();
     const inst = instId ? getInstitution(instId) : null;
@@ -3154,6 +3301,17 @@ function openCatEdit(id) {
             style="direction:rtl;text-align:right;width:100%"/>
         </div>
 
+        <!-- Category type -->
+        <div style="margin-bottom:14px">
+          <div class="cf-section-header" style="margin-bottom:6px">סוג קטגוריה</div>
+          <button type="button" id="cat-edit-type-btn-${id}" onclick="openCatTypeForEdit('${id}')"
+            class="form-input"
+            style="width:100%;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface2);text-align:right">
+            <span>${cat.label}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+
         <!-- Institution -->
         <div style="margin-bottom:14px">
           <div class="cf-section-header" style="margin-bottom:8px">גוף מנהל</div>
@@ -3187,7 +3345,7 @@ function openCatEdit(id) {
             </label>
             <label style="flex:1;cursor:pointer">
               <input type="radio" name="liq-${id}" value="date" ${liqDateActive ? 'checked' : ''} style="display:none" onchange="updateLiqLabel('${id}')"/>
-              <div class="liq-opt" id="liq-date-${id}" style="${liqStyle(liqDateActive,'var(--amber,#f59e0b)','rgba(245,158,11,.1)')}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> תאריך</div>
+              <div class="liq-opt" id="liq-date-${id}" style="${liqStyle(liqDateActive,'var(--amber,#f59e0b)','rgba(245,158,11,.1)')};display:flex;align-items:center;justify-content:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>תאריך</div>
             </label>
           </div>
           <div id="liq-date-row-${id}" style="margin-top:10px;display:${liqDateActive ? 'block' : 'none'}">

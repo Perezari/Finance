@@ -555,7 +555,6 @@ function showAddCustomInst() {
   document.body.appendChild(modal);
   setTimeout(() => document.getElementById('custom-inst-name')?.focus(), 50);
 }
-
 function selectInstType(type) {
   document.getElementById('custom-inst-type').value = type;
   document.querySelectorAll('[data-insttype]').forEach(b =>
@@ -751,7 +750,12 @@ function selectCatName(label, type) {
   if (catEditTargetId) {
     const tid = catEditTargetId;
     catEditTargetId = null;
-    if (type === 'custom') return;
+    if (type === 'custom') {
+      /* מותאמת אישית בעריכה — פשוט תן למשתמש לערוך את שם הקטגוריה */
+      const labelInput = document.getElementById(`cat-edit-label-${tid}`);
+      if (labelInput) { labelInput.value = ''; labelInput.focus(); }
+      return;
+    }
     const labelInput = document.getElementById(`cat-edit-label-${tid}`);
     if (labelInput) labelInput.value = label;
     const typeBtn = document.getElementById(`cat-edit-type-btn-${tid}`);
@@ -764,7 +768,6 @@ function selectCatName(label, type) {
   document.getElementById('new-cat-type').value = type === 'custom' ? '' : type;
   const customField = document.getElementById('new-cat-label');
   if (type === 'custom') {
-    /* פתח מודל מלא לקטגוריה מותאמת */
     showCustomCatModal();
   } else {
     customField.style.display = 'none';
@@ -838,7 +841,7 @@ function showCustomCatModal() {
         <div>
           <div style="font-size:.78rem;font-weight:700;color:var(--ink-3);margin-bottom:7px">גוף מנהל <span style="font-weight:400;color:var(--ink-4)">(אופציונלי)</span></div>
           <div id="ccm-inst-display" onclick="ccmOpenInst()"
-            style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);cursor:pointer;transition:border-color .18s">
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);cursor:pointer">
             <span id="ccm-inst-label" style="color:var(--ink-4);flex:1;font-size:.875rem">${ICONS_JS.bank}&nbsp; בחר גוף מנהל</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
@@ -1035,11 +1038,7 @@ function renderInstGrid(list) {
 }
 
 async function pickInstitution(instId) {
-  if (instTargetMode === 'ccm') {
-    closeInstModal();
-    ccmSetInst(instId || null);
-    return;
-  }
+  if (instTargetMode === 'ccm') { closeInstModal(); ccmSetInst(instId||null); return; }
   if (instTargetMode === 'new_cat') {
     closeInstModal();
     const inst = instId ? getInstitution(instId) : null;

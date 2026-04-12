@@ -4163,6 +4163,40 @@ async function saveCategoryOrder() {
 }
 
 /* ── TAB SWITCH ─────────────────────────────────────── */
+/* ══ MOBILE DRAWER ══════════════════════════════════ */
+function toggleDrawer() {
+  const drawer   = document.getElementById('mobile-drawer');
+  const backdrop = document.getElementById('mobile-drawer-backdrop');
+  const isOpen   = drawer.classList.contains('open');
+  if (isOpen) closeDrawer();
+  else {
+    drawer.classList.add('open');
+    backdrop.classList.add('open');
+    updateDrawerActive();
+  }
+}
+
+function closeDrawer() {
+  document.getElementById('mobile-drawer').classList.remove('open');
+  document.getElementById('mobile-drawer-backdrop').classList.remove('open');
+}
+
+function drawerSwitch(tabName) {
+  closeDrawer();
+  setTimeout(() => {
+    const btn = document.querySelector(`[data-tab="${tabName}"]`);
+    switchTab(tabName, btn);
+  }, 120);
+}
+
+function updateDrawerActive() {
+  const currentTab = document.querySelector('.bottom-nav-item.active')?.dataset?.tab
+    || document.querySelector('.nav-item.active')?.dataset?.tab;
+  document.querySelectorAll('.drawer-nav-item[data-tab]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === currentTab);
+  });
+}
+
 function switchTab(name, btn) {
   ['current','history','retirement','portfolio','annual','calendar'].forEach(t=>{
     const p=document.getElementById(`tab-${t}`); if(p) p.style.display=t===name?'block':'none';

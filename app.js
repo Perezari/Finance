@@ -4163,39 +4163,67 @@ async function saveCategoryOrder() {
 }
 
 /* ── TAB SWITCH ─────────────────────────────────────── */
-/* ══ MOBILE DRAWER ══════════════════════════════════ */
+/* ══ MOBILE NAV DROPDOWN ════════════════════════════ */
+const NAV_ITEMS = [
+  { tab:'current',    label:'דוח נוכחי',       svg:'<rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>' },
+  { tab:'history',    label:'היסטוריה',          svg:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>' },
+  { tab:'retirement', label:'תכנון פרישה',       svg:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/>' },
+  { tab:'portfolio',  label:'תיק השקעות',        svg:'<circle cx="12" cy="12" r="10"/><path d="M12 2v10l6 3"/>' },
+  { tab:'annual',     label:'סיכום שנתי',        svg:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+  { tab:'calendar',   label:'לוח שנה פיננסי',   svg:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/>' },
+  { tab:'settings',   label:'הגדרות',            svg:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
+];
+
 function toggleDrawer() {
-  const drawer   = document.getElementById('mobile-drawer');
-  const backdrop = document.getElementById('mobile-drawer-backdrop');
-  const isOpen   = drawer.classList.contains('open');
-  if (isOpen) closeDrawer();
-  else {
-    drawer.classList.add('open');
-    backdrop.classList.add('open');
-    updateDrawerActive();
-  }
+  const dd = document.getElementById('nav-dropdown');
+  const bd = document.getElementById('nav-dropdown-backdrop');
+  if (!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  if (isOpen) { closeNavDropdown(); return; }
+
+  // current active tab
+  const activeTab = document.querySelector('.bottom-nav-item.active')?.dataset?.tab
+    || document.querySelector('.nav-item.active')?.dataset?.tab || 'current';
+
+  // position below hamburger btn
+  const btn = document.getElementById('hamburger-btn');
+  const rect = btn.getBoundingClientRect();
+
+  dd.innerHTML = NAV_ITEMS.map(item => {
+    const isSel = item.tab === activeTab;
+    const isSettings = item.tab === 'settings';
+    const onClick = isSettings
+      ? `closeNavDropdown();showSettings()`
+      : `closeNavDropdown();setTimeout(()=>switchTab('${item.tab}',document.querySelector('[data-tab=\\'${item.tab}\\']')),80)`;
+    return `<button onclick="${onClick}"
+      style="display:flex;align-items:center;gap:10px;width:100%;text-align:right;padding:9px 12px;border:none;border-radius:8px;cursor:pointer;
+        background:${isSel?'var(--green-light)':'transparent'};
+        color:${isSel?'var(--green)':'var(--ink)'};
+        font-family:var(--font);font-size:.88rem;font-weight:${isSel?'700':'500'};
+        transition:background .12s;${isSettings?'border-top:1px solid var(--border);margin-top:4px;padding-top:12px':''}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:${isSel?'1':'.6'}">${item.svg}</svg>
+      <span style="flex:1">${item.label}</span>
+      ${isSel?`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+    </button>`;
+  }).join('');
+
+  dd.style.display = 'block';
+  dd.style.top  = (rect.bottom + 6) + 'px';
+  dd.style.left = rect.left + 'px';
+  bd.style.display = 'block';
 }
 
-function closeDrawer() {
-  document.getElementById('mobile-drawer').classList.remove('open');
-  document.getElementById('mobile-drawer-backdrop').classList.remove('open');
+function closeNavDropdown() {
+  const dd = document.getElementById('nav-dropdown');
+  const bd = document.getElementById('nav-dropdown-backdrop');
+  if (dd) dd.style.display = 'none';
+  if (bd) bd.style.display = 'none';
 }
 
-function drawerSwitch(tabName) {
-  closeDrawer();
-  setTimeout(() => {
-    const btn = document.querySelector(`[data-tab="${tabName}"]`);
-    switchTab(tabName, btn);
-  }, 120);
-}
-
-function updateDrawerActive() {
-  const currentTab = document.querySelector('.bottom-nav-item.active')?.dataset?.tab
-    || document.querySelector('.nav-item.active')?.dataset?.tab;
-  document.querySelectorAll('.drawer-nav-item[data-tab]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === currentTab);
-  });
-}
+// keep old aliases for compatibility
+function closeDrawer() { closeNavDropdown(); }
+function drawerSwitch(tab) { closeNavDropdown(); setTimeout(()=>switchTab(tab, document.querySelector(`[data-tab="${tab}"]`)),80); }
+function updateDrawerActive() {}
 
 function switchTab(name, btn) {
   ['current','history','retirement','portfolio','annual','calendar'].forEach(t=>{

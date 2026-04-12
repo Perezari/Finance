@@ -1994,6 +1994,73 @@ function renderCurrentReport() {
     ${notesHtml}`;
   applyBlur();
   animateCountUps();
+  renderNextEventWidget();
+}
+
+function renderNextEventWidget() {
+  const el = document.getElementById('next-event-widget');
+  if (!el) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // collect all upcoming events (same logic as calendar tab)
+  const upcoming = [];
+  const firstRec = records.length ? [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date))[0] : null;
+
+  categories.forEach(cat => {
+    if (cat.liquid_date) {
+      const d = new Date(cat.liquid_date);
+      if (d >= today) {
+        const days = Math.round((d-today)/(1000*60*60*24));
+        const isPension = cat.key==='savingsFund'||cat.key==='pensionFund';
+        upcoming.push({ date:d, days, title: isPension?`משיכת ${cat.label}`:`פקיעת ${cat.label}`, type: isPension?'fund':'deposit' });
+      }
+    }
+    (cat.custom_fields||[]).forEach(f => {
+      if (f.type!=='date'||!f.value) return;
+      const d = new Date(f.value); if(isNaN(d)||d<today) return;
+      const days = Math.round((d-today)/(1000*60*60*24));
+      upcoming.push({ date:d, days, title:`${f.label} — ${cat.label}`, type:'custom' });
+    });
+  });
+
+  if (!upcoming.length) { el.innerHTML=''; return; }
+
+  upcoming.sort((a,b)=>a.days-b.days);
+  const ev = upcoming[0];
+
+  const color = ev.days<=30 ? 'var(--amber,#f59e0b)' : 'var(--green)';
+  const icon = ev.type==='fund'
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
+    : ev.type==='deposit'
+    ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+    : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+
+  const daysLabel = ev.days===0?'היום':ev.days===1?'מחר':ev.days<30?`בעוד ${ev.days} ימים`:ev.days<365?`בעוד ${Math.round(ev.days/30)} חודשים`:`בעוד ${(ev.days/365).toFixed(1)} שנים`;
+  const more = upcoming.length-1;
+
+  el.innerHTML = `
+    <div onclick="switchTab('calendar',document.querySelector('[data-tab=\\'calendar\\']'))"
+      style="margin-top:0;padding:13px 16px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:border-color .15s"
+      onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:10px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span style="font-size:.7rem;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.06em">האירוע הקרוב</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:9px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${color}">
+          ${icon}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.88rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.title}</div>
+          <div style="font-size:.72rem;color:var(--ink-4);margin-top:1px">${ev.date.toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          <span style="font-size:.75rem;font-weight:800;color:${color}">${daysLabel}</span>
+          ${more>0?`<span style="font-size:.68rem;color:var(--ink-4)">ועוד ${more}</span>`:''}
+        </div>
+      </div>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════════════

@@ -4305,6 +4305,9 @@ function switchTab(name, btn) {
   if(name==='portfolio')  renderPortfolioTab();
   if(name==='annual')     renderAnnualTab();
   if(name==='calendar')   renderCalendarTab();
+  // Scroll to top
+  const main = document.querySelector('.app-main');
+  if (main) main.scrollTop = 0;
   // Scroll active button into view in bottom nav
   const activeBtn = document.querySelector(`.bottom-nav [data-tab="${name}"]`);
   if (activeBtn) activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });

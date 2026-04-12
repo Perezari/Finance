@@ -4820,6 +4820,10 @@ function renderCalendarTab() {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   // ── Collect events ────────────────────────────────────
+  const latestRec  = records.length ? [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date)).at(-1) : null;
+  const latestCalc = latestRec ? calcRecord(latestRec) : null;
+  const firstRec   = records.length ? [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date))[0] : null;
+
   const events = [];
 
   // 1. liquid_date events (deposit maturities / fund unlock dates)
@@ -4827,12 +4831,16 @@ function renderCalendarTab() {
     if (!cat.liquid_date) return;
     const d = new Date(cat.liquid_date);
     const isPension = cat.key === 'savingsFund' || cat.key === 'pensionFund';
+    const currentVal = latestCalc?.[cat.key] || 0;
+    // progress: from first record date to liquid_date
+    const startMs = firstRec ? new Date(firstRec.record_date).getTime() : today.getTime();
+    const endMs   = d.getTime();
+    const progress = endMs > startMs ? Math.min(100, Math.max(0, (today.getTime()-startMs)/(endMs-startMs)*100)) : 0;
     events.push({
-      date:  d,
-      label: cat.label,
-      type:  isPension ? 'fund' : 'deposit',
+      date: d, label: cat.label, type: isPension ? 'fund' : 'deposit',
       title: isPension ? `משיכת ${cat.label}` : `פקיעת ${cat.label}`,
-      icon:  isPension
+      currentVal, progress, catKey: cat.key,
+      icon: isPension
         ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
         : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
     });
@@ -4845,27 +4853,30 @@ function renderCalendarTab() {
       if (f.type !== 'date' || !f.value) return;
       const d = new Date(f.value);
       if (isNaN(d)) return;
+      const currentVal = latestCalc?.[cat.key] || 0;
+      const startMs = firstRec ? new Date(firstRec.record_date).getTime() : today.getTime();
+      const endMs   = d.getTime();
+      const progress = endMs > startMs ? Math.min(100, Math.max(0, (today.getTime()-startMs)/(endMs-startMs)*100)) : 0;
       events.push({
-        date:  d,
-        label: cat.label,
-        type:  'custom',
+        date: d, label: cat.label, type: 'custom',
         title: `${f.label} — ${cat.label}`,
-        icon:  calIcon,
+        currentVal, progress, catKey: cat.key,
+        icon: calIcon,
       });
     });
   });
 
-  // 3. Monthly update reminder (based on last record)
+  // 3. Monthly update reminder
   if (records.length) {
-    const lastRec  = [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date)).at(-1);
-    const lastDate = new Date(lastRec.record_date);
+    const lastDate  = new Date(latestRec.record_date);
     const nextUpdate = new Date(lastDate.getFullYear(), lastDate.getMonth()+1, 1);
+    const daysSinceLast = Math.round((today - lastDate) / (1000*60*60*24));
     events.push({
-      date:  nextUpdate,
-      label: 'עדכון חודשי',
-      type:  'reminder',
+      date: nextUpdate, label: 'עדכון חודשי', type: 'reminder',
       title: `תזכורת — עדכון ${nextUpdate.toLocaleDateString('he-IL',{month:'long',year:'numeric'})}`,
-      icon:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+      currentVal: latestCalc?.totalAssets || 0, progress: Math.min(100, daysSinceLast/30*100),
+      catKey: null,
+      icon: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
     });
   }
 
@@ -4908,17 +4919,80 @@ function renderCalendarTab() {
     return;
   }
 
-  const rowHtml = ev => `
-    <div style="display:flex;align-items:flex-start;gap:14px;padding:13px 16px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:8px">
-      <div style="width:32px;height:32px;border-radius:8px;background:${ev.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${ev.color}">
-        ${ev.icon}
+  // give every event a unique id for toggling
+  withDays.forEach((ev,i) => { ev.uid = `cal-ev-${i}`; });
+
+  const rowHtml = (ev, showDate=false) => {
+    const hasVal     = ev.currentVal > 0 && ev.type !== 'reminder';
+    const showExpand = ev.type === 'custom' && ev.catKey;
+    const catFields  = showExpand
+      ? (categories.find(c=>c.key===ev.catKey)?.custom_fields||[]).filter(f=>f.value)
+      : [];
+
+    const chevron = showExpand && catFields.length ? `
+      <svg id="${ev.uid}-chv" width="14" height="14" viewBox="0 0 16 16" fill="none"
+        style="flex-shrink:0;transition:transform .2s;color:var(--ink-4)">
+        <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>` : '';
+
+    // progress bar — CSS gradient trick avoids RTL direction issues
+    const progressBar = ev.progress != null ? `
+      <div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-size:.68rem;color:var(--ink-4);font-weight:600">התקדמות לתאריך</span>
+          <span style="font-size:.7rem;font-weight:800;color:${ev.color}">${Math.round(ev.progress)}%</span>
+        </div>
+        <div style="height:5px;border-radius:99px;background:linear-gradient(to left,${ev.color} ${ev.progress}%,var(--border) ${ev.progress}%)"></div>
+      </div>` : '';
+
+    const expandedBody = showExpand && catFields.length ? `
+      <div id="${ev.uid}-body" style="display:none;padding:0 16px 14px 16px">
+        <div style="border-top:1px solid var(--border);padding-top:14px">
+          ${catFields.map(f => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:.75rem;color:var(--ink-4)">${f.label}</span>
+              <span style="font-size:.78rem;font-weight:700;color:var(--ink);font-family:${f.type==='number'?'var(--mono)':'var(--font)'}">${
+                f.type==='date' ? new Date(f.value).toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})
+                : f.type==='number' ? Number(f.value).toLocaleString('he-IL')
+                : f.value
+              }</span>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    const toggleAttr = showExpand && catFields.length
+      ? `onclick="(()=>{const b=document.getElementById('${ev.uid}-body'),c=document.getElementById('${ev.uid}-chv');const op=b.style.display==='none';b.style.display=op?'block':'none';if(c)c.style.transform=op?'rotate(180deg)':'rotate(0deg)'})()"`
+      : '';
+    const headerCursor = showExpand && catFields.length ? 'cursor:pointer;' : '';
+
+    return `
+    <div style="border-radius:14px;background:var(--surface2);border:1px solid var(--border);margin-bottom:10px;overflow:hidden">
+      <div ${toggleAttr} style="${headerCursor}padding:14px 16px">
+        <!-- top row: icon + title + badge+date column on same line -->
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:${ev.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${ev.color}">
+            ${ev.icon}
+          </div>
+          <div style="flex:1;min-width:0;display:flex;align-items:center;gap:5px">
+            <span style="font-size:${ev.title.length<18?'.88rem':ev.title.length<26?'.78rem':ev.title.length<34?'.7rem':'.62rem'};font-weight:700;color:${ev.isPast?'var(--ink-3)':'var(--ink)'}${ev.isPast?';opacity:.5':''};flex:1;white-space:nowrap">${ev.title}</span>
+            ${chevron}
+          </div>
+          <div style="flex-shrink:0;text-align:center">
+            <div style="padding:3px 9px;border-radius:99px;background:${ev.color}18;border:1px solid ${ev.color}33${showDate?';margin-bottom:3px':''}">
+              <span style="font-size:.7rem;font-weight:800;color:${ev.color};white-space:nowrap">${ev.daysLabel}</span>
+            </div>
+            ${showDate?`<div style="font-size:.68rem;color:var(--ink-4);white-space:nowrap">${ev.date.toLocaleDateString('he-IL',{day:'numeric',month:'short'})}</div>`:''}
+          </div>
+        </div>
+        ${hasVal ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:7px 11px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+          <span style="font-size:.7rem;color:var(--ink-4);font-weight:600">שווי נוכחי</span>
+          <span style="font-family:var(--mono);font-size:.88rem;font-weight:800;color:${ev.isPast?'var(--ink-3)':'var(--ink)'}">${fmt(ev.currentVal)}</span>
+        </div>` : ''}
+        ${progressBar}
       </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.88rem;font-weight:700;color:${ev.isPast?'var(--ink-3)':'var(--ink)'}${ev.isPast?';opacity:.55':''}">${ev.title}</div>
-        <div style="font-size:.75rem;color:var(--ink-4);margin-top:2px">${ev.date.toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})}</div>
-      </div>
-      <div style="font-size:.78rem;font-weight:700;color:${ev.color};white-space:nowrap;padding-top:2px">${ev.daysLabel}</div>
-    </div>`;
+      ${expandedBody}
+    </div>`; };
 
   const groupsHtml = (filterPast) => {
     const filtered = withDays.filter(ev => filterPast ? ev.isPast : !ev.isPast);
@@ -4926,14 +5000,19 @@ function renderCalendarTab() {
     const grps = {};
     filtered.forEach(ev => {
       const key = `${ev.date.getFullYear()}-${ev.date.getMonth()}`;
-      if (!grps[key]) grps[key] = { label: ev.date.toLocaleDateString('he-IL',{month:'long',year:'numeric'}), items:[] };
+      if (!grps[key]) grps[key] = { items:[] };
       grps[key].items.push(ev);
     });
-    return Object.values(grps).map(g => `
+    return Object.values(grps).map(g => {
+      const label = g.items.length === 1
+        ? g.items[0].date.toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})
+        : g.items[0].date.toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+      return `
       <div style="margin-bottom:20px">
-        <div style="font-size:.72rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${g.label}</div>
-        ${g.items.map(ev => rowHtml(ev)).join('')}
-      </div>`).join('');
+        <div style="font-size:.72rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${label}</div>
+        ${g.items.map(ev => rowHtml(ev, g.items.length > 1)).join('')}
+      </div>`;
+    }).join('');
   };
 
   // summary strip
@@ -4988,14 +5067,19 @@ function calFilter(showPast) {
   const grps = {};
   filtered.forEach(ev => {
     const key = `${ev.date.getFullYear()}-${ev.date.getMonth()}`;
-    if (!grps[key]) grps[key] = { label: ev.date.toLocaleDateString('he-IL',{month:'long',year:'numeric'}), items:[] };
+    if (!grps[key]) grps[key] = { items:[] };
     grps[key].items.push(ev);
   });
-  panel.innerHTML = Object.values(grps).map(g => `
+  panel.innerHTML = Object.values(grps).map(g => {
+    const label = g.items.length === 1
+      ? g.items[0].date.toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})
+      : g.items[0].date.toLocaleDateString('he-IL',{month:'long',year:'numeric'});
+    return `
     <div style="margin-bottom:20px">
-      <div style="font-size:.72rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${g.label}</div>
-      ${g.items.map(ev => rowHtml(ev)).join('')}
-    </div>`).join('');
+      <div style="font-size:.72rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${label}</div>
+      ${g.items.map(ev => rowHtml(ev, g.items.length > 1)).join('')}
+    </div>`;
+  }).join('');
 }
 
 function renderAnnualTab() {

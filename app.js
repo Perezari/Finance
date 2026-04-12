@@ -1499,7 +1499,11 @@ function calcHealthScore(calc, records) {
   const liquidRatio = calc.totalAssets ? liquid/calc.totalAssets : 0;
   if      (liquidRatio >= 0.15 && liquidRatio <= 0.40) { score+=30; details.push({ label:'נזילות', note:'אחוז נזילות תקין', ok:true }); }
   else if (liquidRatio >= 0.10 && liquidRatio <= 0.55) { score+=18; details.push({ label:'נזילות', note:'נזילות סבירה', ok:null }); }
-  else { score+=5; details.push({ label:'נזילות', note: liquidRatio<0.10?'נזילות נמוכה מדי':'נזילות גבוהה מדי (כסף לא עובד)', ok:false }); }
+  else if (liquidRatio < 0.10) {
+    const needed = Math.ceil(calc.totalAssets * 0.15 - liquid);
+    score+=5; details.push({ label:'נזילות', note:`נזילות נמוכה מדי — חסרים ${fmt(needed)} להגיע ל-15%`, ok:false });
+  }
+  else { score+=5; details.push({ label:'נזילות', note:'נזילות גבוהה מדי (כסף לא עובד)', ok:false }); }
 
   // 2. Diversification – how many categories have meaningful amounts (>5% of total)
   const activeCats = categories.filter(c=>(calc[c.key]||0) > calc.totalAssets*0.02).length;
@@ -1548,6 +1552,80 @@ function renderHealthScore() {
     return `<span class="hs-dot" style="background:${c}" title="${d.label}: ${d.note}"></span>`;
   }).join('');
 
+  // ── Monthly insights ──────────────────────────────
+  const SVG_UP    = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`;
+  const SVG_DOWN  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`;
+  const SVG_STAR  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="var(--green)" stroke="none" style="flex-shrink:0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  const SVG_WARN  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber,#f59e0b)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+  const SVG_TARGET= `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+  const SVG_FAST  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+  const SVG_AVG   = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`;
+
+  const insights = [];
+  const sorted = [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date));
+  const cur = sorted[sorted.length-1];
+  const prev = sorted.length >= 2 ? sorted[sorted.length-2] : null;
+  const curTotal  = calcRecord(cur).totalAssets;
+  const prevTotal = prev ? calcRecord(prev).totalAssets : null;
+
+  if (prev && prevTotal != null) {
+    const delta = curTotal - prevTotal;
+    const pct   = prevTotal ? (delta/prevTotal*100).toFixed(1) : null;
+    const mName = d => new Date(d).toLocaleDateString('he-IL',{month:'long'});
+    if (delta > 0)
+      insights.push([SVG_UP,   `גדלת ב-${fmt(delta)} לעומת ${mName(prev.record_date)}${pct?` (+${pct}%)`:''}` ]);
+    else if (delta < 0)
+      insights.push([SVG_DOWN, `ירידה של ${fmt(Math.abs(delta))} לעומת ${mName(prev.record_date)}${pct?` (${pct}%)`:''}` ]);
+
+    // best/worst category this month
+    const curCalc  = calcRecord(cur);
+    const prevCalc = calcRecord(prev);
+    let bestCat=null, bestPct=-Infinity, worstCat=null, worstPct=Infinity;
+    categories.filter(cat => cat.key !== 'cash').forEach(cat => {
+      const vPrev = prevCalc[cat.key]||0, vCur = curCalc[cat.key]||0;
+      if (vPrev<=0 || vCur<=0) return;
+      const p = (vCur-vPrev)/vPrev*100;
+      if (p > bestPct)  { bestPct=p;  bestCat=cat; }
+      if (p < worstPct) { worstPct=p; worstCat=cat; }
+    });
+    if (bestCat  && bestPct  > 0)
+      insights.push([SVG_STAR, `הקטגוריה שצמחה הכי מהר: ${bestCat.label} (+${bestPct.toFixed(1)}%)`]);
+    if (worstCat && worstPct < 0)
+      insights.push([SVG_WARN, `הקטגוריה שירדה הכי מהר: ${worstCat.label} (${worstPct.toFixed(1)}%)`]);
+  }
+
+  // 3-month rolling average
+  if (sorted.length >= 3) {
+    const last3 = sorted.slice(-3);
+    const avgDelta = (calcRecord(last3[2]).totalAssets - calcRecord(last3[0]).totalAssets) / 2;
+    if (avgDelta > 0)
+      insights.push([SVG_AVG, `ממוצע חודשי (3 חודשים): +${fmt(Math.round(avgDelta))}`]);
+  }
+
+  // milestone projection
+  if (sorted.length >= 2) {
+    const avgM = prev ? (curTotal - prevTotal) : 0;
+    if (avgM > 0) {
+      const milestones = [100000,250000,500000,750000,1000000,1500000,2000000,3000000,5000000];
+      const next = milestones.find(m => m > curTotal);
+      if (next) {
+        const months = Math.ceil((next - curTotal) / avgM);
+        const td = new Date(); td.setMonth(td.getMonth()+months);
+        const milLabel = next>=1000000?`${next/1000000}M₪`:`${next/1000}K₪`;
+        insights.push([SVG_TARGET, `בדרך ל-${milLabel} — עוד ${months} חודש${months===1?'':'ים'} (${td.toLocaleDateString('he-IL',{month:'long',year:'numeric'})})`]);
+      }
+    }
+  }
+
+  const insightsHtml = insights.length ? `
+    <div style="margin-top:8px;padding-top:8px;">
+      <div style="font-size:.7rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">תובנות חודשיות</div>
+      ${insights.map(([icon,text])=>`
+        <div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem;color:var(--ink-2);line-height:1.5;display:flex;align-items:center;gap:8px">
+          ${icon}<span>${text}</span>
+        </div>`).join('')}
+    </div>` : '';
+
   container.innerHTML = `
     <div class="health-card-wrap" id="health-card-wrap">
       <div class="health-bar" onclick="toggleHealthDetails()" role="button" aria-expanded="false" id="health-bar-el">
@@ -1573,6 +1651,7 @@ function renderHealthScore() {
         </div>
       </div>
       <div class="health-details-panel" id="health-details-panel" style="display:none;">
+        <div style="font-size:.7rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">מדדי בריאות</div>
         ${details.map(d=>{
           const c = d.ok===true ? 'var(--green)' : d.ok===false ? 'var(--red)' : 'var(--amber)';
           return `<div class="hdp-row">
@@ -1581,6 +1660,7 @@ function renderHealthScore() {
             <span class="hdp-note">${d.note}</span>
           </div>`;
         }).join('')}
+        ${insightsHtml}
       </div>
     </div>`;
 }
@@ -2705,7 +2785,7 @@ function renderRetirementBreakdown(start,projected,years,monthly) {
         <span class="rbd-label">קצבה חודשית צפויה</span>
       </div>
       <div class="rbd-right">
-        <span style="font-size:.72rem;color:var(--ink-4);margin-left:6px">4% שנתי</span>
+        <span style="font-size:.72rem;color:var(--ink-4);margin-left:6px">כלל 4% שנתי</span>
         <span class="rbd-val blur-text">${fmt(monthlyPension)}</span>
         <span class="rbd-pct">/ חודש</span>
       </div>

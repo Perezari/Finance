@@ -2137,14 +2137,14 @@ function renderYearVsYear() {
       responsive:true, maintainAspectRatio:false,
       animation:{duration:400,easing:'easeOutQuart'},
       plugins:{
-        legend:{ position:'bottom', labels:{ font:{family:"'Heebo',sans-serif",size:11}, color:tickCol, padding:14, boxWidth:10, usePointStyle:true }},
+        legend:{ position:'bottom', labels:{ font:{family:"'Heebo',sans-serif",size:12,weight:'700'}, color:tickCol, padding:14, boxWidth:10, usePointStyle:true }},
         tooltip:{ enabled:false },
       },
       interaction:{ mode:'index', intersect:false },
       scales:{
-        y:{ grid:{color:gridCol}, border:{display:false}, ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:tickCol,
+        y:{ grid:{color:gridCol}, border:{display:false}, ticks:{font:{family:"'JetBrains Mono',monospace",size:10,weight:'600'},color:tickCol,
             callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v}},
-        x:{ grid:{display:false}, border:{display:false}, ticks:{font:{family:"'Heebo',sans-serif",size:10},color:tickCol}}
+        x:{ grid:{display:false}, border:{display:false}, ticks:{font:{family:"'Heebo',sans-serif",size:11,weight:'600'},color:tickCol}}
       }
     },
     plugins:[yvyCrosshair]
@@ -2354,16 +2354,16 @@ function renderChart() {
     responsive:true, maintainAspectRatio:false,
     animation:{duration:600,easing:'easeOutQuart'},
     plugins:{
-      legend:{position:'bottom',labels:{font:{family:"'Heebo',sans-serif",size:11},color:tickCol,padding:16,boxWidth:10,usePointStyle:true}},
+      legend:{position:'bottom',labels:{font:{family:"'Heebo',sans-serif",size:12,weight:'700'},color:tickCol,padding:16,boxWidth:10,usePointStyle:true}},
       tooltip:{enabled:false},
     },
     interaction:{mode:'index',intersect:false,axis:'x'},
     scales:{
       y:{grid:{color:gridCol},border:{display:false},
-         ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:tickCol,maxTicksLimit:5,
+         ticks:{font:{family:"'JetBrains Mono',monospace",size:10,weight:'600'},color:tickCol,maxTicksLimit:5,
                 callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v}},
       x:{grid:{display:false},border:{display:false},
-         ticks:{font:{family:"'Heebo',sans-serif",size:10},color:tickCol,maxRotation:0}}
+         ticks:{font:{family:"'Heebo',sans-serif",size:11,weight:'600'},color:tickCol,maxRotation:0}}
     }
   };
 
@@ -2807,16 +2807,16 @@ function renderRetirementChart(histRecords,projByYear,currentAge,annualReturn) {
     responsive:true, maintainAspectRatio:false,
     animation:{duration:600,easing:'easeOutQuart'},
     plugins:{
-      legend:{position:'bottom',labels:{font:{family:"'Heebo',sans-serif",size:11},color:tickCol,padding:16,boxWidth:10,usePointStyle:true}},
+      legend:{position:'bottom',labels:{font:{family:"'Heebo',sans-serif",size:12,weight:'700'},color:tickCol,padding:16,boxWidth:10,usePointStyle:true}},
       tooltip:{enabled:false},
     },
     interaction:{mode:'index',intersect:false,axis:'x'},
     scales:{
       y:{grid:{color:gridCol},border:{display:false},
-         ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:tickCol,maxTicksLimit:5,
+         ticks:{font:{family:"'JetBrains Mono',monospace",size:10,weight:'600'},color:tickCol,maxTicksLimit:5,
                 callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v}},
       x:{type:'category',grid:{display:false},border:{display:false},
-         ticks:{font:{family:"'Heebo',sans-serif",size:10},color:tickCol,maxRotation:0}}
+         ticks:{font:{family:"'Heebo',sans-serif",size:11,weight:'600'},color:tickCol,maxRotation:0}}
     }
   };
 
@@ -2892,15 +2892,15 @@ function chartOptions() {
   return {
     responsive:true, maintainAspectRatio:false,
     plugins:{
-      legend:{position:'bottom',labels:{font:{family:"'Heebo',sans-serif",size:11},color:'#6b7280',padding:16,boxWidth:12,usePointStyle:true}},
+      legend:{position:'bottom',labels:{font:{family:"'Heebo',sans-serif",size:12,weight:'700'},color:'#6b7280',padding:16,boxWidth:12,usePointStyle:true}},
       tooltip:{rtl:true,backgroundColor:'#111827',titleColor:'#f9fafb',bodyColor:'#9ca3af',borderColor:'#374151',borderWidth:1,padding:12,
         titleFont:{family:"'Outfit',sans-serif",weight:'700'},bodyFont:{family:"'JetBrains Mono',monospace",size:12},
         callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}}
     },
     scales:{
-      y:{grid:{color:'rgba(0,0,0,.05)'},border:{color:'#e5e9f0'},ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:'#9ca3af',
+      y:{grid:{color:'rgba(0,0,0,.05)'},border:{color:'#e5e9f0'},ticks:{font:{family:"'JetBrains Mono',monospace",size:10,weight:'600'},color:'#9ca3af',
           callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M₪':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K₪':v+'₪'}},
-      x:{grid:{display:false},border:{color:'#e5e9f0'},ticks:{font:{family:"'Heebo',sans-serif",size:10},color:'#9ca3af'}}
+      x:{grid:{display:false},border:{color:'#e5e9f0'},ticks:{font:{family:"'Heebo',sans-serif",size:11,weight:'600'},color:'#9ca3af'}}
     }
   };
 }
@@ -5329,9 +5329,9 @@ function openCatHistory(catKey, catLabel) {
             interaction: { mode:'index', intersect:false, axis:'x' },
             plugins: { legend:{ display:false }, tooltip:{ enabled:false } },
             scales: {
-              x: { grid:{display:false}, ticks:{color:tickColor,font:{size:10,family:"'Heebo',sans-serif"}} },
+              x: { grid:{display:false}, ticks:{color:tickColor,font:{size:11,family:"'Heebo',sans-serif",weight:'600'}} },
               y: { grid:{color:gridColor}, border:{display:false},
-                   ticks:{color:tickColor,font:{size:10,family:"'JetBrains Mono',monospace"},
+                   ticks:{color:tickColor,font:{size:10,family:"'JetBrains Mono',monospace",weight:'600'},
                           callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v} }
             }
           },

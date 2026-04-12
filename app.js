@@ -2480,6 +2480,12 @@ function renderRetirementSummary(projected,yearsLeft,monthlySave,annualReturn,st
 function renderRetirementChart(histRecords,projByYear,currentAge,annualReturn) {
   const canvas=document.getElementById('ret-chart'); if(!canvas) return;
   if(retChart){retChart.destroy();retChart=null;}
+
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  const gridCol = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.08)';
+  const tickCol = isDark ? '#4b5563' : '#9ca3af';
+  const colorGreen='#0e9e7e', colorBlue='#4f8ef7';
+
   const histPoints=histRecords.map(r=>{
     const d=new Date(r.record_date);
     const age=currentAge-Math.round((new Date()-d)/(365.25*24*3600*1000));
@@ -2487,13 +2493,188 @@ function renderRetirementChart(histRecords,projByYear,currentAge,annualReturn) {
   });
   const allLabels=[...new Set([...histPoints,...projByYear].map(p=>p.x))]
     .sort((a,b)=>parseInt(a.replace('גיל ',''))-parseInt(b.replace('גיל ','')));
-  const opts=chartOptions();
-  opts.plugins.tooltip.callbacks.label=ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw.y||ctx.raw)}`;
-  opts.scales.x={type:'category',grid:{display:false},border:{color:'#e5e9f0'},ticks:{font:{family:"'Outfit','Heebo',sans-serif",size:10},color:'#9ca3af'}};
+
+  // Sort histPoints by age ascending so latest record wins per age label
+  const sortedHist = [...histPoints].sort((a,b)=>
+    parseInt(a.x.replace('גיל ',''))-parseInt(b.x.replace('גיל ','')));
+  const histMap = new Map();
+  sortedHist.forEach(p => histMap.set(p.x, p.y)); // later entries overwrite earlier same-age ones
+  const histData = allLabels.map(lbl => histMap.get(lbl) ?? null);
+  const projData = allLabels.map(lbl => projByYear.find(p=>p.x===lbl)?.y ?? null);
+
+  const chartH = canvas.parentElement?.offsetHeight || 260;
+  const ctx2 = canvas.getContext('2d');
+
+  const gradGreen = ctx2.createLinearGradient(0,0,0,chartH);
+  gradGreen.addColorStop(0, colorGreen+(isDark?'38':'28'));
+  gradGreen.addColorStop(0.7, colorGreen+'08');
+  gradGreen.addColorStop(1,   colorGreen+'00');
+
+  const gradBlue = ctx2.createLinearGradient(0,0,0,chartH);
+  gradBlue.addColorStop(0, colorBlue+(isDark?'28':'18'));
+  gradBlue.addColorStop(0.7, colorBlue+'06');
+  gradBlue.addColorStop(1,   colorBlue+'00');
+
+  const dsColors = [colorGreen, colorBlue];
+
+  /* ── crosshair + bubble plugin ── */
+  const retCrosshairPlugin = {
+    id:'retCrosshair',
+    afterDraw(chart) {
+      const {ctx,chartArea:{top,bottom,left,right}} = chart;
+      const activeEls = chart._active; if (!activeEls?.length) return;
+      const idx = activeEls[0].index, xi = activeEls[0].element.x;
+      const isDarkNow = document.documentElement.getAttribute('data-theme')==='dark';
+      const ageLabel = allLabels[idx] || '';
+      ctx.save();
+
+      // crosshair line
+      ctx.beginPath(); ctx.setLineDash([4,5]);
+      ctx.strokeStyle = isDarkNow?'rgba(255,255,255,.18)':'rgba(0,0,0,.15)';
+      ctx.lineWidth=1.5; ctx.moveTo(xi,top); ctx.lineTo(xi,bottom); ctx.stroke(); ctx.setLineDash([]);
+
+      // collect all valid items (origY = real dot position)
+      const items=[];
+      chart.data.datasets.forEach((ds,di) => {
+        const meta = chart.getDatasetMeta(di); if (meta.hidden) return;
+        const el = meta.data[idx]; if (!el) return;
+        const val = ds.data[idx]; // now a plain number or null
+        if (val==null) return;
+        items.push({origY:el.y, bubbleY:el.y, val, col:dsColors[di]||colorGreen});
+      });
+
+      // draw dots at real positions first
+      items.forEach(({origY,col}) => {
+        ctx.beginPath(); ctx.arc(xi,origY,6,0,Math.PI*2);
+        ctx.fillStyle=col; ctx.strokeStyle=isDarkNow?'#1a1d26':'#fff'; ctx.lineWidth=2;
+        ctx.shadowColor=col; ctx.shadowBlur=8; ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+      });
+
+      // de-overlap bubble positions (push apart if too close)
+      const BH=34, GAP=6;
+      items.sort((a,b)=>a.origY-b.origY);
+      for (let i=1;i<items.length;i++) {
+        if (items[i].bubbleY - items[i-1].bubbleY < BH+GAP)
+          items[i].bubbleY = items[i-1].bubbleY + BH + GAP;
+      }
+      // clamp to chart area
+      items.forEach(it => {
+        it.bubbleY = Math.max(top+BH/2+2, Math.min(bottom-BH/2-2, it.bubbleY));
+      });
+
+      // if נכסים בפועל exists at this point, show only its bubble (not תחזית)
+      const bubbleItems = items.length > 1 && items.some(it=>it.col===colorGreen)
+        ? items.filter(it=>it.col===colorGreen)
+        : items;
+
+      // draw bubbles
+      bubbleItems.forEach(({origY,bubbleY,val,col}) => {
+        const text = `${ageLabel}  ${fmt(val)}`;
+        ctx.font="700 12px 'JetBrains Mono', monospace";
+        const tw=ctx.measureText(text).width, bw=tw+36, br=8, dotR=8;
+        const by=bubbleY-BH/2;
+        const goLeft=xi+dotR+bw+4>right, bx=goLeft?xi-dotR-bw:xi+dotR;
+        const path=()=>{ctx.beginPath();ctx.moveTo(bx+br,by);ctx.lineTo(bx+bw-br,by);ctx.arcTo(bx+bw,by,bx+bw,by+br,br);ctx.lineTo(bx+bw,by+BH-br);ctx.arcTo(bx+bw,by+BH,bx+bw-br,by+BH,br);ctx.lineTo(bx+br,by+BH);ctx.arcTo(bx,by+BH,bx,by+BH-br,br);ctx.lineTo(bx,by+br);ctx.arcTo(bx,by,bx+br,by,br);ctx.closePath();};
+        ctx.shadowColor='rgba(0,0,0,.45)';ctx.shadowBlur=18;ctx.shadowOffsetY=4;
+        path();ctx.fillStyle=isDarkNow?'rgba(15,18,25,.92)':'rgba(255,255,255,.95)';ctx.fill();ctx.shadowBlur=ctx.shadowOffsetY=0;
+        ctx.beginPath();ctx.roundRect?ctx.roundRect(bx+6,by+6,3,BH-12,2):ctx.rect(bx+6,by+6,3,BH-12);ctx.fillStyle=col;ctx.fill();
+        path();ctx.strokeStyle=isDarkNow?'rgba(255,255,255,.1)':'rgba(0,0,0,.08)';ctx.lineWidth=1;ctx.stroke();
+        // arrow pointing to real dot position
+        const arrowBg=isDarkNow?'rgba(15,18,25,.92)':'rgba(255,255,255,.95)';
+        ctx.beginPath();
+        if(goLeft){ctx.moveTo(bx+bw,origY-5);ctx.lineTo(bx+bw,origY+5);ctx.lineTo(bx+bw+6,origY);}
+        else{ctx.moveTo(bx,origY-5);ctx.lineTo(bx,origY+5);ctx.lineTo(bx-6,origY);}
+        ctx.fillStyle=arrowBg;ctx.fill();
+        ctx.fillStyle=isDarkNow?'#f9fafb':'#111827';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.font="700 12px 'JetBrains Mono', monospace";ctx.fillText(text,bx+bw/2+4,by+BH/2);
+      });
+      ctx.restore();
+    }
+  };
+
+  /* ── last-point label plugin ── */
+  const retLastPointPlugin = {
+    id:'retLastPoint',
+    afterDraw(chart) {
+      const isDarkNow = document.documentElement.getAttribute('data-theme')==='dark';
+      chart.data.datasets.forEach((ds,di) => {
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        const last = meta.data[meta.data.length-1]; if(!last) return;
+        const col = dsColors[di]||colorGreen;
+        // find last non-null value
+        const dsArr = ds.data;
+        let lastNonNullIdx = dsArr.length-1;
+        while(lastNonNullIdx>=0 && dsArr[lastNonNullIdx]==null) lastNonNullIdx--;
+        if(lastNonNullIdx<0) return;
+        const val = dsArr[lastNonNullIdx];
+        const lastEl = meta.data[lastNonNullIdx]; if(!lastEl) return;
+        const {ctx} = chart; ctx.save();
+        if(!chart._active?.length) {
+          const text=fmt(val); ctx.font="600 10px 'JetBrains Mono', monospace";
+          const tw=ctx.measureText(text).width, bw=tw+14, bh=18;
+          const {left,right}=chart.chartArea;
+          let bx=lastEl.x-bw-10;
+          if(bx<left) bx=Math.min(lastEl.x+10, right-bw);
+          const by=lastEl.y-bh/2;
+          ctx.beginPath(); ctx.roundRect?ctx.roundRect(bx,by,bw,bh,5):ctx.rect(bx,by,bw,bh);
+          ctx.fillStyle=isDarkNow?'rgba(15,18,25,.9)':'rgba(255,255,255,.9)'; ctx.fill();
+          ctx.strokeStyle=col; ctx.lineWidth=1; ctx.stroke();
+          ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,bx+bw/2,by+bh/2);
+        }
+        ctx.beginPath(); ctx.arc(lastEl.x,lastEl.y,5.5,0,Math.PI*2);
+        ctx.fillStyle=col; ctx.strokeStyle=isDarkNow?'#1a1d26':'#fff'; ctx.lineWidth=2.5;
+        ctx.shadowColor=col; ctx.shadowBlur=8; ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+        ctx.restore();
+      });
+    }
+  };
+
+  const opts = {
+    responsive:true, maintainAspectRatio:false,
+    animation:{duration:600,easing:'easeOutQuart'},
+    plugins:{
+      legend:{position:'bottom',labels:{font:{family:"'Outfit','Heebo',sans-serif",size:11},color:tickCol,padding:16,boxWidth:10,usePointStyle:true}},
+      tooltip:{enabled:false},
+    },
+    interaction:{mode:'index',intersect:false,axis:'x'},
+    scales:{
+      y:{grid:{color:gridCol},border:{display:false},
+         ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:tickCol,maxTicksLimit:5,
+                callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v}},
+      x:{type:'category',grid:{display:false},border:{display:false},
+         ticks:{font:{family:"'Outfit','Heebo',sans-serif",size:10},color:tickCol,maxRotation:0}}
+    }
+  };
+
   retChart=new Chart(canvas,{type:'line',data:{labels:allLabels,datasets:[
-    {label:'נכסים בפועל',data:histPoints,borderColor:'#0e9e7e',backgroundColor:'rgba(14,158,126,.08)',fill:true,tension:.4,pointRadius:5,pointBackgroundColor:'#0e9e7e',pointBorderColor:'#fff',pointBorderWidth:2},
-    {label:`תחזית (${annualReturn}%)`,data:projByYear,borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,.06)',fill:true,tension:.4,borderDash:[6,4],pointRadius:4,pointBackgroundColor:'#4f8ef7',pointBorderColor:'#fff',pointBorderWidth:2}
-  ]},options:opts});
+    {label:'נכסים בפועל', data:histData, borderColor:colorGreen, borderWidth:2.5,
+     backgroundColor:gradGreen, fill:true, tension:.4,
+     spanGaps:false, pointRadius:0, pointHoverRadius:0},
+    {label:`תחזית (${annualReturn}%)`, data:projData, borderColor:colorBlue, borderWidth:2,
+     backgroundColor:gradBlue, fill:true, tension:.4, borderDash:[7,5],
+     spanGaps:false, pointRadius:0, pointHoverRadius:0}
+  ]},options:opts, plugins:[retCrosshairPlugin,retLastPointPlugin]});
+
+  let _rafId=null, _touchEndTimer=null;
+  const updateAt=(clientX)=>{
+    if(!retChart) return;
+    const rect=canvas.getBoundingClientRect(), xPos=clientX-rect.left;
+    const idx=Math.round(retChart.scales.x.getValueForPixel(xPos));
+    const cl=Math.max(0,Math.min(idx,allLabels.length-1));
+    if(retChart._active?.[0]?.index===cl) return;
+    const activeEls=[];
+    [0,1].forEach(di=>{
+      const meta=retChart.getDatasetMeta(di);
+      if(meta?.data?.[cl]) activeEls.push({datasetIndex:di,index:cl});
+    });
+    retChart.setActiveElements(activeEls);
+    retChart.update('none');
+  };
+  canvas.addEventListener('mousemove',e=>{if(_rafId)return;_rafId=requestAnimationFrame(()=>{_rafId=null;updateAt(e.clientX);});});
+  canvas.addEventListener('mouseleave',()=>{retChart?.setActiveElements([]);retChart?.update('none');});
+  let _touchRaf=null;
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(_touchRaf)return;_touchRaf=requestAnimationFrame(()=>{_touchRaf=null;updateAt(e.touches[0].clientX);});},{passive:false});
+  canvas.addEventListener('touchend',()=>{clearTimeout(_touchEndTimer);_touchEndTimer=setTimeout(()=>{retChart?.setActiveElements([]);retChart?.update('none');},800);});
 }
 
 function renderRetirementBreakdown(start,projected,years,monthly) {
@@ -2524,7 +2705,7 @@ function renderRetirementBreakdown(start,projected,years,monthly) {
         <span class="rbd-label">קצבה חודשית צפויה</span>
       </div>
       <div class="rbd-right">
-        <span style="font-size:.72rem;color:var(--ink-4);margin-left:6px">כלל 4% שנתי</span>
+        <span style="font-size:.72rem;color:var(--ink-4);margin-left:6px">4% שנתי</span>
         <span class="rbd-val blur-text">${fmt(monthlyPension)}</span>
         <span class="rbd-pct">/ חודש</span>
       </div>

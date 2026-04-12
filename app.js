@@ -2001,10 +2001,176 @@ function renderCurrentReport() {
 ══════════════════════════════════════════════════════ */
 function renderHistoryTab() {
   renderChart();
+  renderStackedChart();
   populateDateSelect();
   renderDynamicFields();
   populateYearSelects();
   renderYearVsYear();
+}
+
+/* ── Stacked composition chart ──────────────────────── */
+let stackedChart = null;
+const STACK_PALETTE = ['#0e9e7e','#4f8ef7','#f59e0b','#8b5cf6','#ef4444','#10b981','#f97316','#06b6d4','#ec4899','#84cc16'];
+
+function renderStackedChart() {
+  const canvas = document.getElementById('stacked-chart'); if (!canvas) return;
+  if (stackedChart) { stackedChart.destroy(); stackedChart=null; }
+  if (!records.length || !categories.length) return;
+
+  const isDark  = document.documentElement.getAttribute('data-theme')==='dark';
+  const tickCol = isDark ? '#4b5563' : '#9ca3af';
+  const gridCol = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.08)';
+
+  const sorted = [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date));
+  const labels = sorted.map(r=>new Date(r.record_date).toLocaleDateString('he-IL',{month:'short',year:'2-digit'}));
+
+  // Only include categories that have at least one non-zero value
+  const activeCats = categories.filter(cat =>
+    sorted.some(r => (calcRecord(r)[cat.key]||0) > 0)
+  );
+
+  const datasets = activeCats.map((cat,i) => ({
+    label: cat.label,
+    data:  sorted.map(r => calcRecord(r)[cat.key]||0),
+    backgroundColor: STACK_PALETTE[i % STACK_PALETTE.length] + 'cc',
+    borderColor:     STACK_PALETTE[i % STACK_PALETTE.length],
+    borderWidth: 0,
+    borderRadius: i === activeCats.length-1 ? 4 : 0, // round only top segment
+    borderSkipped: false,
+  }));
+
+  // ── hover plugin: crosshair + floating card ──
+  const stackHoverPlugin = {
+    id:'stackHover',
+    afterDraw(chart) {
+      const {ctx,chartArea:{top,bottom,left,right}} = chart;
+      const activeEls = chart._active; if (!activeEls?.length) return;
+      const idx  = activeEls[0].index;
+      const dark = document.documentElement.getAttribute('data-theme')==='dark';
+
+      // x position from first active element
+      const xi = activeEls[0].element.x;
+
+      ctx.save();
+      // crosshair
+      ctx.beginPath(); ctx.setLineDash([4,5]);
+      ctx.strokeStyle = dark?'rgba(255,255,255,.18)':'rgba(0,0,0,.15)';
+      ctx.lineWidth=1.5; ctx.moveTo(xi,top); ctx.lineTo(xi,bottom); ctx.stroke(); ctx.setLineDash([]);
+
+      // collect values for this month
+      const monthLabel = chart.data.labels[idx];
+      const rows = chart.data.datasets.map((ds,di)=>({
+        label: ds.label,
+        val:   ds.data[idx]||0,
+        col:   STACK_PALETTE[di%STACK_PALETTE.length],
+      })).filter(r=>r.val>0).reverse(); // top of stack first
+
+      const total = rows.reduce((s,r)=>s+r.val,0);
+
+      // measure card size
+      ctx.font = "600 11px 'Heebo',sans-serif";
+      const maxLabelW = Math.max(...rows.map(r=>ctx.measureText(r.label).width));
+      ctx.font = "700 11px 'JetBrains Mono',monospace";
+      const maxValW   = Math.max(...rows.map(r=>ctx.measureText(fmt(r.val)).width));
+
+      const rowH=20, pad=12, dotSz=8, gap=6;
+      const cardW = pad + dotSz + gap + maxLabelW + 16 + maxValW + pad;
+      const headerH = 24;
+      const cardH = headerH + rows.length*rowH + pad;
+
+      const spaceRight = right - (xi + 12);
+      const spaceLeft  = (xi - 12) - left;
+      const goLeft = spaceLeft > spaceRight;
+      let bx = goLeft ? xi - 12 - cardW : xi + 12;
+      // only clamp if truly overflowing the canvas
+      if (bx < left) bx = left + 2;
+      if (bx + cardW > right) bx = right - cardW - 2;
+      const byIdeal = top + (bottom-top)/2 - cardH/2;
+      const by = Math.max(top+4, Math.min(bottom-cardH-4, byIdeal));
+      const br = 10;
+
+      // shadow + bg
+      ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=20; ctx.shadowOffsetY=4;
+      ctx.beginPath(); ctx.roundRect?ctx.roundRect(bx,by,cardW,cardH,br):ctx.rect(bx,by,cardW,cardH);
+      ctx.fillStyle=dark?'rgba(15,18,25,.95)':'rgba(255,255,255,.97)'; ctx.fill();
+      ctx.shadowBlur=ctx.shadowOffsetY=0;
+      ctx.beginPath(); ctx.roundRect?ctx.roundRect(bx,by,cardW,cardH,br):ctx.rect(bx,by,cardW,cardH);
+      ctx.strokeStyle=dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.07)'; ctx.lineWidth=1; ctx.stroke();
+
+      // header: month + total
+      ctx.fillStyle=dark?'#f9fafb':'#111827';
+      ctx.font="700 11px 'Heebo',sans-serif"; ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.fillText(monthLabel, bx+cardW-pad, by+headerH/2);
+      ctx.font="700 11px 'JetBrains Mono',monospace"; ctx.textAlign='left';
+      ctx.fillStyle=dark?'#9ca3af':'#6b7280';
+      ctx.fillText(fmt(total), bx+pad, by+headerH/2);
+
+      // separator
+      ctx.beginPath(); ctx.moveTo(bx+8,by+headerH); ctx.lineTo(bx+cardW-8,by+headerH);
+      ctx.strokeStyle=dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.08)'; ctx.lineWidth=1; ctx.stroke();
+
+      // rows
+      rows.forEach((row,i) => {
+        const ry = by+headerH+i*rowH+rowH/2;
+        // dot
+        ctx.beginPath(); ctx.arc(bx+pad+dotSz/2, ry, dotSz/2, 0, Math.PI*2);
+        ctx.fillStyle=row.col; ctx.fill();
+        // label
+        ctx.font="600 11px 'Heebo',sans-serif"; ctx.fillStyle=dark?'#d1d5db':'#374151';
+        ctx.textAlign='left'; ctx.textBaseline='middle';
+        ctx.fillText(row.label, bx+pad+dotSz+gap, ry);
+        // value
+        ctx.font="700 11px 'JetBrains Mono',monospace"; ctx.fillStyle=dark?'#f9fafb':'#111827';
+        ctx.textAlign='right';
+        ctx.fillText(fmt(row.val), bx+cardW-pad, ry);
+      });
+
+      ctx.restore();
+    }
+  };
+
+  let _rafId=null, _touchEndTimer=null;
+  const updateAt=(clientX)=>{
+    if(!stackedChart) return;
+    const rect=canvas.getBoundingClientRect(), xPos=clientX-rect.left;
+    const idx=Math.round(stackedChart.scales.x.getValueForPixel(xPos));
+    const cl=Math.max(0,Math.min(idx,labels.length-1));
+    if(stackedChart._active?.[0]?.index===cl) return;
+    const activeEls=datasets.map((_,di)=>({datasetIndex:di,index:cl}));
+    stackedChart.setActiveElements(activeEls);
+    stackedChart.update('none');
+  };
+
+  stackedChart = new Chart(canvas, {
+    type:'bar',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:{duration:500,easing:'easeOutQuart'},
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{ font:{family:"'Heebo',sans-serif",size:11,weight:'600'}, color:tickCol, padding:12, boxWidth:10, usePointStyle:true }
+        },
+        tooltip:{ enabled:false },
+      },
+      interaction:{ mode:'index', intersect:false },
+      scales:{
+        x:{ stacked:true, grid:{display:false}, border:{display:false},
+            ticks:{font:{family:"'Heebo',sans-serif",size:11,weight:'600'},color:tickCol,maxRotation:0,maxTicksLimit:8}},
+        y:{ stacked:true, grid:{color:gridCol}, border:{display:false},
+            ticks:{font:{family:"'JetBrains Mono',monospace",size:10,weight:'600'},color:tickCol,maxTicksLimit:5,
+                   callback:v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v}}
+      }
+    },
+    plugins:[stackHoverPlugin]
+  });
+
+  canvas.addEventListener('mousemove',e=>{if(_rafId)return;_rafId=requestAnimationFrame(()=>{_rafId=null;updateAt(e.clientX);});});
+  canvas.addEventListener('mouseleave',()=>{stackedChart?.setActiveElements([]);stackedChart?.update('none');});
+  let _touchRaf=null;
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(_touchRaf)return;_touchRaf=requestAnimationFrame(()=>{_touchRaf=null;updateAt(e.touches[0].clientX);});},{passive:false});
+  canvas.addEventListener('touchend',()=>{clearTimeout(_touchEndTimer);_touchEndTimer=setTimeout(()=>{stackedChart?.setActiveElements([]);stackedChart?.update('none');},800);});
 }
 
 /* ── Year vs Year ───────────────────────────────────── */

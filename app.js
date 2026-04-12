@@ -3904,17 +3904,18 @@ async function saveCategoryOrder() {
 
 /* ── TAB SWITCH ─────────────────────────────────────── */
 function switchTab(name, btn) {
-  ['current','history','retirement','portfolio','annual'].forEach(t=>{
+  ['current','history','retirement','portfolio','annual','calendar'].forEach(t=>{
     const p=document.getElementById(`tab-${t}`); if(p) p.style.display=t===name?'block':'none';
   });
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll(`[data-tab="${name}"]`).forEach(b=>b.classList.add('active'));
-  const titles={current:'דוח נוכחי',history:'היסטוריה',retirement:'תכנון פרישה',portfolio:'תיק השקעות',annual:'סיכום שנתי'};
+  const titles={current:'דוח נוכחי',history:'היסטוריה',retirement:'תכנון פרישה',portfolio:'תיק השקעות',annual:'סיכום שנתי',calendar:'לוח שנה פיננסי'};
   const te=document.getElementById('topbar-title'); if(te) te.textContent=titles[name]||'';
   if(name==='history')    renderHistoryTab();
   if(name==='retirement') { loadRetirementSettings(); renderRetirement(); }
   if(name==='portfolio')  renderPortfolioTab();
   if(name==='annual')     renderAnnualTab();
+  if(name==='calendar')   renderCalendarTab();
   // Scroll active button into view in bottom nav
   const activeBtn = document.querySelector(`.bottom-nav [data-tab="${name}"]`);
   if (activeBtn) activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
@@ -4551,6 +4552,192 @@ function portfolioHighlight(key) {
 }
 
 /* ══ ANNUAL SUMMARY TAB ══════════════════════════════ */
+function renderCalendarTab() {
+  const el = document.getElementById('calendar-content');
+  if (!el) return;
+
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // ── Collect events ────────────────────────────────────
+  const events = [];
+
+  // 1. liquid_date events (deposit maturities / fund unlock dates)
+  categories.forEach(cat => {
+    if (!cat.liquid_date) return;
+    const d = new Date(cat.liquid_date);
+    const isPension = cat.key === 'savingsFund' || cat.key === 'pensionFund';
+    events.push({
+      date:  d,
+      label: cat.label,
+      type:  isPension ? 'fund' : 'deposit',
+      title: isPension ? `משיכת ${cat.label}` : `פקיעת ${cat.label}`,
+      icon:  isPension
+        ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
+        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    });
+  });
+
+  // 2. custom_fields with type==='date'
+  const calIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+  categories.forEach(cat => {
+    (cat.custom_fields || []).forEach(f => {
+      if (f.type !== 'date' || !f.value) return;
+      const d = new Date(f.value);
+      if (isNaN(d)) return;
+      events.push({
+        date:  d,
+        label: cat.label,
+        type:  'custom',
+        title: `${f.label} — ${cat.label}`,
+        icon:  calIcon,
+      });
+    });
+  });
+
+  // 3. Monthly update reminder (based on last record)
+  if (records.length) {
+    const lastRec  = [...records].sort((a,b)=>new Date(a.record_date)-new Date(b.record_date)).at(-1);
+    const lastDate = new Date(lastRec.record_date);
+    const nextUpdate = new Date(lastDate.getFullYear(), lastDate.getMonth()+1, 1);
+    events.push({
+      date:  nextUpdate,
+      label: 'עדכון חודשי',
+      type:  'reminder',
+      title: `תזכורת — עדכון ${nextUpdate.toLocaleDateString('he-IL',{month:'long',year:'numeric'})}`,
+      icon:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+    });
+  }
+
+  // ── Sort and compute days diff ───────────────────────
+  events.sort((a,b) => a.date - b.date);
+  const withDays = events.map(ev => {
+    const diffMs   = ev.date - today;
+    const days     = Math.round(diffMs / (1000*60*60*24));
+    const isPast   = days < 0;
+    const isSoon   = days >= 0 && days <= 30;
+    const color    = isPast   ? 'var(--ink-4)'
+                   : isSoon   ? 'var(--amber,#f59e0b)'
+                   : ev.type === 'reminder' ? '#4f8ef7'
+                   : 'var(--green)';
+    let daysLabel;
+    if (days === 0)       daysLabel = 'היום';
+    else if (days === 1)  daysLabel = 'מחר';
+    else if (days === -1) daysLabel = 'אתמול';
+    else if (days < 0)   daysLabel = `לפני ${Math.abs(days)} ימים`;
+    else if (days < 30)  daysLabel = `בעוד ${days} ימים`;
+    else if (days < 365) daysLabel = `בעוד ${Math.round(days/30)} חודשים`;
+    else                 daysLabel = `בעוד ${(days/365).toFixed(1)} שנים`;
+    return { ...ev, days, isPast, isSoon, color, daysLabel };
+  });
+
+  // ── Group by month ───────────────────────────────────
+  const groups = {};
+  withDays.forEach(ev => {
+    const key = `${ev.date.getFullYear()}-${ev.date.getMonth()}`;
+    if (!groups[key]) groups[key] = { label: ev.date.toLocaleDateString('he-IL',{month:'long',year:'numeric'}), items:[] };
+    groups[key].items.push(ev);
+  });
+
+  if (!withDays.length) {
+    el.innerHTML = `<div style="padding:60px 24px;text-align:center;color:var(--ink-4)">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35;margin-bottom:12px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div style="font-size:.95rem;font-weight:600;color:var(--ink-3);margin-bottom:6px">אין אירועים בלוח השנה</div>
+      <div style="font-size:.82rem">הגדר תאריכי פקיעה לפיקדונות<br/>דרך עריכת קטגוריה</div>
+    </div>`;
+    return;
+  }
+
+  const rowHtml = ev => `
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:13px 16px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:8px">
+      <div style="width:32px;height:32px;border-radius:8px;background:${ev.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${ev.color}">
+        ${ev.icon}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.88rem;font-weight:700;color:${ev.isPast?'var(--ink-3)':'var(--ink)'}${ev.isPast?';opacity:.55':''}">${ev.title}</div>
+        <div style="font-size:.75rem;color:var(--ink-4);margin-top:2px">${ev.date.toLocaleDateString('he-IL',{day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+      <div style="font-size:.78rem;font-weight:700;color:${ev.color};white-space:nowrap;padding-top:2px">${ev.daysLabel}</div>
+    </div>`;
+
+  const groupsHtml = (filterPast) => {
+    const filtered = withDays.filter(ev => filterPast ? ev.isPast : !ev.isPast);
+    if (!filtered.length) return `<div style="padding:30px;text-align:center;color:var(--ink-4);font-size:.85rem">אין אירועים</div>`;
+    const grps = {};
+    filtered.forEach(ev => {
+      const key = `${ev.date.getFullYear()}-${ev.date.getMonth()}`;
+      if (!grps[key]) grps[key] = { label: ev.date.toLocaleDateString('he-IL',{month:'long',year:'numeric'}), items:[] };
+      grps[key].items.push(ev);
+    });
+    return Object.values(grps).map(g => `
+      <div style="margin-bottom:20px">
+        <div style="font-size:.72rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${g.label}</div>
+        ${g.items.map(ev => rowHtml(ev)).join('')}
+      </div>`).join('');
+  };
+
+  // summary strip
+  const upcoming = withDays.filter(e=>!e.isPast).length;
+  const overdue  = withDays.filter(e=>e.isPast).length;
+
+  const btnStyle = (active) =>
+    `flex:1;min-width:0;padding:14px 16px;background:var(--surface2);border-radius:12px;` +
+    `border:${active?'1.5px solid var(--green)':'1px solid var(--border)'};cursor:pointer;text-align:right;` +
+    `transition:border .15s;`;
+
+  el.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <button id="cal-btn-upcoming" onclick="calFilter(false)"
+        style="${btnStyle(true)}">
+        <div style="font-size:.7rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">קרובים</div>
+        <div style="font-family:var(--mono);font-size:1.4rem;font-weight:800;color:var(--green)">${upcoming}</div>
+      </button>
+      <button id="cal-btn-past" onclick="calFilter(true)"
+        style="${btnStyle(false)}">
+        <div style="font-size:.7rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">עברו</div>
+        <div style="font-family:var(--mono);font-size:1.4rem;font-weight:800;color:var(--ink-3)">${overdue}</div>
+      </button>
+    </div>
+    <div class="card" style="padding:16px" id="cal-events-panel">
+      ${groupsHtml(false)}
+    </div>`;
+
+  // store events on the element for calFilter
+  el._calWithDays = withDays;
+  el._calRowHtml  = rowHtml;
+}
+
+function calFilter(showPast) {
+  const el = document.getElementById('calendar-content');
+  if (!el?._calWithDays) return;
+  const withDays = el._calWithDays;
+  const rowHtml  = el._calRowHtml;
+
+  const btnUpcoming = document.getElementById('cal-btn-upcoming');
+  const btnPast     = document.getElementById('cal-btn-past');
+  const panel       = document.getElementById('cal-events-panel');
+
+  const activeStyle   = 'flex:1;min-width:0;padding:14px 16px;background:var(--surface2);border-radius:12px;border:1.5px solid var(--green);cursor:pointer;text-align:right;';
+  const inactiveStyle = 'flex:1;min-width:0;padding:14px 16px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);cursor:pointer;text-align:right;';
+
+  if (btnUpcoming) btnUpcoming.style.cssText = showPast ? inactiveStyle : activeStyle;
+  if (btnPast)     btnPast.style.cssText     = showPast ? activeStyle   : inactiveStyle;
+
+  const filtered = withDays.filter(ev => showPast ? ev.isPast : !ev.isPast);
+  if (!filtered.length) { panel.innerHTML = `<div style="padding:30px;text-align:center;color:var(--ink-4);font-size:.85rem">אין אירועים</div>`; return; }
+  const grps = {};
+  filtered.forEach(ev => {
+    const key = `${ev.date.getFullYear()}-${ev.date.getMonth()}`;
+    if (!grps[key]) grps[key] = { label: ev.date.toLocaleDateString('he-IL',{month:'long',year:'numeric'}), items:[] };
+    grps[key].items.push(ev);
+  });
+  panel.innerHTML = Object.values(grps).map(g => `
+    <div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${g.label}</div>
+      ${g.items.map(ev => rowHtml(ev)).join('')}
+    </div>`).join('');
+}
+
 function renderAnnualTab() {
   const el = document.getElementById('annual-content');
   if (!el) return;

@@ -1546,9 +1546,9 @@ select option{background:var(--surface)}
 [data-theme="dark"] .bottom-nav-item .nav-icon svg { stroke: rgba(255,255,255,.5); }
 .bottom-nav-item.active .nav-icon svg { stroke: var(--green); }
 .bottom-nav-item:hover .nav-icon svg { stroke: rgba(0,0,0,.65); }
-[data-theme="dark"] .bottom-nav-item:hover .nav-icon svg { stroke: rgba(255,255,255,.8); }
-.bottom-nav-item.active .nav-icon svg { stroke: #fff; stroke-width: 2.2; }
-.bottom-nav-item:hover .nav-icon svg { stroke: rgba(255,255,255,.8); }
+[data-theme="dark"] .bottom-nav-item:hover .nav-icon svg { stroke: var(--green); }
+.bottom-nav-item.active .nav-icon svg { stroke: var(--green); stroke-width: 2.2; }
+.bottom-nav-item:hover .nav-icon svg { stroke: var(--green); }
 
 /* Sidebar bottom icons (settings/logout) — slightly smaller */
 .sidebar-footer .nav-item .nav-icon svg { width: 16px; height: 16px; }

@@ -156,6 +156,7 @@ async function loadApp() {
   showScreen('app');
   hideLoader();
   checkOnboarding();
+  initSwipeNavigation();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -4311,6 +4312,88 @@ function switchTab(name, btn) {
   // Scroll active button into view in bottom nav
   const activeBtn = document.querySelector(`.bottom-nav [data-tab="${name}"]`);
   if (activeBtn) activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+}
+
+/* ══ SWIPE BETWEEN TABS ═══════════════════════════════ */
+const SWIPE_TABS = ['current','history','annual','calendar'];
+
+function initSwipeNavigation() {
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+
+  let startX = 0, startY = 0, startTime = 0;
+  let isSwiping = false;
+
+  main.addEventListener('touchstart', e => {
+    startX    = e.touches[0].clientX;
+    startY    = e.touches[0].clientY;
+    startTime = Date.now();
+    isSwiping = false;
+  }, { passive: true });
+
+  main.addEventListener('touchmove', e => {
+    if (!startX) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // if more vertical than horizontal — it's a scroll, not a swipe
+    if (Math.abs(dy) > Math.abs(dx)) { startX = 0; return; }
+    isSwiping = true;
+  }, { passive: true });
+
+  main.addEventListener('touchend', e => {
+    if (!isSwiping) return;
+    const dx       = e.changedTouches[0].clientX - startX;
+    const elapsed  = Date.now() - startTime;
+    const minDist  = 60;   // minimum px
+    const maxTime  = 400;  // ms — must be a quick flick
+
+    if (Math.abs(dx) < minDist || elapsed > maxTime) return;
+
+    const currentTab = document.querySelector('.bottom-nav-item.active, .nav-item.active')?.dataset?.tab
+      || SWIPE_TABS[0];
+    const idx = SWIPE_TABS.indexOf(currentTab);
+    if (idx === -1) return;
+
+    // RTL reversed: swipe left (dx<0) = previous tab, swipe right (dx>0) = next tab
+    const nextIdx = dx < 0 ? idx - 1 : idx + 1;
+    if (nextIdx < 0 || nextIdx >= SWIPE_TABS.length) return;
+
+    const nextTab = SWIPE_TABS[nextIdx];
+    const direction = dx < 0 ? 'right' : 'left';
+
+    animateTabSwitch(direction, () => {
+      switchTab(nextTab, document.querySelector(`[data-tab="${nextTab}"]`));
+    });
+
+    startX = 0; isSwiping = false;
+  }, { passive: true });
+}
+
+function animateTabSwitch(direction, callback) {
+  const main = document.querySelector('.app-main');
+  if (!main) { callback(); return; }
+
+  // slide out
+  const outX = direction === 'left' ? '-30px' : '30px';
+  main.style.transition = 'opacity .15s ease, transform .15s ease';
+  main.style.opacity    = '0';
+  main.style.transform  = `translateX(${outX})`;
+
+  setTimeout(() => {
+    callback();
+    // slide in from opposite side
+    const inX = direction === 'left' ? '30px' : '-30px';
+    main.style.transition = 'none';
+    main.style.transform  = `translateX(${inX})`;
+    main.style.opacity    = '0';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        main.style.transition = 'opacity .18s ease, transform .18s ease';
+        main.style.opacity    = '1';
+        main.style.transform  = 'translateX(0)';
+      });
+    });
+  }, 150);
 }
 
 

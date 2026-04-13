@@ -2564,3 +2564,31 @@ input[type="date"]::-webkit-date-and-time-value {
   transform: translateX(0);
   visibility: visible;
 }
+
+/* ══ DISABLE HOVER ON TOUCH DEVICES ══════════════════
+   Prevents iOS "sticky hover" bug after tap           */
+@media (hover: none) {
+  .icon-btn:hover,
+  [data-theme="dark"] .icon-btn:hover,
+  [data-theme="dark"] .icon-btn:hover svg { 
+    border-color: var(--border) !important;
+    background: var(--bg) !important;
+    color: inherit !important;
+  }
+  .icon-btn-new-month:hover,
+  [data-theme="dark"] .icon-btn-new-month:hover {
+    background: var(--green) !important;
+    border-color: var(--green) !important;
+  }
+  .nav-item:hover,
+  .bottom-nav-item:hover,
+  .drawer-nav-item:hover { 
+    background: transparent !important;
+    color: var(--ink-3) !important;
+  }
+  .bottom-nav-item.active:hover,
+  .nav-item.active:hover { 
+    background: rgba(14,158,126,.1) !important;
+    color: var(--green) !important;
+  }
+}

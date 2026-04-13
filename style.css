@@ -14,7 +14,7 @@
   --font:'Outfit','Heebo',sans-serif; --mono:'JetBrains Mono',monospace;
 }
 
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html, body {
   height: 100vh;
   height: 100dvh;
@@ -25,6 +25,7 @@ html, body {
   color: var(--ink);
   direction: rtl;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
 }

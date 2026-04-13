@@ -284,7 +284,7 @@ html, body {
 .topbar-title{font-size:1.05rem;font-weight:700;color:var(--ink);letter-spacing:-.02em}
 .topbar-actions{display:flex;gap:8px;align-items:center}
 .icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-xs);font-size:1rem;cursor:pointer;transition:all .18s}
-.icon-btn:hover{border-color:var(--green);background:var(--green-light)}
+/* handled by @media hover */
 .app-main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:26px 28px 40px}
 .tab-panel{max-width:860px;margin:0 auto;animation:fadeUp .3s ease both}
 
@@ -1816,13 +1816,8 @@ select option{background:var(--surface)}
 [data-theme="dark"] .icon-btn svg {
   stroke: var(--ink-2);
 }
-[data-theme="dark"] .icon-btn:hover {
-  background: var(--green-light);
-  border-color: var(--green);
-}
-[data-theme="dark"] .icon-btn:hover svg {
-  stroke: var(--green);
-}
+
+
 [data-theme="dark"] .icon-btn-new-month,
 [data-theme="dark"] .icon-btn-new-month:hover {
   background: var(--green) !important;
@@ -2565,30 +2560,9 @@ input[type="date"]::-webkit-date-and-time-value {
   visibility: visible;
 }
 
-/* ══ DISABLE HOVER ON TOUCH DEVICES ══════════════════
-   Prevents iOS "sticky hover" bug after tap           */
-@media (hover: none) {
-  .icon-btn:hover,
-  [data-theme="dark"] .icon-btn:hover,
-  [data-theme="dark"] .icon-btn:hover svg { 
-    border-color: var(--border) !important;
-    background: var(--bg) !important;
-    color: inherit !important;
-  }
-  .icon-btn-new-month:hover,
-  [data-theme="dark"] .icon-btn-new-month:hover {
-    background: var(--green) !important;
-    border-color: var(--green) !important;
-  }
-  .nav-item:hover,
-  .bottom-nav-item:hover,
-  .drawer-nav-item:hover { 
-    background: transparent !important;
-    color: var(--ink-3) !important;
-  }
-  .bottom-nav-item.active:hover,
-  .nav-item.active:hover { 
-    background: rgba(14,158,126,.1) !important;
-    color: var(--green) !important;
-  }
+/* ══ FIX iOS STICKY HOVER — wrap hover-only styles ══ */
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover { border-color: var(--green); background: var(--green-light); }
+  
+  
 }

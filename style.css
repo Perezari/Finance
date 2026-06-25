@@ -33,7 +33,7 @@ html, body {
 }
 
 /* LOADER */
-.loader-overlay{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loader-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .loader-ring{width:42px;height:42px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
 #loader-text{font-size:.875rem;font-weight:500;color:var(--ink-3)}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -483,6 +483,9 @@ select option{background:var(--surface)}
 /* ══ SETTINGS MODAL ════════════════════════════════════ */
 .modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.35);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
 .modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:420px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
+/* Full-screen data modals (e.g. category detail) use the main bg so the
+   content — and the iOS notch above it — match the home screen, like Shifty. */
+.cat-history-overlay .modal-box{background:var(--bg)}
 .modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
 .modal-header h2{font-size:1rem;font-weight:700;color:var(--ink)}
 .modal-close{width:32px;height:32px;background:var(--bg);border:1.5px solid var(--border);border-radius:50%;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-3);transition:all .15s}
@@ -1437,7 +1440,7 @@ select option{background:var(--surface)}
   --shadow-lg:0 16px 48px rgba(0,0,0,.45);
 }
 [data-theme="dark"] body                    { background-color: #15171c; }
-[data-theme="dark"] .loader-overlay         { background: var(--surface); }
+[data-theme="dark"] .loader-overlay         { background: var(--bg); }
 [data-theme="dark"] .auth-card              { background: var(--surface); }
 [data-theme="dark"] .sidebar               { background: var(--surface); border-color: var(--border); }
 [data-theme="dark"] .topbar                { background: var(--bg); border-color: var(--border); }

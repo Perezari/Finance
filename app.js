@@ -4306,6 +4306,8 @@ function switchTab(name, btn) {
   if(name==='portfolio')  renderPortfolioTab();
   if(name==='annual')     renderAnnualTab();
   if(name==='calendar')   renderCalendarTab();
+  // Re-fit charts after layout (and any swipe animation) settles — iOS Safari fix
+  [80, 320].forEach(d => setTimeout(refitCharts, d));
   // Scroll to top
   const main = document.querySelector('.app-main');
   if (main) main.scrollTop = 0;
@@ -4314,14 +4316,17 @@ function switchTab(name, btn) {
   if (activeBtn) activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
 }
 
-/* ── Keep all charts fitted to the current screen on resize / rotation ── */
+/* ── Keep all charts fitted to the current screen on resize / rotation / tab-switch ──
+   iOS Safari sometimes measures a Chart.js canvas before the layout (or the swipe
+   animation) has settled, which squeezes the plot to one side. Forcing resize()
+   after things settle makes the chart re-fit its container. */
+function refitCharts(){
+  [mainChart, stackedChart, yvyChart, retChart, catHistoryChart]
+    .forEach(c => { try { c && c.resize(); } catch(e){} });
+}
 (function initChartRefit(){
   let t = null;
-  const refit = () => {
-    [mainChart, stackedChart, yvyChart, retChart, catHistoryChart]
-      .forEach(c => { try { c && c.resize(); } catch(e){} });
-  };
-  const schedule = (delay) => { clearTimeout(t); t = setTimeout(refit, delay); };
+  const schedule = (delay) => { clearTimeout(t); t = setTimeout(refitCharts, delay); };
   window.addEventListener('resize', () => schedule(150));
   window.addEventListener('orientationchange', () => schedule(250));
 })();
@@ -6325,7 +6330,7 @@ function applyDarkMode(on) {
   document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = on;
-  const themeColor = on ? '#0d0f14' : '#ffffff';
+  const themeColor = on ? '#15171c' : '#ffffff';   // must match --bg in each mode
   let meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
   meta.content = themeColor;

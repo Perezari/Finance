@@ -7,8 +7,8 @@
   <link rel="manifest" href="manifest.json"/>
   <link rel="icon" type="image/png" href="icon.png"/>
   <link rel="shortcut icon" type="image/png" href="icon.png"/>
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"/>
-  <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)"/>
+  <!-- Single theme-color, kept in sync with the actual app background by applyDarkMode() -->
+  <meta name="theme-color" content="#15171c"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
@@ -508,7 +508,7 @@
 </div>
 
 <script src="config.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 
 <!-- ══ PASSWORD RESET MODAL ══════════════════════════ -->
 <div id="pwd-reset-modal" class="pwd-reset-overlay" style="display:none;">

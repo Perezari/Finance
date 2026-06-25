@@ -1,0 +1,5 @@
+# Local tooling & secrets — never commit
+.claude/
+.env
+node_modules/
+backup/

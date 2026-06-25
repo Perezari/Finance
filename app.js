@@ -4314,6 +4314,18 @@ function switchTab(name, btn) {
   if (activeBtn) activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
 }
 
+/* ── Keep all charts fitted to the current screen on resize / rotation ── */
+(function initChartRefit(){
+  let t = null;
+  const refit = () => {
+    [mainChart, stackedChart, yvyChart, retChart, catHistoryChart]
+      .forEach(c => { try { c && c.resize(); } catch(e){} });
+  };
+  const schedule = (delay) => { clearTimeout(t); t = setTimeout(refit, delay); };
+  window.addEventListener('resize', () => schedule(150));
+  window.addEventListener('orientationchange', () => schedule(250));
+})();
+
 /* ══ SWIPE BETWEEN TABS ═══════════════════════════════ */
 const SWIPE_TABS = ['current','history','annual','calendar'];
 

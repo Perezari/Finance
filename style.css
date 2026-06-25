@@ -389,8 +389,9 @@ html, body {
 .yvy-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 
 /* ══ CHART ════════════════════════════════════════════ */
-.chart-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-md);padding:22px 18px 16px;margin-bottom:20px;animation:fadeUp .38s ease both}
-.chart-wrap{position:relative;height:240px}
+.chart-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-md);padding:22px 18px 16px;margin-bottom:20px;animation:fadeUp .38s ease both;overflow:hidden}
+.chart-wrap{position:relative;height:240px;width:100%}
+.chart-wrap canvas{max-width:100%!important}
 
 /* ══ CONTROLS + FORM ══════════════════════════════════ */
 .ctrl-bar{display:flex;gap:10px;align-items:center;margin-bottom:14px}

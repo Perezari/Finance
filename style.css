@@ -688,7 +688,9 @@ select option{background:var(--surface)}
 }
 @media (min-width:769px){.bottom-nav{display:none}}
 @supports (padding:env(safe-area-inset-bottom)){
-  .bottom-nav{height:calc(68px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}
+  /* Classic nav handles its own safe-area (see [data-nav="classic"] .bottom-nav);
+     the floating pill lifts itself via its own `bottom` calc, so it must NOT be
+     height-inflated here — that turned it into a tall black box on notched iPhones. */
   @media (max-width:768px){.app-content{padding-bottom:0}}
 }
 
@@ -1415,14 +1417,15 @@ select option{background:var(--surface)}
 
 /* ══ DARK MODE ═══════════════════════════════════════ */
 [data-theme="dark"] {
-  --bg:       #1a1c28;
-  --surface:  #1a1d27;
-  --surface2: #22263a;
-  --border:   #2e3347;
-  --ink:      #f0f2f8;
-  --ink-2:    #c8cde0;
-  --ink-3:    #7b82a0;
-  --ink-4:    #4e5470;
+  /* Shifty dark palette — soft neutral charcoal, no near-black, no blue tint */
+  --bg:       #15171c;
+  --surface:  #1e2026;
+  --surface2: #262931;
+  --border:   #2c3039;
+  --ink:      #f0f1f4;
+  --ink-2:    #c6cbd4;
+  --ink-3:    #9aa0ad;
+  --ink-4:    #6b7280;
   --green-light: rgba(14,158,126,.15);
   --blue-light:  rgba(79,142,247,.12);
   --red-light:   rgba(239,68,68,.12);
@@ -1431,7 +1434,7 @@ select option{background:var(--surface)}
   --shadow-md:0 6px 20px rgba(0,0,0,.35);
   --shadow-lg:0 16px 48px rgba(0,0,0,.45);
 }
-[data-theme="dark"] body                    { background-color: #090b11; }
+[data-theme="dark"] body                    { background-color: #15171c; }
 [data-theme="dark"] .loader-overlay         { background: var(--surface); }
 [data-theme="dark"] .auth-card              { background: var(--surface); }
 [data-theme="dark"] .sidebar               { background: var(--surface); border-color: var(--border); }

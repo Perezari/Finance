@@ -9,6 +9,22 @@
   <link rel="shortcut icon" type="image/png" href="icon.png"/>
   <!-- Single theme-color, kept in sync with the actual app background by applyDarkMode() -->
   <meta name="theme-color" content="#15171c"/>
+  <script>
+    /* Theme-flash prevention: apply the saved theme BEFORE first paint, so the
+       auth screen and the iOS notch snapshot start in the right colors.
+       app.js loads at the end of <body> (after CDN scripts) — far too late.
+       Hex values must match --bg in style.css for each mode. */
+    (function(){
+      try {
+        var saved = localStorage.getItem('dark_mode_v1');
+        var dark = saved !== null ? saved === '1'
+                 : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', dark ? '#15171c' : '#ffffff');
+      } catch(e){}
+    })();
+  </script>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="default"/>

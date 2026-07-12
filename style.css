@@ -23,7 +23,7 @@ html, body {
   width: 100vw;
   overflow: hidden;
   font-family: var(--font);
-  background-color: #ffffff;
+  background-color: var(--bg);
   color: var(--ink);
   direction: rtl;
   -webkit-font-smoothing: antialiased;
@@ -1447,7 +1447,7 @@ select option{background:var(--surface)}
   --shadow-md:0 6px 20px rgba(0,0,0,.35);
   --shadow-lg:0 16px 48px rgba(0,0,0,.45);
 }
-[data-theme="dark"] body                    { background-color: #15171c; }
+[data-theme="dark"] body                    { background-color: var(--bg); }
 [data-theme="dark"] .loader-overlay         { background: var(--bg); }
 [data-theme="dark"] .auth-card              { background: var(--surface); }
 [data-theme="dark"] .sidebar               { background: var(--surface); border-color: var(--border); }

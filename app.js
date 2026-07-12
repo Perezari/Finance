@@ -6330,10 +6330,16 @@ function applyDarkMode(on) {
   document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = on;
-  const themeColor = on ? '#15171c' : '#ffffff';   // must match --bg in each mode
-  let meta = document.querySelector('meta[name="theme-color"]');
-  if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
+  // Like Shifty: read the real computed --bg off <body> (also forces a style
+  // recalc for the new theme). iOS standalone ignores content updates on an
+  // existing theme-color meta — it only re-reads a freshly inserted node — so
+  // replace the node instead of mutating it (fixes stale notch until relaunch).
+  const themeColor = getComputedStyle(document.body).backgroundColor;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.remove());
+  const meta = document.createElement('meta');
+  meta.name = 'theme-color';
   meta.content = themeColor;
+  document.head.appendChild(meta);
 }
 
 async function toggleDarkMode(on) {

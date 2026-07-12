@@ -2691,7 +2691,6 @@ function openDetailModal(record) {
       max-width:480px;
       max-height:85vh;
       overflow-y:auto;
-      animation:fadeUp .22s ease;
       scrollbar-width:thin;
       scrollbar-color:var(--border) transparent;
       margin:16px;

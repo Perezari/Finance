@@ -487,7 +487,7 @@ select option{background:var(--surface)}
 
 /* ══ SETTINGS MODAL ════════════════════════════════════ */
 .modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.35);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
-.modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:420px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
+.modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:420px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden}
 /* Full-screen modals (category detail, settings, add-month wizard) use the
    main bg so the content — and the iOS notch above it — match the home
    screen, like Shifty. Inner fields/items are var(--bg)+border just like the
@@ -500,8 +500,12 @@ select option{background:var(--surface)}
 .modal-close:hover{background:var(--border);color:var(--ink)}
 .modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 22px 40px;flex:1}
 @media (max-width:768px){
+  /* iOS paints backdrop-filter a frame late, flashing on every modal open.
+     Mobile modals are full-screen sheets anyway, so the blur buys nothing —
+     keep only the rgba dim. Desktop (centered cards) keeps the blur. */
+  .modal-overlay,.shortcuts-overlay,.info-modal-overlay{backdrop-filter:none;-webkit-backdrop-filter:none}
   .modal-overlay,.shortcuts-overlay{align-items:flex-end;padding:0}
-  .modal-box{position:absolute;bottom:0;left:0;right:0;border-color:var(--surface);height:var(--modal-h,100dvh);max-height:none;max-width:100%;border-radius:0;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom);animation:slideUp .28s ease}
+  .modal-box{position:absolute;bottom:0;left:0;right:0;border-color:var(--surface);height:var(--modal-h,100dvh);max-height:none;max-width:100%;border-radius:0;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
   .modal-body{flex:0 1 auto}
 }
 .settings-section{margin-bottom:26px}
@@ -1873,7 +1877,6 @@ select option{background:var(--surface)}
   flex-direction: column;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: fadeUp .22s ease;
 }
 
 /* Header */
@@ -2080,7 +2083,6 @@ select option{background:var(--surface)}
     border-radius: 0;
     max-width: 100%;
     padding-bottom: env(safe-area-inset-bottom);
-    animation: slideUp .28s ease;
   }
 }
 
@@ -2098,7 +2100,7 @@ select option{background:var(--surface)}
   padding: 16px;
 }
 
-.info-modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:380px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:fadeUp .25s ease;overflow:hidden}
+.info-modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);width:100%;max-width:380px;max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden}
 
 /* Info modal — mobile bottom sheet */
 @media (max-width: 640px) {
@@ -2118,7 +2120,6 @@ select option{background:var(--surface)}
     border-radius: 0;
     max-width: 100%;
     padding-bottom: env(safe-area-inset-bottom);
-    animation: slideUp .28s ease;
   }
 }
 
@@ -2209,7 +2210,6 @@ input[type="date"]::-webkit-date-and-time-value {
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-lg);
-  animation: fadeUp .22s ease;
   overflow: hidden;
 }
 @media (max-width: 768px) {
@@ -2224,7 +2224,6 @@ input[type="date"]::-webkit-date-and-time-value {
     border-radius: 0;
     max-width: 100%;
     padding-bottom: env(safe-area-inset-bottom);
-    animation: slideUp .28s ease;
   }
 }
 .wz-header {

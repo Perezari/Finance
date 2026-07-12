@@ -420,6 +420,27 @@
         <div id="pwd-section"><!-- rendered dynamically --></div>
       </div>
 
+      <!-- 2.5 נעילת אפליקציה -->
+      <div class="settings-section">
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none"/></svg> נעילת אפליקציה</h3>
+        <p class="settings-hint">קוד הנעילה נשמר במכשיר הזה בלבד — בכל מכשיר מגדירים נעילה בנפרד. האפליקציה ננעלת בפתיחה ואחרי דקה ברקע.</p>
+        <div class="dark-toggle-row" style="border-top:none;margin-top:0;padding-top:6px">
+          <span class="dark-toggle-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15L19 4"/><path d="M18 5l2 2"/><path d="M15 8l2 2"/></svg> נעילה עם קוד</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="lock-toggle" onchange="lockToggleChanged(this.checked)"/>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="dark-toggle-row" id="lock-bio-row" style="display:none">
+          <span class="dark-toggle-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6.5A2.5 2.5 0 0 1 6.5 4H8M16 4h1.5A2.5 2.5 0 0 1 20 6.5V8M20 16v1.5a2.5 2.5 0 0 1-2.5 2.5H16M8 20H6.5A2.5 2.5 0 0 1 4 17.5V16"/><path d="M8.6 9.8v1.6M15.4 9.8v1.6M12 9.8v3.1a1 1 0 0 1-.9.9M8.8 16a4.7 4.7 0 0 0 6.4 0"/></svg> פתיחה עם Face ID</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="lock-bio-toggle" onchange="lockBioChanged(this.checked)"/>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <button onclick="lockChangePin()" class="restore-btn" id="lock-change-btn" style="display:none;margin-top:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3"/><path d="M22 12.5a10 10 0 0 1-18.8 4.2"/></svg> שינוי קוד</button>
+      </div>
+
       <!-- 3. מראה -->
       <div class="settings-section">
         <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2C8 6 8 18 12 22"/></svg> מראה</h3>
@@ -523,6 +544,7 @@
   </div>
 </div>
 
+<script src="lock.js"></script>
 <script src="config.js"></script>
 <script src="app.js?v=4"></script>
 

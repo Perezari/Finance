@@ -393,7 +393,12 @@ html, body {
 /* ══ CHART ════════════════════════════════════════════ */
 .chart-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-md);padding:22px 18px 16px;margin-bottom:20px;animation:fadeUp .38s ease both;overflow:hidden}
 .chart-wrap{position:relative;height:240px;width:100%}
-.chart-wrap canvas{max-width:100%!important}
+/* Force the canvas to always fill its wrap. Canvas is inline, so when iOS
+   Safari mis-measures it after a tab switch it ends up narrower than the
+   card and (in RTL) hugs the right edge, leaving dead space on the left.
+   The category-detail chart has inline width:100% and never squeezes —
+   same guarantee here. refitCharts() restores sharpness right after. */
+.chart-wrap canvas{display:block;width:100%!important;height:100%!important}
 
 /* ══ CONTROLS + FORM ══════════════════════════════════ */
 .ctrl-bar{display:flex;gap:10px;align-items:center;margin-bottom:14px}

@@ -223,8 +223,24 @@
   /* ---------- public API ---------- */
   function isEnabled() { const c = cfg(); return !!(c && c.hash); }
 
+  // מחובר ל-Supabase? (המפתח של הסשן נשמר ב-localStorage בשם sb-<ref>-auth-token)
+  function hasSession() {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("sb-") && k.endsWith("-auth-token")) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  // התנתקות רכה: הסשן נשמר מאחורי הנעילה, ומסך ההתחברות מציג "כניסה עם Face ID"
+  function softLoggedOut() {
+    try { return localStorage.getItem("budgy.softlogout") === "1"; } catch (e) { return false; }
+  }
+
   function lockNow() {
-    if (!isEnabled() || mode === "set1" || mode === "set2") return;
+    // בלי סשן (או אחרי התנתקות) אין מה לנעול — מסך ההתחברות הוא השער
+    if (!isEnabled() || !hasSession() || softLoggedOut() || mode === "set1" || mode === "set2") return;
     locked = true;
     show("unlock", "הזן קוד גישה", false);
     // one automatic Face ID attempt; if the browser blocks it (no user
@@ -285,7 +301,21 @@
     syncUI();
   };
 
-  window.BudgyLock = { isEnabled, lockNow, syncUI };
+  // אימות לכפתור "כניסה עם Face ID" במסך ההתחברות: ביומטרי תחילה,
+  // ואם נכשל/בוטל — נפילה לקוד הגישה
+  async function verify() {
+    const c = cfg();
+    if (c && c.credId && (await tryBio())) return true;
+    return promptConfirm("הזן קוד גישה");
+  }
+
+  window.BudgyLock = {
+    isEnabled,
+    lockNow,
+    syncUI,
+    verify,
+    hasBio: () => { const c = cfg(); return !!(c && c.credId); },
+  };
 
   /* ---------- boot + relock ---------- */
   if (isEnabled()) lockNow();

@@ -107,8 +107,10 @@ async function init() {
   let appLoaded = false;
   try {
     const { data: { session } } = await db.auth.getSession();
-    if (session?.user) { currentUser = session.user; appLoaded = true; await loadApp(); }
-    else showScreen('auth');
+    // התנתקות רכה: יש סשן שמור אבל המשתמש התנתק — מסך התחברות עם "כניסה עם Face ID"
+    const softLogout = localStorage.getItem('budgy.softlogout') === '1';
+    if (session?.user && !softLogout) { currentUser = session.user; appLoaded = true; await loadApp(); }
+    else { showScreen('auth'); refreshBioLoginBtn(); }
   } catch(e) { console.error(e); showScreen('auth'); }
 
   db.auth.onAuthStateChange(async (event, session) => {
@@ -122,6 +124,8 @@ async function init() {
       return;
     }
     if (event === 'SIGNED_IN' && session && !appLoaded) {
+      // בהתנתקות רכה הסשן עדיין חי — רענון טוקן לא אמור לעקוף את מסך ההתחברות
+      if (localStorage.getItem('budgy.softlogout') === '1') return;
       currentUser = session.user; appLoaded = true; await loadApp();
     } else if (event === 'SIGNED_OUT') {
       currentUser = null; appLoaded = false; records = []; categories = [];
@@ -133,6 +137,7 @@ async function init() {
 }
 
 async function loadApp() {
+  localStorage.removeItem('budgy.softlogout');   // כל כניסה מוצלחת מנקה התנתקות רכה
   showLoader('טוען נתונים...');
   await Promise.all([loadCategories(), loadRecords()]);
   loadRetirementSettings();
@@ -391,9 +396,43 @@ async function handleMagicLink() {
 
 async function handleLogout() {
   closeSettings();
+  // כשנעילת האפליקציה פעילה — התנתקות רכה: הסשן נשאר שמור מאחורי הנעילה,
+  // ומסך ההתחברות מציע "כניסה עם Face ID" לחזרה מהירה (כמו אפליקציית בנק)
+  if (window.BudgyLock && BudgyLock.isEnabled()) {
+    localStorage.setItem('budgy.softlogout', '1');
+    location.reload();
+    return;
+  }
   localStorage.removeItem('display_name_v1');
   await db.auth.signOut();
 }
+
+// כפתור "כניסה עם Face ID" — מוצג רק אחרי התנתקות רכה כשמוגדר אימות ביומטרי
+function refreshBioLoginBtn() {
+  const btn = document.getElementById('bio-login-btn');
+  if (!btn) return;
+  const l = window.BudgyLock;
+  const soft = localStorage.getItem('budgy.softlogout') === '1';
+  btn.style.display = soft && l && l.isEnabled() && l.hasBio() ? '' : 'none';
+}
+
+async function handleBioLogin() {
+  const ok = await window.BudgyLock.verify();
+  if (!ok) return;
+  showLoader('נכנס...');
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) {
+    localStorage.removeItem('budgy.softlogout');
+    currentUser = session.user;
+    await loadApp();
+  } else {
+    hideLoader();
+    localStorage.removeItem('budgy.softlogout');
+    refreshBioLoginBtn();
+    showAuthMsg('הסשן פג — יש להיכנס עם אימייל וסיסמה', false);
+  }
+}
+window.handleBioLogin = handleBioLogin;
 
 function translateError(msg) {
   return ({'Invalid login credentials':'אימייל או סיסמה שגויים',

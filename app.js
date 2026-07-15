@@ -434,6 +434,67 @@ async function handleBioLogin() {
 }
 window.handleBioLogin = handleBioLogin;
 
+/* ══════════════════════════════════════════════════════
+   PUSH — התראות ישירות מהענן (Edge Function), בלי תלות במחשב
+══════════════════════════════════════════════════════ */
+const PUSH_VAPID_PUBLIC = 'BMDqhxYn7sg8uC4HCEFvOZtZIUVHBIqI7L5AapgRFjZuiDNkzc5fh646J2TpL5vts4cWDZHOi5L8G-oDdk5c_CU';
+
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && isSecureContext;
+}
+function pushB64ToBuf(b) {
+  const pad = '='.repeat((4 - (b.length % 4)) % 4);
+  const raw = atob((b + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0)).buffer;
+}
+async function pushEnabled() {
+  if (!pushSupported()) return false;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return !!(reg && (await reg.pushManager.getSubscription()));
+}
+async function refreshPushSection() {
+  const section = document.getElementById('push-section');
+  if (!section) return;
+  if (!pushSupported() || !currentUser) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  document.getElementById('push-toggle').checked = await pushEnabled();
+}
+async function pushToggleChanged(checked) {
+  const cb = document.getElementById('push-toggle');
+  try {
+    if (checked) {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') throw new Error('לא ניתנה הרשאה להתראות');
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: pushB64ToBuf(PUSH_VAPID_PUBLIC),
+      });
+      const j = sub.toJSON();
+      const { error } = await db.from('push_subscriptions').upsert({
+        endpoint: sub.endpoint,
+        user_id: currentUser.id,
+        p256dh: j.keys.p256dh,
+        auth: j.keys.auth,
+      });
+      if (error) throw error;
+      showToast('התראות הופעלו למכשיר הזה');
+    } else {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && (await reg.pushManager.getSubscription());
+      if (sub) {
+        try { await db.from('push_subscriptions').delete().eq('endpoint', sub.endpoint); } catch (e) {}
+        await sub.unsubscribe();
+      }
+      showToast('ההתראות כובו');
+    }
+  } catch (e) {
+    cb.checked = !checked;
+    showToast(e && e.message ? e.message : 'לא הצלחנו לעדכן את ההתראות');
+  }
+}
+window.pushToggleChanged = pushToggleChanged;
+
 function translateError(msg) {
   return ({'Invalid login credentials':'אימייל או סיסמה שגויים',
            'Email not confirmed':'יש לאשר את האימייל קודם',
@@ -3801,6 +3862,7 @@ function showSettings(tab) {
   renderCategoriesList();
   document.getElementById('settings-modal').style.display='flex';
   switchSettingsTab(tab || 'categories');
+  refreshPushSection();
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const toggle = document.getElementById('dark-mode-toggle');
   if (toggle) toggle.checked = isDark;

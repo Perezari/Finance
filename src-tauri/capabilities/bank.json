@@ -1,12 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "bank",
-  "description": "The bank window, granted exactly one thing: the ability to emit an event. Tauri's IPC on Windows rides WebView2's native postMessage bridge, so it works even where a site's CSP blocks the page from reaching the network — which is how the reader gets its result out. Emitting is all it can do: no command, no filesystem, no shell. Treat anything arriving on that channel as untrusted input.",
+  "description": "The bank window, granted exactly one thing: the ability to emit an event. Tauri's IPC on Windows rides WebView2's native postMessage bridge, so it works even where a site's CSP blocks the page from reaching the network — which is how a reader gets its result out. Emitting is all it can do: no command, no filesystem, no shell. Treat anything arriving on that channel as untrusted input.",
   "windows": ["bank"],
   "remote": {
     "urls": [
       "https://*.bankhapoalim.co.il",
-      "https://*.mizrahi-tefahot.co.il"
+      "https://*.mizrahi-tefahot.co.il",
+      "https://*.meitav.co.il",
+      "https://*.menoramivt.co.il",
+      "https://*.inter-il.com"
     ]
   },
   "permissions": ["core:event:allow-emit"]

@@ -1815,6 +1815,7 @@ if (typeof window !== 'undefined' && window.__TAURI__) {
    endpoints and field names cannot be guessed, and guessing them has already
    cost us two rounds. Desktop only; the captured files never leave the PC. */
 const DISCOVER_PRESETS = [
+  { id: 'meitav',   name: 'מיטב דש',      url: 'https://customers.meitav.co.il/v2/login/loginAmit' },
   { id: 'hapoalim', name: 'בנק הפועלים', url: 'https://login.bankhapoalim.co.il/ng-portals/auth/he/?reqName=getLogonPage' },
   { id: 'mizrahi',  name: 'מזרחי טפחות', url: 'https://sc.mizrahi-tefahot.co.il/TFHLogin/index.html#/login' },
 ];
@@ -1850,7 +1851,12 @@ function initTauriSettings() {
    live in Rust; this is only what the UI needs to offer the button. */
 const IMPORTABLE = {
   hapoalim: { name: 'בנק הפועלים', url: 'https://login.bankhapoalim.co.il/ng-portals/auth/he/?reqName=getLogonPage' },
+  meitav:   { name: 'מיטב דש',    url: 'https://customers.meitav.co.il/v2/login/loginAmit' },
 };
+
+/* Colour per product so the share bars stay distinguishable whatever the
+   institution reports. */
+const PRODUCT_COLORS = ['var(--green)', 'var(--blue)', 'var(--amber)', 'var(--ink-3)'];
 
 let bankSnapshots = {};   // institution_id -> newest row from bank_snapshots
 
@@ -1895,27 +1901,40 @@ function showBankDetail(instId, catKey, catLabel) {
   const own = latest ? (latest.values || {})[catKey] || 0 : 0;
   const ownPrev = prev ? (prev.values || {})[catKey] || 0 : null;
 
-  /* Everything this bank holds, so each product can be shown as a share. */
+  /* Everything this institution holds, so each product can be shown as a
+     share. `details.accounts` is the generic form any reader can emit; the
+     named current/securities pair is Hapoalim's older shape, still read so
+     snapshots taken before the generic form keep rendering. */
   const products = [];
-  if (d.current) {
-    products.push({
-      name: 'עובר ושב', value: d.current.balance, color: 'var(--green)',
+  if (Array.isArray(d.accounts) && d.accounts.length) {
+    d.accounts.forEach((a, i) => products.push({
+      name: a.name || a.kind, value: a.value, color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
       meta: [
-        d.current.withdrawal != null && d.current.withdrawal !== d.current.balance
-          ? `יתרה למשיכה <b>${fmt(d.current.withdrawal)}</b>` : null,
-        d.current.creditLimit ? `מסגרת <b>${fmt(d.current.creditLimit)}</b>` : 'ללא מסגרת',
-        d.current.creditUsed ? `נוצל <b style="color:var(--red)">${fmt(d.current.creditUsed)}</b>` : null,
+        a.number ? `חשבון <b>${a.number}</b>` : null,
+        a.asOf ? `שערוך ${new Date(a.asOf).toLocaleDateString('he-IL')}` : null,
       ].filter(Boolean),
-    });
-  }
-  if (d.securities) {
-    products.push({
-      name: 'ניירות ערך', value: d.securities.total, color: 'var(--blue)',
-      meta: [
-        d.securities.israeli != null ? `ישראלי <b>${fmt(d.securities.israeli)}</b>` : null,
-        d.securities.foreign != null ? `חו"ל <b>${fmt(d.securities.foreign)}</b>` : null,
-      ].filter(Boolean),
-    });
+    }));
+  } else {
+    if (d.current) {
+      products.push({
+        name: 'עובר ושב', value: d.current.balance, color: 'var(--green)',
+        meta: [
+          d.current.withdrawal != null && d.current.withdrawal !== d.current.balance
+            ? `יתרה למשיכה <b>${fmt(d.current.withdrawal)}</b>` : null,
+          d.current.creditLimit ? `מסגרת <b>${fmt(d.current.creditLimit)}</b>` : 'ללא מסגרת',
+          d.current.creditUsed ? `נוצל <b style="color:var(--red)">${fmt(d.current.creditUsed)}</b>` : null,
+        ].filter(Boolean),
+      });
+    }
+    if (d.securities) {
+      products.push({
+        name: 'ניירות ערך', value: d.securities.total, color: 'var(--blue)',
+        meta: [
+          d.securities.israeli != null ? `ישראלי <b>${fmt(d.securities.israeli)}</b>` : null,
+          d.securities.foreign != null ? `חו"ל <b>${fmt(d.securities.foreign)}</b>` : null,
+        ].filter(Boolean),
+      });
+    }
   }
   const bankTotal = products.reduce((a, p) => a + (p.value || 0), 0);
 
@@ -1934,6 +1953,24 @@ function showBankDetail(instId, catKey, catLabel) {
         </div>
       </div>`;
   }).join('');
+
+  /* Provident deposits: what went in this month and who paid it. */
+  const deposits = (d.deposits || []).filter((x) => x.total);
+  const depositsBlock = deposits.length ? `
+    <div class="chb-history-header" style="margin:16px -20px 0;padding-right:20px;padding-left:20px"><span>הפקדה אחרונה</span></div>
+    ${deposits.map((x) => `
+      <div class="mort-route">
+        <div class="mort-route-top">
+          <span class="mort-route-name"><i style="background:var(--green)"></i>${x.fund || 'הפקדה'}</span>
+          <span class="mort-route-bal">${fmt(x.total)}</span>
+        </div>
+        <div class="mort-route-meta" style="margin-top:8px">
+          ${x.employee ? `<span>עובד <b>${fmt(x.employee)}</b></span>` : ''}
+          ${x.employer ? `<span>מעסיק <b>${fmt(x.employer)}</b></span>` : ''}
+          ${x.severance ? `<span>פיצויים <b>${fmt(x.severance)}</b></span>` : ''}
+          ${x.date ? `<span>${new Date(x.date).toLocaleDateString('he-IL')}</span>` : ''}
+        </div>
+      </div>`).join('')}` : '';
 
   const charges = (d.cards?.byDebitDate || []).filter((c) => c.amount);
   const cardsBlock = d.cards ? `
@@ -1970,6 +2007,7 @@ function showBankDetail(instId, catKey, catLabel) {
       : `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">${catLabel}: <strong>${fmt(own)}</strong></bdi></span>`,
     ...products.map((p) => `<span class="tkr-item">${ICONS_JS.trending} <bdi dir="rtl" class="tkr-text">${p.name}: <strong>${fmt(p.value)}</strong></bdi></span>`),
     ...(d.cards?.total ? [`<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">אשראי: <strong style="color:var(--red)">${fmt(d.cards.total)}</strong></bdi></span>`] : []),
+    ...(deposits.length ? [`<span class="tkr-item">${ICONS_JS.piggy} <bdi dir="rtl" class="tkr-text">הופקד: <strong>${fmt(deposits.reduce((a, x) => a + x.total, 0))}</strong></bdi></span>`] : []),
   ];
   const SEP = `<span class="tkr-sep">·</span>`, LOOP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
   const ticker = `<div class="tkr-track" id="bank-tkr-track">${tickerItems.join(SEP) + LOOP + tickerItems.join(SEP) + LOOP}</div>`;
@@ -2006,6 +2044,7 @@ function showBankDetail(instId, catKey, catLabel) {
         ${productCards ? `
           <div class="chb-history-header" style="margin:0 -20px 0;padding-right:20px;padding-left:20px"><span>החשבונות בבנק</span></div>
           ${productCards}` : ''}
+        ${depositsBlock}
         ${cardsBlock}
         ${!snap ? '<p class="settings-hint" style="margin-top:10px">עוד לא יובאו נתונים מהבנק. לחץ על הייבוא כדי למשוך אותם.</p>' : ''}
 
@@ -2084,7 +2123,7 @@ async function importFromInstitution(instId, btn) {
       // Redraw the open detail view so the new numbers show without reopening.
       if (document.getElementById('bank-detail-modal')) showBankDetail(instId, lastBankCat.key, lastBankCat.label);
     });
-    await invoke('import_accounts_from_bank', { url });
+    await invoke('import_accounts_from_bank', { url, institution: instId });
   } catch (e) {
     stop();
     showToast(String(e && e.message ? e.message : e));

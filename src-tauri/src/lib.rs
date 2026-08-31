@@ -476,6 +476,155 @@ fn hapoalim_script() -> String {
     template.to_string()
 }
 
+/// Meitav Dash — provident and pension balances.
+///
+/// /v2/api/AmitLobby/getAllAmitAccounts carries every account the member
+/// holds. KupaType is the stable identifier for the product (2 = study fund,
+/// 5 = pension), so the mapping survives a renamed account.
+///
+/// Only the financial fields are forwarded. The payload also carries an ID
+/// number, phone, email, home address and the agent's details, and none of
+/// that belongs in a balance snapshot.
+fn meitav_script() -> String {
+    r####"
+(function () {
+  if (window.top !== window.self) return;
+  if (window.__budgyMeitav) return;
+  window.__budgyMeitav = true;
+
+  var NL = String.fromCharCode(10);
+  var nativeFetch = window.fetch.bind(window);
+  var payload = null, done = false, tries = 0, lastErr = "ממתין להתחברות";
+
+  function alreadySubmitted() {
+    try { return sessionStorage.getItem("__budgySubmitted") === "1"; } catch (e) { return false; }
+  }
+  function markSubmitted() {
+    try { sessionStorage.setItem("__budgySubmitted", "1"); } catch (e) {}
+  }
+
+  function box() {
+    var el = document.getElementById("__budgy_box");
+    if (!el && document.body) {
+      el = document.createElement("div");
+      el.id = "__budgy_box";
+      el.style.cssText = "position:fixed;left:12px;right:12px;bottom:16px;z-index:2147483647;" +
+        "background:#16181d;color:#fff;padding:13px 16px;border-radius:14px;direction:rtl;text-align:right;" +
+        "font:600 15px/1.45 -apple-system,system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.45);white-space:pre-line";
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function say(t, ok) {
+    var el = box(); if (!el) return;
+    el.textContent = t;
+    if (ok === true) el.style.background = "#0e9e7e";
+    if (ok === false) el.style.background = "#b3312c";
+  }
+
+  function kindOf(kupaType) {
+    if (kupaType === 2) return "study";
+    if (kupaType === 5) return "pension";
+    return "kupa" + kupaType;
+  }
+
+  /* Pull out the numbers and nothing else. */
+  function consider(text) {
+    if (done || typeof text !== "string" || text.indexOf("AmitAccounts") === -1) return;
+    var j; try { j = JSON.parse(text); } catch (e) { return; }
+    var lobby = j && j.lobbyData;
+    var list = lobby && lobby.AmitAccounts;
+    if (!Array.isArray(list) || !list.length) return;
+
+    var accounts = [], details = { accounts: [], deposits: [] };
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (typeof a.YitrotAccountSum !== "number") continue;
+      var kind = kindOf(a.KupaType);
+      var name = a.KupaTypeNameHebrew || kind;
+      accounts.push({ kind: kind, label: name, balance: a.YitrotAccountSum });
+      details.accounts.push({
+        kind: kind, name: name, value: a.YitrotAccountSum,
+        number: a.AccountNumForShow || null,
+        asOf: (a.RevaluationDate || "").slice(0, 10) || null
+      });
+    }
+    if (!accounts.length) return;
+
+    var tx = lobby.DayliTransactions || [];
+    for (var k = 0; k < tx.length; k++) {
+      var t = tx[k];
+      if (typeof t.HafkadotSum !== "number") continue;
+      details.deposits.push({
+        fund: t.KupaName || null,
+        date: (t.ErehDate || "").slice(0, 10) || null,
+        employee: t.HafkadotOved, employer: t.HafkadotEmployer,
+        severance: t.HafkadotPitzuim, total: t.HafkadotSum
+      });
+    }
+    var loans = lobby.lobbyLoanData || j.lobbyLoanData;
+    if (loans && typeof loans.TotalLoansAmount === "number") {
+      details.loans = loans.TotalLoansAmount;
+    }
+
+    payload = { institution_id: "meitav", accounts: accounts, details: details };
+  }
+
+  var _fetch = window.fetch;
+  window.fetch = function () {
+    var out = _fetch.apply(this, arguments);
+    try { out.then(function (r) { try { r.clone().text().then(consider, function () {}); } catch (e) {} }, function () {}); } catch (e) {}
+    return out;
+  };
+  var _send = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function () {
+    try { this.addEventListener("load", function () { try { consider(this.responseText); } catch (e) {} }); } catch (e) {}
+    return _send.apply(this, arguments);
+  };
+
+  function probe() {
+    return nativeFetch("/v2/api/AmitLobby/getAllAmitAccounts", {
+      credentials: "include", headers: { accept: "application/json" }
+    }).then(function (r) {
+      if (r.status !== 200) { lastErr = "חשבונות: HTTP " + r.status; return; }
+      return r.text().then(consider);
+    }).catch(function (e) { lastErr = "חשבונות: " + (e && e.message || e); });
+  }
+
+  function submitNow() {
+    if (done || alreadySubmitted() || !payload) return;
+    done = true;
+    markSubmitted();
+    say("Budgy — שומר…");
+    try {
+      window.__TAURI__.event.emit("budgy://accounts", payload);
+      say("\u2713 נשלח לשמירה");
+    } catch (e) {
+      done = false;
+      say("\u2717 " + (e.message || e), false);
+    }
+  }
+
+  var timer = setInterval(function () {
+    if (done) { clearInterval(timer); return; }
+    tries++;
+    probe().then(function () {
+      if (done) return;
+      if (payload) { submitNow(); return; }
+      say("Budgy — ממתין לנתונים…" + NL + lastErr + NL + "ניסיון " + tries);
+      try { window.__TAURI__.event.emit("budgy://result", { progress: true, error: lastErr, tries: tries }); } catch (e) {}
+    });
+    if (tries > 200) {
+      clearInterval(timer); done = true;
+      say("\u2717 לא הצלחנו לקרוא את החשבונות" + NL + lastErr, false);
+      try { window.__TAURI__.event.emit("budgy://result", { ok: false, error: lastErr }); } catch (e) {}
+    }
+  }, 3000);
+})();
+"####
+    .to_string()
+}
+
 /// Records every JSON response the page receives, so an adapter for a new
 /// bank can be written from real payloads instead of guesswork.
 fn capture_script() -> String {
@@ -485,7 +634,7 @@ fn capture_script() -> String {
   window.__budgyCapture = true;
 
   var SKIP = /(login|logon|signin|sign-in|auth|oauth|token|otp|sms|captcha|password|identify|kyc)/i;
-  var seen = {}, count = 0, sent = 0, failed = 0;
+  var seen = {}, count = 0, sent = 0, failed = 0, lastText = "";
 
   function box() {
     var el = document.getElementById("__budgy_box");
@@ -538,6 +687,52 @@ fn capture_script() -> String {
     try { this.addEventListener("load", function () { try { keep(self.__budgyUrl || location.href, self.responseText); } catch (e) {} }); } catch (e) {}
     return _send.apply(this, arguments);
   };
+
+  /* Not every site has an API to listen to. A server-rendered page carries the
+     numbers in its markup, so record the rendered DOM as well — text to find
+     the figures, markup to find a selector that will still be there tomorrow. */
+  function snapshotDom() {
+    if (!document.body) return;
+    /* Same rule as the network capture: nothing from a sign-in screen. */
+    if (SKIP.test(location.href)) return;
+    var text = document.body.innerText || "";
+    if (text.length < 200) return;
+    /* Re-send only when the page actually changed. */
+    var fingerprint = text.length + ":" + text.slice(0, 200);
+    if (fingerprint === lastText) return;
+    lastText = fingerprint;
+
+    var payload = JSON.stringify({
+      kind: "dom",
+      url: location.href,
+      title: document.title,
+      text: text.slice(0, 300000),
+      html: document.body.innerHTML.slice(0, 600000)
+    });
+    count++;
+    try {
+      window.__TAURI__.event.emit("budgy://capture", { url: location.href + "#dom", body: payload });
+      sent++;
+    } catch (e) { failed++; }
+    status();
+  }
+
+  setInterval(snapshotDom, 3000);
+  window.addEventListener("load", function () { setTimeout(snapshotDom, 1500); });
+
+  /* The IPC channel only exists for hosts listed in the bank capability. A
+     missing one produced an empty dump with no hint why — say it out loud. */
+  if (!(window.__TAURI__ && window.__TAURI__.event)) {
+    var el = box();
+    if (el) {
+      el.style.background = "#b3312c";
+      el.style.color = "#fff";
+      var NL = String.fromCharCode(10);
+      el.textContent = "Budgy — הדומיין הזה לא מורשה" + NL + location.hostname + NL +
+        "צריך להוסיף אותו ל-capabilities/bank.json ולבנות מחדש.";
+    }
+    return;
+  }
 
   status();
 })();
@@ -798,13 +993,25 @@ async fn discover_from_bank(app: AppHandle, url: String) -> Result<String, Strin
 }
 
 #[tauri::command]
-async fn import_accounts_from_bank(app: AppHandle, url: String) -> Result<(), String> {
+async fn import_accounts_from_bank(
+    app: AppHandle,
+    url: String,
+    institution: Option<String>,
+) -> Result<(), String> {
     let s = load_settings(&app);
     if s.secret.is_empty() || s.user_id.is_empty() || s.supabase_url.is_empty() {
         return Err("חסרות הגדרות — פתח את ההגדרות והזן אותן".into());
     }
     let url: tauri::Url = url.trim().parse().map_err(|e| format!("url: {e}"))?;
-    let script = hapoalim_script();
+
+    /* One reader per institution. Adding a bank is a new arm plus its script —
+       nothing else in this file changes. */
+    let inst = institution.unwrap_or_else(|| "hapoalim".to_string());
+    let script = match inst.as_str() {
+        "hapoalim" => hapoalim_script(),
+        "meitav" => meitav_script(),
+        other => return Err(format!("אין עדיין קורא ל-{other}")),
+    };
 
     open_bank_window(&app, url, "התחבר לבנק — Budgy ייקח את היתרות", script).await?;
     emit(&app, "running", "נפתח חלון הבנק — התחבר", None);

@@ -2663,3 +2663,281 @@ input[type="date"]::-webkit-date-and-time-value {
   letter-spacing: -.01em;
 }
 .auth-btn-bio:active { background: var(--green-light); }
+
+/* ── Mortgage update prompt ──────────────────────────
+   Uses the themed accent vars so it follows COLOR_THEMES, and only
+   var()-based colors so dark mode is handled by the :root overrides. */
+.mort-due {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--green-light);
+  border: 1px solid var(--green-glow);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  animation: fadeUp .35s ease both;
+}
+.mort-due-icon {
+  display: flex;
+  flex: 0 0 auto;
+  color: var(--green);
+}
+.mort-due-icon svg { width: 20px; height: 20px; }
+.mort-due-body { flex: 1 1 auto; min-width: 0; }
+.mort-due-title {
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--ink-2);
+}
+.mort-due-sub {
+  font-family: var(--font);
+  font-size: .74rem;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.mort-due-btn {
+  flex: 0 0 auto;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 8px 14px;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: .8rem;
+  cursor: pointer;
+  box-shadow: var(--green-shadow-sm);
+  transition: filter .15s, transform .15s;
+}
+.mort-due-btn:hover  { filter: brightness(1.06); }
+.mort-due-btn:active { transform: scale(.97); }
+.mort-due-x {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--ink-4);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+  border-radius: var(--r-xs);
+  transition: color .15s, background .15s;
+}
+.mort-due-x:hover { color: var(--ink-2); background: var(--border); }
+
+@media (max-width: 768px) {
+  .mort-due { flex-wrap: wrap; gap: 10px; }
+  .mort-due-body { flex: 1 1 60%; }
+  .mort-due-btn  { flex: 1 1 100%; order: 3; padding: 10px; }
+}
+
+/* ── Mortgage detail modal ───────────────────────────
+   Route colours are set inline from mortRouteType() so the rate type stays
+   the one visual key across the mix bar, the pills and the cards. */
+.mort-stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: .72rem;
+  color: var(--ink-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mort-stat b { color: var(--ink); font-family: var(--mono); margin-right: 3px; }
+
+.mort-mix {
+  display: flex;
+  /* .chb-body is a flex column, so this would otherwise be shrunk to 0 height. */
+  flex: 0 0 10px;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface2);
+  margin: 12px 0 10px;
+}
+.mort-mix > div { height: 100%; }
+
+.mort-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.mort-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: .72rem;
+  color: var(--ink-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mort-pill i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.mort-pill b { color: var(--ink); font-family: var(--mono); }
+
+.mort-route {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  margin-top: 8px;
+}
+.mort-route-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.mort-route-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  min-width: 0;
+}
+.mort-route-name i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mort-route-bal {
+  font-family: var(--mono);
+  font-size: .875rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.mort-route-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  margin: 8px 0;
+}
+.mort-route-bar > div {
+  height: 100%;
+  border-radius: 2px;
+  /* A 0.4% share rounds to a single pixel and reads as an empty track;
+     keep a sliver so a small holding is still visibly present. */
+  min-width: 3px;
+}
+/* Every data point is a chip. The cards sit on --surface2, so the chips use
+   --surface to stay readable in both themes. */
+.mort-route-meta,
+.mort-file-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: .7rem;
+  color: var(--ink-4);
+}
+.mort-route-meta > span,
+.mort-file-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+.mort-route-meta b,
+.mort-file-meta b { color: var(--ink-2); font-family: var(--mono); font-weight: 700; }
+
+.mort-file {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  margin-top: 8px;
+}
+.mort-file-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mort-file-title { font-size: .8rem; font-weight: 700; color: var(--ink-2); }
+.mort-file-bal   { font-family: var(--mono); font-size: .875rem; font-weight: 700; color: var(--ink); white-space: nowrap; }
+
+.mort-hist-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 11px;
+  font-family: var(--font);
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.mort-hist-btn:hover { background: var(--border); border-color: var(--ink-4); }
+
+/* Import-from-bank button inside the mortgage modal. Accent-filled because
+   it is the primary action there; the history button stays secondary. */
+.mort-import-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 16px;
+  background: var(--green);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 12px;
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--green-shadow-sm);
+  transition: filter .15s, transform .15s;
+}
+.mort-import-btn:hover:not(:disabled)  { filter: brightness(1.06); }
+.mort-import-btn:active:not(:disabled) { transform: scale(.99); }
+.mort-import-btn:disabled,
+.mort-due-btn:disabled { opacity: .7; cursor: progress; }
+.mort-import-btn + .mort-hist-btn { margin-top: 8px; }
+
+/* Inside the Tauri app the window can be narrow, but the import button must
+   still be there — the width gate only stands in for "is this a PC". */
+html.is-tauri .mort-due-btn.desktop-only,
+html.is-tauri .mort-import-btn { display: flex !important; }
+html.is-tauri .mort-due-btn.mobile-only { display: none !important; }
+
+/* Window controls, drawn into the app's own topbar under Tauri only.
+   In RTL the topbar actions sit on the left, so that is where these land. */
+.win-controls { display: none; }
+html.is-tauri .win-controls {
+  display: flex;
+  gap: 2px;
+  /* Far left of the window. .topbar-actions is already the left-hand group in
+     RTL, and appending makes this its left-most item — so no order hack. The
+     gap goes on the right, between the controls and the app's own buttons. */
+  margin-right: 6px;
+}
+html.is-tauri .topbar { cursor: default; }
+.win-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 26px;
+  background: none;
+  border: none;
+  border-radius: var(--r-xs);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.win-btn:hover { background: var(--border); color: var(--ink); }
+.win-close:hover { background: var(--red); color: #fff; }

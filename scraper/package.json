@@ -1,0 +1,17 @@
+{
+  "name": "budgy-mortgage-recorder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Monthly mortgage snapshot: real browser -> record-mortgage Edge Function -> Web Push",
+  "scripts": {
+    "start": "node mortgage-recorder.mjs",
+    "discover": "node mortgage-recorder.mjs --discover",
+    "dry-run": "node mortgage-recorder.mjs --dry-run",
+    "test": "node --test extract.test.mjs",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}

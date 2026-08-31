@@ -139,7 +139,7 @@ async function init() {
 async function loadApp() {
   localStorage.removeItem('budgy.softlogout');   // כל כניסה מוצלחת מנקה התנתקות רכה
   showLoader('טוען נתונים...');
-  await Promise.all([loadCategories(), loadRecords()]);
+  await Promise.all([loadCategories(), loadRecords(), loadMortgageSnapshot(), loadBankSnapshots()]);
   loadRetirementSettings();
   // Sync mortgage institution from Supabase to localStorage
   const cloudMortInst = currentUser?.user_metadata?.mortgage_inst;
@@ -1779,6 +1779,864 @@ function toggleHealthDetails() {
 /* ══════════════════════════════════════════════════════
    RENDER CURRENT
 ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   IMPORT FROM BANK (desktop only)
+   A web page cannot start a process, so the button talks to helper.mjs on
+   127.0.0.1 — a loopback server that runs the Playwright recorder. On the
+   phone there is nothing to talk to, which is why the button is desktop-only.
+══════════════════════════════════════════════════════ */
+const IMPORT_HELPER = 'http://127.0.0.1:8787';
+const MORT_IMPORT_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+
+let mortImporting = false;
+
+/* In the desktop build the button drives Tauri directly — it opens the bank in
+   our own webview and injects the reader into that page, so there is no helper
+   to start and nothing to install in Safari. The browser build keeps talking to
+   helper.mjs on 127.0.0.1. */
+/* Named inTauri, not isTauri: Tauri v2 injects window.isTauri as a
+   non-configurable global, and a top-level `const isTauri` collides with it
+   — a parse-time SyntaxError that stops all of app.js from running. It only
+   shows up inside the app; a browser and `node --check` both accept it. */
+const inTauri = () => !!(window.__TAURI__ && window.__TAURI__.core);
+if (typeof window !== 'undefined' && window.__TAURI__) {
+  document.documentElement.classList.add('is-tauri');
+}
+
+/* Window chrome. The config sets decorations:false, so the app draws its own —
+   but instead of stacking a title bar on top of Budgy's, the existing .topbar
+   becomes the drag region and the buttons go where its actions already live.
+   Nothing moves, and the web build never sees any of it.
+
+   The window also starts hidden, so this is what reveals it: by now the saved
+   theme has been applied and there is no flash of the wrong colours. */
+/* Discovery: record one real session at a bank so an adapter can be written
+   from what the site actually returns. Adding a bank always starts here —
+   endpoints and field names cannot be guessed, and guessing them has already
+   cost us two rounds. Desktop only; the captured files never leave the PC. */
+const DISCOVER_PRESETS = [
+  { id: 'hapoalim', name: 'בנק הפועלים', url: 'https://login.bankhapoalim.co.il/ng-portals/auth/he/?reqName=getLogonPage' },
+  { id: 'mizrahi',  name: 'מזרחי טפחות', url: 'https://sc.mizrahi-tefahot.co.il/TFHLogin/index.html#/login' },
+];
+
+function initTauriSettings() {
+  if (!inTauri()) return;
+  const panel = document.getElementById('settings-panel-categories');
+  if (!panel || document.getElementById('bank-discovery-section')) return;
+
+  const box = document.createElement('div');
+  box.id = 'bank-discovery-section';
+  box.className = 'settings-section';
+  box.innerHTML = `
+    <h3>${MORT_IMPORT_ICON} גילוי נתונים מבנק</h3>
+    <p class="settings-hint">
+      פותח את הבנק ומקליט את התגובות שהאתר מקבל, כדי שאפשר יהיה לבנות ממנו
+      ייבוא אוטומטי. הקבצים נשמרים על המחשב הזה בלבד, ובקשות התחברות מדולגות
+      כך שסיסמאות וטוקנים לא נכתבים.
+    </p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      ${DISCOVER_PRESETS.map((b) => `
+        <button class="mort-pill" style="cursor:pointer;border-color:var(--border)"
+          onclick="document.getElementById('discover-url').value='${b.url}'">${b.name}</button>`).join('')}
+    </div>
+    <input id="discover-url" class="form-input" dir="ltr"
+           value="${DISCOVER_PRESETS[0].url}" placeholder="https://..."/>
+    <button class="mort-import-btn" onclick="runBankDiscovery(this)">פתח והקלט</button>
+    <p class="settings-hint" id="discover-status" style="margin-top:8px"></p>`;
+  panel.appendChild(box);
+}
+
+/* Institutions Budgy can pull balances from. The bank window and the reader
+   live in Rust; this is only what the UI needs to offer the button. */
+const IMPORTABLE = {
+  hapoalim: { name: 'בנק הפועלים', url: 'https://login.bankhapoalim.co.il/ng-portals/auth/he/?reqName=getLogonPage' },
+};
+
+let bankSnapshots = {};   // institution_id -> newest row from bank_snapshots
+
+async function loadBankSnapshots() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await db
+      .from('bank_snapshots')
+      .select('institution_id, snapshot_date, accounts, details')
+      .eq('user_id', currentUser.id)
+      .order('snapshot_date', { ascending: false });
+    if (error) throw error;
+    bankSnapshots = {};
+    for (const row of data || []) {
+      if (!bankSnapshots[row.institution_id]) bankSnapshots[row.institution_id] = row;
+    }
+  } catch (e) {
+    bankSnapshots = {};   // never block the report over a missing snapshot
+  }
+}
+
+let lastBankCat = { key: null, label: '' };
+
+/* The institution's own screen. Same shape as the mortgage one: what the bank
+   reported up front, the month-by-month chart behind a button.
+
+   Products are cards with a share bar rather than loose pills — a lone pill
+   under a heading reads as an unfinished layout, and the bar makes the split
+   between accounts legible at a glance. */
+function showBankDetail(instId, catKey, catLabel) {
+  const spec = IMPORTABLE[instId];
+  if (!spec) { openCatHistory(catKey, catLabel); return; }
+  lastBankCat = { key: catKey, label: catLabel };
+
+  const inst = getInstitution(instId);
+  const snap = bankSnapshots[instId];
+  const d = snap?.details || {};
+
+  const sorted = [...records].sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+  const latest = sorted[sorted.length - 1];
+  const prev = sorted[sorted.length - 2];
+  const own = latest ? (latest.values || {})[catKey] || 0 : 0;
+  const ownPrev = prev ? (prev.values || {})[catKey] || 0 : null;
+
+  /* Everything this bank holds, so each product can be shown as a share. */
+  const products = [];
+  if (d.current) {
+    products.push({
+      name: 'עובר ושב', value: d.current.balance, color: 'var(--green)',
+      meta: [
+        d.current.withdrawal != null && d.current.withdrawal !== d.current.balance
+          ? `יתרה למשיכה <b>${fmt(d.current.withdrawal)}</b>` : null,
+        d.current.creditLimit ? `מסגרת <b>${fmt(d.current.creditLimit)}</b>` : 'ללא מסגרת',
+        d.current.creditUsed ? `נוצל <b style="color:var(--red)">${fmt(d.current.creditUsed)}</b>` : null,
+      ].filter(Boolean),
+    });
+  }
+  if (d.securities) {
+    products.push({
+      name: 'ניירות ערך', value: d.securities.total, color: 'var(--blue)',
+      meta: [
+        d.securities.israeli != null ? `ישראלי <b>${fmt(d.securities.israeli)}</b>` : null,
+        d.securities.foreign != null ? `חו"ל <b>${fmt(d.securities.foreign)}</b>` : null,
+      ].filter(Boolean),
+    });
+  }
+  const bankTotal = products.reduce((a, p) => a + (p.value || 0), 0);
+
+  const productCards = products.map((p) => {
+    const share = bankTotal ? (p.value / bankTotal) * 100 : 0;
+    return `
+      <div class="mort-route">
+        <div class="mort-route-top">
+          <span class="mort-route-name"><i style="background:${p.color}"></i>${p.name}</span>
+          <span class="mort-route-bal">${fmt(p.value)}</span>
+        </div>
+        <div class="mort-route-bar"><div style="width:${share.toFixed(2)}%;background:${p.color}"></div></div>
+        <div class="mort-route-meta">
+          ${p.meta.map((m) => `<span>${m}</span>`).join('')}
+          <span>${share.toFixed(1)}% מהבנק</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  const charges = (d.cards?.byDebitDate || []).filter((c) => c.amount);
+  const cardsBlock = d.cards ? `
+    <div class="chb-history-header" style="margin:16px -20px 0;padding-right:20px;padding-left:20px"><span>חיובי אשראי קרובים</span></div>
+    <div class="mort-route">
+      <div class="mort-route-top">
+        <span class="mort-route-name"><i style="background:var(--red)"></i>סה"כ צפוי</span>
+        <span class="mort-route-bal" style="color:var(--red)">${fmt(d.cards.total || 0)}</span>
+      </div>
+      ${charges.length ? `<div class="mort-route-meta" style="margin-top:8px">${charges.map((c) => {
+        const t = String(c.date);
+        const nice = t.length === 8 ? `${t.slice(6, 8)}/${t.slice(4, 6)}` : t;
+        return `<span>${nice} <b>${fmt(c.amount)}</b></span>`;
+      }).join('')}</div>` : ''}
+    </div>
+    <p class="settings-hint" style="margin-top:8px">אין לזה קטגוריה ב-Budgy — מוצג כמידע בלבד.</p>` : '';
+
+  /* Delta on the category itself, the number the card in the report shows. */
+  let deltaHtml = '';
+  if (ownPrev != null && ownPrev !== 0) {
+    const diff = own - ownPrev;
+    const pct = (diff / ownPrev * 100).toFixed(1);
+    const up = diff >= 0;
+    deltaHtml = `<div class="ct-growth ${up ? 'pos' : 'neg'}" style="display:inline-flex;margin-top:6px">
+      ${up ? '+' : ''}${fmt(diff)} · ${up ? '+' : ''}${pct}%</div>`;
+  }
+
+  /* Lead with the bank total, not the category: when the open card is the
+     current account, repeating it as the first item and again as a product
+     read as a duplicate. */
+  const tickerItems = [
+    products.length
+      ? `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">סה"כ בבנק: <strong>${fmt(bankTotal)}</strong></bdi></span>`
+      : `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">${catLabel}: <strong>${fmt(own)}</strong></bdi></span>`,
+    ...products.map((p) => `<span class="tkr-item">${ICONS_JS.trending} <bdi dir="rtl" class="tkr-text">${p.name}: <strong>${fmt(p.value)}</strong></bdi></span>`),
+    ...(d.cards?.total ? [`<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">אשראי: <strong style="color:var(--red)">${fmt(d.cards.total)}</strong></bdi></span>`] : []),
+  ];
+  const SEP = `<span class="tkr-sep">·</span>`, LOOP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
+  const ticker = `<div class="tkr-track" id="bank-tkr-track">${tickerItems.join(SEP) + LOOP + tickerItems.join(SEP) + LOOP}</div>`;
+
+  document.getElementById('bank-detail-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'bank-detail-modal';
+  modal.className = 'info-modal-overlay cat-history-overlay';
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div class="chb-header">
+        <div class="chb-title">
+          ${inst ? `<img src="${logoUrl(inst.domain)}" width="16" height="16" style="border-radius:4px;object-fit:contain" onerror="this.style.display='none'"/>` : ''}
+          ${catLabel}
+        </div>
+        <button onclick="document.getElementById('bank-detail-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+
+      <div class="chb-ticker-row">${ticker}</div>
+
+      <div class="chb-top" style="padding:16px 20px 18px;direction:rtl">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span class="blur-text" style="font-family:var(--mono);font-size:2rem;font-weight:800;color:var(--ink);line-height:1">${fmt(own)}</span>
+          <span style="font-size:.72rem;color:var(--ink-4)">${catLabel}</span>
+        </div>
+        ${deltaHtml}
+        <div style="font-size:.72rem;color:var(--ink-4);margin-top:8px">
+          ${spec.name}${snap ? ` · נכון ל-${new Date(snap.snapshot_date).toLocaleDateString('he-IL')}` : ' · טרם יובאו נתונים'}
+          ${bankTotal && products.length > 1 ? ` · סה"כ בבנק ${fmt(bankTotal)}` : ''}
+        </div>
+      </div>
+
+      <div class="chb-body">
+        ${productCards ? `
+          <div class="chb-history-header" style="margin:0 -20px 0;padding-right:20px;padding-left:20px"><span>החשבונות בבנק</span></div>
+          ${productCards}` : ''}
+        ${cardsBlock}
+        ${!snap ? '<p class="settings-hint" style="margin-top:10px">עוד לא יובאו נתונים מהבנק. לחץ על הייבוא כדי למשוך אותם.</p>' : ''}
+
+        <button class="mort-import-btn desktop-only" onclick="importFromInstitution('${instId}', this)">
+          ${MORT_IMPORT_ICON} ייבא נתונים מ${spec.name}
+        </button>
+        <button class="mort-hist-btn"
+          onclick="document.getElementById('bank-detail-modal').remove();openCatHistory('${catKey}','${catLabel}')">
+          ${ICONS_JS.calendar} הצג גרף היסטוריה
+        </button>
+      </div>
+    </div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+  applyBlur();
+
+  setTimeout(() => {
+    const track = document.getElementById('bank-tkr-track');
+    if (!track) return;
+    const one = track.scrollWidth / 2;
+    if (one > 0) {
+      track.style.animationDuration = `${(one / 60).toFixed(2)}s`;
+      track.style.animationPlayState = 'running';
+    }
+  }, 60);
+}
+window.showBankDetail = showBankDetail;
+
+/* A category card opens the bank screen when its institution supports import,
+   and the plain history chart otherwise. */
+function openCategory(catKey, catLabel) {
+  const cat = categories.find((c) => c.key === catKey);
+  if (cat && IMPORTABLE[cat.institution_id]) showBankDetail(cat.institution_id, catKey, catLabel);
+  else openCatHistory(catKey, catLabel);
+}
+window.openCategory = openCategory;
+
+async function importFromInstitution(instId, btn) {
+  const spec = IMPORTABLE[instId];
+  if (!spec) { showToast('אין ייבוא מוגדר למוסד הזה'); return; }
+  if (!inTauri()) { showToast('הייבוא זמין רק באפליקציית המחשב'); return; }
+  const url = spec.url;
+  const status = document.getElementById('discover-status');
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+
+  const setStatus = (t) => { if (status) status.textContent = t; };
+  /* Progress overwrites the label, so keep the original and put it back —
+     otherwise the button is left reading "HTTP 401 · ניסיון 7" after a run
+     that actually succeeded. */
+  const original = btn ? btn.innerHTML : '';
+  const alive = () => btn && document.body.contains(btn);
+  btn.disabled = true;
+  setStatus('פותח את הבנק…');
+  let unlisten = null;
+  const stop = () => {
+    if (unlisten) { unlisten(); unlisten = null; }
+    if (alive()) { btn.disabled = false; btn.innerHTML = original; }
+  };
+
+  try {
+    unlisten = await listen('budgy://import', async (e) => {
+      const p = e.payload || {};
+      if (p.state === 'running') {
+        setStatus(p.message || '');
+        if (alive()) btn.innerHTML = `${MORT_IMPORT_ICON} ${p.message || 'מייבא…'}`;
+        return;
+      }
+      await invoke('close_bank_window').catch(() => {});
+      if (p.state === 'error') { showToast(p.message || 'הייבוא נכשל'); stop(); return; }
+      await Promise.all([loadRecords(), loadMortgageSnapshot(), loadBankSnapshots()]);
+      renderCurrentReport();
+      showToast(p.result?.push?.message || 'היתרות עודכנו');
+      setStatus(p.result?.push?.message || '');
+      stop();
+      // Redraw the open detail view so the new numbers show without reopening.
+      if (document.getElementById('bank-detail-modal')) showBankDetail(instId, lastBankCat.key, lastBankCat.label);
+    });
+    await invoke('import_accounts_from_bank', { url });
+  } catch (e) {
+    stop();
+    showToast(String(e && e.message ? e.message : e));
+  }
+}
+window.importFromInstitution = importFromInstitution;
+
+async function runBankDiscovery(btn) {
+  const url = document.getElementById('discover-url').value.trim();
+  const status = document.getElementById('discover-status');
+  if (!url) { showToast('צריך כתובת'); return; }
+
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+
+  btn.disabled = true;
+  status.textContent = 'פותח…';
+
+  let unlisten = null;
+  const stop = () => { if (unlisten) { unlisten(); unlisten = null; } btn.disabled = false; };
+
+  try {
+    unlisten = await listen('budgy://import', (e) => {
+      const p = e.payload || {};
+      if (p.message) status.textContent = p.message;
+      if (p.state === 'done') {
+        status.textContent = `${p.message} · ${p.result?.dir ?? ''}`;
+        showToast(p.message);
+        stop();
+      } else if (p.state === 'error') {
+        showToast(p.message || 'הגילוי נכשל');
+        stop();
+      }
+    });
+    const dir = await invoke('discover_from_bank', { url });
+    status.textContent = `מקליט. הקבצים נכתבים ל:\n${dir}`;
+  } catch (e) {
+    stop();
+    showToast(String(e && e.message ? e.message : e));
+  }
+}
+window.runBankDiscovery = runBankDiscovery;
+
+async function initTauriChrome() {
+  if (!inTauri()) return;
+  const win = window.__TAURI__.window.getCurrentWindow();
+
+  const bar = document.querySelector('.topbar');
+  const actions = bar && bar.querySelector('.topbar-actions');
+  if (actions && !document.getElementById('win-controls')) {
+    bar.setAttribute('data-tauri-drag-region', '');
+    const box = document.createElement('div');
+    box.id = 'win-controls';
+    box.className = 'win-controls';
+    box.innerHTML = `
+      <button class="win-btn" title="מזער" data-win="min">
+        <svg width="11" height="11" viewBox="0 0 12 12"><rect x="1" y="5.5" width="10" height="1" fill="currentColor"/></svg>
+      </button>
+      <button class="win-btn" title="הגדל" data-win="max">
+        <svg width="11" height="11" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+      <button class="win-btn win-close" title="סגור" data-win="close">
+        <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </button>`;
+    box.addEventListener('click', async (e) => {
+      const act = e.target.closest('[data-win]')?.dataset.win;
+      if (act === 'min') await win.minimize();
+      else if (act === 'max') await win.toggleMaximize();
+      else if (act === 'close') await win.close();
+    });
+    actions.appendChild(box);
+  }
+
+  initTauriSettings();
+  try { await win.show(); } catch (e) { /* the Rust safety net covers this */ }
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTauriChrome);
+  } else {
+    initTauriChrome();
+  }
+}
+
+function showTauriSetup(status) {
+  document.getElementById('tauri-setup-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'tauri-setup-modal';
+  modal.className = 'info-modal-overlay cat-history-overlay';
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div class="chb-header">
+        <div class="chb-title">${MORT_IMPORT_ICON} הגדרות ייבוא</div>
+        <button onclick="document.getElementById('tauri-setup-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+      <div class="chb-body">
+        <p style="font-size:.82rem;color:var(--ink-3);line-height:1.6;margin:0 0 14px">
+          חד-פעמי. הערכים נשמרים על המחשב הזה בלבד.
+        </p>
+        <label class="form-label">כתובת Supabase</label>
+        <input id="ts-url" class="form-input" dir="ltr" placeholder="https://xxx.supabase.co"
+               value="${status?.supabase_url || ''}"/>
+        <label class="form-label" style="margin-top:10px">מזהה משתמש</label>
+        <input id="ts-user" class="form-input" dir="ltr" value="${status?.user_id || ''}"/>
+        <label class="form-label" style="margin-top:10px">סוד הייבוא</label>
+        <input id="ts-secret" class="form-input" dir="ltr" type="password" placeholder="BOOKMARKLET_SECRET"/>
+        <button class="mort-import-btn" onclick="saveTauriSettings()">שמור</button>
+      </div>
+    </div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+async function saveTauriSettings() {
+  const supabase_url = document.getElementById('ts-url').value.trim();
+  const user_id = document.getElementById('ts-user').value.trim();
+  const secret = document.getElementById('ts-secret').value.trim();
+  if (!supabase_url || !user_id || !secret) { showToast('צריך למלא את שלושת השדות'); return; }
+  try {
+    await window.__TAURI__.core.invoke('save_settings', { supabaseUrl: supabase_url, userId: user_id, secret });
+    document.getElementById('tauri-setup-modal')?.remove();
+    showToast('ההגדרות נשמרו');
+  } catch (e) {
+    showToast(String(e));
+  }
+}
+window.saveTauriSettings = saveTauriSettings;
+
+/**
+ * Opens the bank window and resolves once the injected reader reports back.
+ * The bank page never gets a Tauri command — it posts to a loopback listener
+ * that Rust closes as soon as it has an answer.
+ */
+function importViaTauri(label) {
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+
+  return new Promise(async (resolve, reject) => {
+    const status = await invoke('settings_status').catch(() => null);
+    if (!status || !status.configured) { showTauriSetup(status); reject(new Error('חסרות הגדרות ייבוא')); return; }
+
+    let unlisten = null;
+    const settle = async (fn, arg) => {
+      if (unlisten) { unlisten(); unlisten = null; }
+      await invoke('close_bank_window').catch(() => {});
+      fn(arg);
+    };
+
+    unlisten = await listen('budgy://import', (e) => {
+      const { state, message, result } = e.payload || {};
+      if (state === 'running') { label(message || 'מייבא…'); return; }
+      if (state === 'error') { settle(reject, new Error(message || 'הייבוא נכשל')); return; }
+      settle(resolve, result);
+    });
+
+    invoke('import_from_bank').catch((e) => settle(reject, new Error(String(e))));
+  });
+}
+
+
+/** Is the helper running? Short timeout — a dead port should not hang the UI. */
+async function helperPing(ms = 1500) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(`${IMPORT_HELPER}/ping`, { signal: ac.signal, cache: 'no-store' });
+    return r.ok;
+  } catch (e) {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function showHelperMissing() {
+  document.getElementById('helper-missing-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'helper-missing-modal';
+  modal.className = 'info-modal-overlay cat-history-overlay';
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div class="chb-header">
+        <div class="chb-title">${MORT_IMPORT_ICON} העוזר לא רץ</div>
+        <button onclick="document.getElementById('helper-missing-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+      <div class="chb-body">
+        <p style="font-size:.85rem;color:var(--ink-2);line-height:1.6;margin:0 0 12px">
+          הייבוא מריץ דפדפן על המחשב הזה, ולשם כך צריך שהעוזר המקומי יהיה פתוח.
+        </p>
+        <ol style="font-size:.82rem;color:var(--ink-2);line-height:1.9;padding-right:18px;margin:0 0 14px">
+          <li>פתח את התיקייה <code>Finance\\scraper</code></li>
+          <li>לחץ פעמיים על <b>helper.bat</b></li>
+          <li>השאר את החלון השחור פתוח, וחזור לכאן</li>
+        </ol>
+        <p style="font-size:.75rem;color:var(--ink-4);line-height:1.6;margin:0">
+          העוזר מאזין רק ל-127.0.0.1 ורק ל-Budgy, והפעולה היחידה שהוא יודע לעשות
+          היא לפתוח דפדפן שאתה מתחבר בו בעצמך.
+        </p>
+      </div>
+    </div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+window.showHelperMissing = showHelperMissing;
+
+async function importFromBank(btn) {
+  if (mortImporting) { showToast('ייבוא כבר רץ'); return; }
+
+  const alive = () => btn && document.body.contains(btn);
+  const original = btn ? btn.innerHTML : '';
+  const label = (txt) => { if (alive()) btn.innerHTML = `${MORT_IMPORT_ICON} ${txt}`; };
+
+  mortImporting = true;
+  if (btn) btn.disabled = true;
+
+  try {
+    if (inTauri()) {
+      label('פותח את הבנק…');
+      const result = await importViaTauri(label);
+      await Promise.all([loadRecords(), loadMortgageSnapshot()]);
+      renderCurrentReport();
+      showToast(result?.push?.title ? `${result.push.title} · ${result.push.message}` : 'הנתונים עודכנו');
+      return;
+    }
+
+    label('בודק חיבור למחשב…');
+    if (!(await helperPing())) { showHelperMissing(); return; }
+
+    const start = await (await fetch(`${IMPORT_HELPER}/import`, { method: 'POST' })).json();
+    if (!start.started) throw new Error('ייבוא כבר רץ במחשב');
+    label('נפתח דפדפן — התחבר לבנק…');
+
+    /* The user has to sign in by hand, so give this a long leash — but not an
+       unbounded one, or a closed browser would poll forever. */
+    const deadline = Date.now() + 15 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const st = await (await fetch(`${IMPORT_HELPER}/status`, { cache: 'no-store' })).json();
+
+      if (st.state === 'running') { label(st.message || 'מייבא…'); continue; }
+      if (st.state === 'error')   throw new Error(st.message || 'הייבוא נכשל');
+
+      await Promise.all([loadRecords(), loadMortgageSnapshot()]);
+      renderCurrentReport();
+      showToast(st.result?.title ? `${st.result.title} · ${st.result.message}` : 'הנתונים עודכנו');
+      return;
+    }
+    throw new Error('הייבוא לא הסתיים בזמן');
+  } catch (e) {
+    /* Supabase is written before the result is reported back, so a failure
+       here can still mean the data landed. Check before crying wolf. */
+    const before = mortgageSnapshot?.snapshot_date ?? null;
+    try {
+      await loadMortgageSnapshot();
+      if (mortgageSnapshot && mortgageSnapshot.snapshot_date !== before) {
+        await loadRecords();
+        renderCurrentReport();
+        showToast('הנתונים עודכנו');
+        return;
+      }
+    } catch (_) { /* fall through to the original error */ }
+    showToast(e && e.message ? e.message : 'הייבוא נכשל');
+  } finally {
+    mortImporting = false;
+    if (alive()) { btn.disabled = false; btn.innerHTML = original; }
+  }
+}
+window.importFromBank = importFromBank;
+
+/* Module-scoped copy: renderCurrentReport() has its own local SVG_MORTGAGE
+   that these functions cannot reach. */
+const MORT_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
+
+/* ══════════════════════════════════════════════════════
+   MORTGAGE UPDATE PROMPT
+   The balance is refreshed from the bank once a month, by hand: the bank has
+   no public API and Budgy can never read another origin. The cloud sends a
+   push on the 15th; this banner is the same nudge for anyone already inside
+   the app, plus a shortcut straight to the bank.
+══════════════════════════════════════════════════════ */
+let mortgageSnapshot = null;   // newest row from mortgage_snapshots
+
+async function loadMortgageSnapshot() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await db
+      .from('mortgage_snapshots')
+      .select('snapshot_date, balance, payoff_balance, early_repayment_fees, routes, raw')
+      .eq('user_id', currentUser.id)
+      .order('snapshot_date', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    mortgageSnapshot = data && data.length ? data[0] : null;
+  } catch (e) {
+    mortgageSnapshot = null;   // never block the report over a missing snapshot
+  }
+}
+
+/* Due once the monthly charge has posted (10th) and no snapshot exists yet
+   for this calendar month. Dismissing hides it for the rest of the day. */
+function mortgageUpdateDue() {
+  const mortInst = localStorage.getItem('mortgage_inst_v1');
+  if (!mortInst) return false;
+
+  const now = new Date();
+  if (now.getDate() < 12) return false;
+
+  const today = now.toISOString().slice(0, 10);
+  if (localStorage.getItem('budgy.mortDismissed') === today) return false;
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  return !(mortgageSnapshot && mortgageSnapshot.snapshot_date >= monthStart);
+}
+
+function dismissMortgageDue() {
+  localStorage.setItem('budgy.mortDismissed', new Date().toISOString().slice(0, 10));
+  renderCurrentReport();
+}
+window.dismissMortgageDue = dismissMortgageDue;
+
+function openBankForMortgage() {
+  const inst = getInstitution(localStorage.getItem('mortgage_inst_v1'));
+  const url = inst && inst.domain
+    ? (inst.domain.startsWith('http') ? inst.domain : `https://${inst.domain}`)
+    : null;
+  if (!url) { showToast('לא הוגדר גוף מנהל משכנתא'); return; }
+  window.open(url, '_blank', 'noopener');
+}
+window.openBankForMortgage = openBankForMortgage;
+
+function mortgageDueHtml() {
+  if (!mortgageUpdateDue()) return '';
+  const inst = getInstitution(localStorage.getItem('mortgage_inst_v1'));
+  const last = mortgageSnapshot
+    ? `עודכן לאחרונה ב-${new Date(mortgageSnapshot.snapshot_date).toLocaleDateString('he-IL')}`
+    : 'טרם נקלט עדכון אוטומטי';
+
+  return `
+    <div class="mort-due">
+      <div class="mort-due-icon">${MORT_ICON}</div>
+      <div class="mort-due-body">
+        <div class="mort-due-title">צריך לעדכן את יתרת המשכנתא</div>
+        <div class="mort-due-sub">${last}</div>
+      </div>
+      <button class="mort-due-btn desktop-only" onclick="importFromBank(this)">
+        ${MORT_IMPORT_ICON} ייבא נתונים מהבנק
+      </button>
+      <button class="mort-due-btn mobile-only" onclick="openBankForMortgage()">
+        ${inst ? `פתח את ${inst.name}` : 'פתח את הבנק'}
+      </button>
+      <button class="mort-due-x" onclick="dismissMortgageDue()" aria-label="הסתר להיום">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   MORTGAGE DETAIL
+   Everything the bank reports about the loan, from the newest snapshot:
+   the route mix, the rate on each tranche, and what settling today costs.
+══════════════════════════════════════════════════════ */
+
+/* Rate type drives the colour coding — a prime tranche moves with the Bank
+   of Israel rate and a fixed one does not, which is the distinction worth
+   seeing at a glance. */
+function mortRouteType(r) {
+  const n = r.name || '';
+  if (/פריים/.test(n)) return { key: 'prime', label: 'פריים', color: 'var(--amber)' };
+  if (/משתנה/.test(n)) return { key: 'var',   label: 'משתנה', color: 'var(--blue)'  };
+  if (/קבועה/.test(n)) return { key: 'fixed', label: 'קבועה', color: 'var(--green)' };
+  return { key: 'other', label: 'אחר', color: 'var(--ink-3)' };
+}
+
+function mortgageStats(snap) {
+  const routes = (snap?.routes || [])
+    .filter(r => (r.balance || 0) > 0)
+    .sort((a, b) => (b.balance || 0) - (a.balance || 0));
+
+  const total   = routes.reduce((s, r) => s + (r.balance || 0), 0);
+  const monthly = routes.reduce((s, r) => s + (r.monthly_payment || 0), 0);
+  const wRate   = total ? routes.reduce((s, r) => s + (r.balance || 0) * (r.rate || 0), 0) / total : 0;
+
+  const ends    = routes.map(r => r.end_date).filter(Boolean).sort();
+  const lastEnd = ends.length ? ends[ends.length - 1] : null;
+  const monthsLeft = lastEnd
+    ? Math.max(0, Math.round((new Date(lastEnd) - new Date()) / (365.25 * 864e5) * 12))
+    : null;
+
+  const byType = {};
+  for (const r of routes) {
+    const t = mortRouteType(r);
+    byType[t.key] = byType[t.key] || Object.assign({}, t, { sum: 0 });
+    byType[t.key].sum += r.balance || 0;
+  }
+  const linked = routes
+    .filter(r => /^צמוד/.test(r.linkage || ''))
+    .reduce((s, r) => s + (r.balance || 0), 0);
+
+  return {
+    routes, total, monthly, wRate, lastEnd, monthsLeft,
+    types: Object.values(byType).sort((a, b) => b.sum - a.sum),
+    linkedPct: total ? linked / total * 100 : 0,
+    payoff: snap?.payoff_balance != null ? Number(snap.payoff_balance) : null,
+    fees:   snap?.early_repayment_fees != null ? Number(snap.early_repayment_fees) : null,
+    files:  (snap?.raw?.mashkantaot || []).filter(f => Number(f.itraLeSiluk) > 0),
+    date:   snap?.snapshot_date || null,
+  };
+}
+
+function showMortgageDetail() {
+  const snap = mortgageSnapshot;
+  /* Nothing scraped yet — the history chart is still the useful view. */
+  if (!snap || !(snap.routes || []).length) { openCatHistory('_mortgage', 'יתרת משכנתא'); return; }
+
+  const st  = mortgageStats(snap);
+  const pct = (v) => st.total ? (v / st.total * 100) : 0;
+  const yrs = st.monthsLeft != null
+    ? `${Math.floor(st.monthsLeft / 12)} שנים${st.monthsLeft % 12 ? ` ו-${st.monthsLeft % 12} ח׳` : ''}`
+    : '—';
+
+  const mixBar = st.types
+    .map(t => `<div style="width:${pct(t.sum).toFixed(2)}%;background:${t.color}"></div>`)
+    .join('');
+
+  const mixPills = st.types.map(t => `
+    <span class="mort-pill"><i style="background:${t.color}"></i>${t.label} ${pct(t.sum).toFixed(0)}%
+      <b>${fmt(t.sum)}</b></span>`).join('');
+
+  const routeCards = st.routes.map(r => {
+    const t = mortRouteType(r);
+    const share = pct(r.balance);
+    return `
+      <div class="mort-route">
+        <div class="mort-route-top">
+          <span class="mort-route-name"><i style="background:${t.color}"></i>${r.name || 'מסלול'}</span>
+          <span class="mort-route-bal">${fmt(r.balance)}</span>
+        </div>
+        <div class="mort-route-bar"><div style="width:${share.toFixed(2)}%;background:${t.color}"></div></div>
+        <div class="mort-route-meta">
+          <span>ריבית <b style="color:${t.color}">${r.rate != null ? r.rate.toFixed(2) + '%' : '—'}</b></span>
+          <span>${r.linkage || '—'}</span>
+          <span>החזר <b>${r.monthly_payment ? fmt(r.monthly_payment) : '—'}</b></span>
+          <span>עד ${r.end_date ? new Date(r.end_date).toLocaleDateString('he-IL', { month: '2-digit', year: 'numeric' }) : '—'}</span>
+          <span>${share.toFixed(1)}% מהיתרה</span>
+          ${r.fees ? `<span>עמלת פירעון <b style="color:var(--red)">${fmt(r.fees)}</b></span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  /* Original amount only means something per file: a refinance shows up as a
+     second file drawn from the first, so the two must never be summed. */
+  const fileRows = st.files.map(f => `
+    <div class="mort-file">
+      <div class="mort-file-top">
+        <span class="mort-file-title">${f.matara || 'תיק משכנתא'}</span>
+        <span class="mort-file-bal">${fmt(Number(f.itraLeSiluk) || 0)}</span>
+      </div>
+      <div class="mort-file-meta">
+        <span>תיק <b>${f.id}</b></span>
+        <span>מקורי <b>${fmt(Number(f.schum) || 0)}</b></span>
+        <span>החזר <b>${fmt(Number(f.schumHiuvAba) || 0)}</b></span>
+      </div>
+    </div>`).join('');
+
+  const accrued = st.payoff != null ? st.payoff - st.total : null;
+
+  const tickerItems = [
+    `<span class="tkr-item">${MORT_ICON} <bdi dir="rtl" class="tkr-text">יתרת קרן: <strong>${fmt(st.total)}</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.target} <bdi dir="rtl" class="tkr-text">ריבית משוקללת: <strong>${st.wRate.toFixed(2)}%</strong></bdi></span>`,
+    `<span class="tkr-item">${ICONS_JS.calendar} <bdi dir="rtl" class="tkr-text">החזר חודשי: <strong>${fmt(st.monthly)}</strong></bdi></span>`,
+  ]
+    .concat(st.fees ? [`<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">עמלת פירעון: <strong style="color:var(--red)">${fmt(st.fees)}</strong></bdi></span>`] : [])
+    .concat([`<span class="tkr-item">${ICONS_JS.home} <bdi dir="rtl" class="tkr-text">סיום: <strong>${yrs}</strong></bdi></span>`]);
+
+  const SEP = `<span class="tkr-sep">·</span>`;
+  const LOOP = `<span class="tkr-sep tkr-loop-sep">·</span>`;
+  const tickerHtml = `<div class="tkr-track" id="mort-tkr-track">${tickerItems.join(SEP) + LOOP + tickerItems.join(SEP) + LOOP}</div>`;
+
+  document.getElementById('mortgage-detail-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'mortgage-detail-modal';
+  modal.className = 'info-modal-overlay cat-history-overlay';
+  modal.innerHTML = `
+    <div class="modal-box">
+
+      <div class="chb-header">
+        <div class="chb-title">${MORT_ICON} פירוט משכנתא</div>
+        <button onclick="document.getElementById('mortgage-detail-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+
+      <div class="chb-ticker-row">${tickerHtml}</div>
+
+      <div class="chb-top" style="padding:14px 20px 16px;direction:rtl">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+          <span style="font-family:var(--mono);font-size:2rem;font-weight:800;color:var(--ink);line-height:1">${fmt(st.total)}</span>
+          <span style="font-size:.72rem;color:var(--ink-4)">יתרת קרן</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--ink-4);margin-bottom:10px">
+          ${st.payoff != null ? `יתרה לסילוק ${fmt(st.payoff)} · כולל ${fmt(accrued)} ריבית צבורה` : ''}${st.date ? ` · נכון ל-${new Date(st.date).toLocaleDateString('he-IL')}` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="mort-stat">ריבית משוקללת <b>${st.wRate.toFixed(2)}%</b></span>
+          <span class="mort-stat">החזר חודשי <b>${fmt(st.monthly)}</b></span>
+          ${st.fees ? `<span class="mort-stat">פירעון מוקדם <b style="color:var(--red)">${fmt(st.fees)}</b></span>` : ''}
+          <span class="mort-stat">נותרו <b>${yrs}</b></span>
+        </div>
+      </div>
+
+      <div class="chb-body">
+
+        <div class="chb-history-header" style="margin:0 -20px;padding-right:20px;padding-left:20px"><span>תמהיל</span></div>
+        <div class="mort-mix">${mixBar}</div>
+        <div class="mort-pills">
+          ${mixPills}
+          <span class="mort-pill"><i style="background:var(--ink-4)"></i>${st.linkedPct < 1 ? 'ללא הצמדה למדד' : `צמוד מדד ${st.linkedPct.toFixed(0)}%`}</span>
+        </div>
+
+        <div class="chb-history-header" style="margin:14px -20px 0;padding-right:20px;padding-left:20px"><span>מסלולים (${st.routes.length})</span></div>
+        ${routeCards}
+
+        ${fileRows ? `
+          <div class="chb-history-header" style="margin:14px -20px 0;padding-right:20px;padding-left:20px"><span>תיקי משכנתא</span></div>
+          ${fileRows}` : ''}
+
+        <button class="mort-import-btn desktop-only" onclick="importFromBank(this)">
+          ${MORT_IMPORT_ICON} ייבא נתונים מהבנק
+        </button>
+        <button class="mort-hist-btn"
+          onclick="document.getElementById('mortgage-detail-modal').remove();openCatHistory('_mortgage','יתרת משכנתא')">
+          ${ICONS_JS.calendar} הצג גרף היסטוריה
+        </button>
+      </div>
+    </div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+
+  /* The ticker CSS starts paused with no duration — each modal sets its own
+     from the measured track width, so the speed stays constant regardless of
+     how much text is in it. */
+  setTimeout(() => {
+    const track = document.getElementById('mort-tkr-track');
+    if (!track) return;
+    const oneWidth = track.scrollWidth / 2;
+    if (oneWidth > 0) {
+      track.style.animationDuration = `${(oneWidth / 60).toFixed(2)}s`;
+      track.style.animationPlayState = 'running';
+    }
+  }, 60);
+}
+window.showMortgageDetail = showMortgageDetail;
+
 function renderCurrentReport() {
   renderHealthScore();
   const el = document.getElementById('current-card');
@@ -1900,7 +2758,7 @@ function renderCurrentReport() {
   const { pensionTotal, tax, netAfterTax } = calcNetWorthAfterTax(calc);
 
   const mortgageHero = calc.mortgage>0 ? `
-    <div class="hero-tile danger" style="animation-delay:.1s;position:relative;cursor:pointer" onclick="openCatHistory('_mortgage','יתרת משכנתא')">
+    <div class="hero-tile danger" style="animation-delay:.1s;position:relative;cursor:pointer" onclick="showMortgageDetail()">
       <div class="ht-label" style="margin-bottom:4px">${SVG_MORTGAGE} יתרת משכנתא</div>
       ${mortInst ? `<span class="ct-inst" style="display:flex;align-items:center;gap:4px;margin-bottom:8px"><img src="${logoUrl(mortInst.domain)}" width="13" height="13" style="border-radius:3px;object-fit:contain" onerror="this.style.display='none'"/>${mortInst.name}</span>` : ''}
       <div class="ht-value blur-text" style="margin-bottom:6px" data-countup="${calc.mortgage}">${fmt(calc.mortgage)}</div>
@@ -1949,7 +2807,7 @@ function renderCurrentReport() {
     }
 
     return `
-    <div class="cat-tile${tileAlertClass ? ' ' + tileAlertClass : ''}" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCatHistory('${cat.key}','${cat.label}')">
+    <div class="cat-tile${tileAlertClass ? ' ' + tileAlertClass : ''}" style="animation-delay:${.05*(i+1)}s;cursor:pointer" onclick="openCategory('${cat.key}','${cat.label}')">
       ${logoHtml}
       <span class="ct-icon" ${inst?'style="display:none"':''}>${getCatSvg(cat)}</span>
       <div class="ct-label">${cat.label}${inst?`<span class="ct-inst">${inst.name}</span>`:''}</div>
@@ -2011,7 +2869,7 @@ function renderCurrentReport() {
     }
 
     return `
-    <div class="cat-row" style="animation-delay:${.04*(i+1)}s" onclick="openCatHistory('${cat.key}','${cat.label}')">
+    <div class="cat-row" style="animation-delay:${.04*(i+1)}s" onclick="openCategory('${cat.key}','${cat.label}')">
       ${logoHtml}
       <div class="cat-row-info">
         <div class="cat-row-name">${cat.label}</div>
@@ -2049,6 +2907,7 @@ function renderCurrentReport() {
     ? `<div class="notes-bar ${latest.notes.includes('✔️')?'pos':'neg'}">${latest.notes}</div>` : '';
  
   el.innerHTML = `
+    ${mortgageDueHtml()}
     <div class="hero-strip">
       <div class="hero-tile accent" style="cursor:pointer" onclick="showTotalAssetsBreakdown()">
         <div class="ht-label">${SVG_TOTAL} סה"כ נכסים</div>

@@ -1,0 +1,15 @@
+{
+  "name": "budgy-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "_comment": "Deliberately no \"type\": \"module\" — it would make Node treat app.js at the repo root as ESM (strict mode), which the browser does not. Build scripts here use the .mjs extension instead.",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "sync": "node src-tauri/scripts/sync-frontend.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

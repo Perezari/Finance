@@ -1,0 +1,19 @@
+# Secrets — push secret, bookmarklet secret, user id.
+# Glob, not a literal: .env.bak / .env.local must never slip through either.
+.env
+.env.*
+!.env.example
+
+node_modules/
+
+# Live browser profile: contains the bank session cookies. Never commit.
+browser-profile/
+
+# Raw endpoint dumps from --discover: contain real account data. Never commit.
+discovery/
+
+# Task Scheduler run logs
+logs/
+
+# Generated bookmarklet — contains the secret
+bookmarklet.txt

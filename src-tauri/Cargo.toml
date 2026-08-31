@@ -1,0 +1,28 @@
+[package]
+name = "budgy"
+version = "1.0.0"
+description = "Budgy — מעקב פיננסי, with one-click mortgage import from the bank"
+authors = ["Ari"]
+edition = "2021"
+
+[lib]
+name = "budgy_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Outbound HTTP from Rust. The bank's page cannot POST to Supabase — its
+# CSP blocks connect-src — so the app relays instead, which also keeps the
+# secret out of the injected script entirely.
+ureq = { version = "2", features = ["json"] }
+
+[profile.release]
+strip = true
+lto = true

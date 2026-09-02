@@ -1851,7 +1851,7 @@ function initTauriSettings() {
    live in Rust; this is only what the UI needs to offer the button. */
 const IMPORTABLE = {
   hapoalim: { name: 'בנק הפועלים', url: 'https://login.bankhapoalim.co.il/ng-portals/auth/he/?reqName=getLogonPage' },
-  meitav:   { name: 'מיטב דש',    url: 'https://customers.meitav.co.il/v2/login/loginAmit' },
+  meitav:   { name: 'מיטב דש',    url: 'https://customers.meitav.co.il/v2/login/loginAmit', accountsTitle: 'הקופות במיטב דש' },
 };
 
 /* Colour per product so the share bars stay distinguishable whatever the
@@ -1906,14 +1906,93 @@ function showBankDetail(instId, catKey, catLabel) {
      named current/securities pair is Hapoalim's older shape, still read so
      snapshots taken before the generic form keep rendering. */
   const products = [];
+  const pct = (v) => `${Number(Number(v).toFixed(2))}%`;
+  const heDate = (v) => new Date(v).toLocaleDateString('he-IL');
+  const signed = (v) => `<b class="${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${v > 0 ? '+' : ''}${fmt(v)}</b>`;
+  /* Behind the "info" button: everything the fund reported, as a statement —
+     labelled sections of label/value rows, not chips. */
+  const INFO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="8" r=".6" fill="currentColor"/></svg>';
+  const kv = (rows) => rows.filter((r) => r && r[1] != null && r[1] !== '')
+    .map((r) => `<div class="fund-ledger-row"><span>${r[0]}</span><b${r[2] ? ' class="txt"' : ''}>${r[1]}</b></div>`).join('');
+  const section = (title, body) => body ? `<div class="fund-ledger"><div class="fund-ledger-title">${title}</div>${body}</div>` : '';
+  function fundExtra(a, color, share) {
+    let html = '';
+    const r = a.retirement, ins = a.insurance, sp = a.split, y = a.year;
+    if (r && r.monthly) {
+      html += `<div class="fund-stat"><span>קצבה חודשית צפויה בפרישה${r.age ? ` · גיל ${r.age}` : ''}</span><b>${fmt(r.monthly)}</b></div>`;
+    }
+    html += section('פרטי הקופה', kv([
+      a.number ? (/^[\d\s-]+$/.test(String(a.number)) ? ['מספר חשבון', a.number] : ['קופה', a.number, true]) : null,
+      a.asOf ? ['שערוך אחרון', heDate(a.asOf)] : null,
+      a.since ? ['הצטרפות', heDate(a.since)] : null,
+      a.liquidDate ? ['נזיל מ־', heDate(a.liquidDate)] : null,
+      share != null ? ['חלק מהסה"כ במוסד', pct(share)] : null,
+    ]));
+    const multi = a.tracks && a.tracks.length > 1;
+    html += section('מסלול והוצאות', kv([
+      !multi && a.track ? ['מסלול השקעה', a.track, true] : null,
+      ...(multi ? a.tracks.map((t) => [`מסלול ${t.name}`, t.share != null ? pct(t.share) : '']) : []),
+      a.ytdReturn != null ? ['תשואת המסלול מתחילת השנה', pct(a.ytdReturn)] : null,
+      a.feeDeposit ? ['דמי ניהול מהפקדה', pct(a.feeDeposit)] : null,
+      a.feeSavings != null ? ['דמי ניהול מחיסכון', pct(a.feeSavings)] : null,
+    ]));
+    const spTotal = sp ? (sp.employee || 0) + (sp.employer || 0) + (sp.severance || 0) : 0;
+    if (spTotal > 0) {
+      const segs = [['עובד', sp.employee, 1], ['מעסיק', sp.employer, .55], ['פיצויים', sp.severance, .3]].filter((x) => x[1] > 0);
+      html += `<div class="fund-ledger"><div class="fund-ledger-title">פיצול היתרה</div>
+        <div class="fund-split">${segs.map((x) => `<div style="width:${(x[1] / spTotal * 100).toFixed(2)}%;background:${color};opacity:${x[2]}"></div>`).join('')}</div>
+        ${kv(segs.map((x) => [x[0], fmt(x[1])]))}</div>`;
+    }
+    if (y && y.to) {
+      const rows = [
+        ['הפקדות', y.deposits], ['העברות לקופה', y.transfersIn],
+        ['העברות מהקופה', y.transfersOut ? -y.transfersOut : 0], ['משיכות', y.withdrawals ? -y.withdrawals : 0],
+        ['רווח / הפסד', y.profit], ['דמי ניהול מחיסכון', y.feesSavings],
+        ['דמי ניהול מהפקדות', y.feesDeposits], ['עלות ביטוחים', y.insurance],
+      ].filter((x) => x[1]);
+      if (rows.length) {
+        html += `<div class="fund-ledger">
+          <div class="fund-ledger-title">תנועות ${new Date(y.to).getFullYear()} · עד ${heDate(y.to)}</div>
+          ${y.opening ? `<div class="fund-ledger-row"><span>יתרת פתיחה</span><b>${fmt(y.opening)}</b></div>` : ''}
+          ${rows.map((x) => `<div class="fund-ledger-row"><span>${x[0]}</span>${signed(x[1])}</div>`).join('')}
+          <div class="fund-ledger-row total"><span>יתרה ${heDate(y.to)}</span><b>${fmt(a.value)}</b></div>
+        </div>`;
+      }
+    }
+    if (r && (r.age || r.rate)) {
+      html += section('פרישה', kv([
+        r.age ? ['גיל פרישה', r.age] : null,
+        r.rate ? ['ריבית לתחשיב הקצבה', pct(r.rate)] : null,
+      ]));
+    }
+    if (ins && (ins.disability || ins.widow)) {
+      html += section('כיסוי ביטוחי · לחודש', kv([
+        ins.status ? ['סטטוס', ins.status, true] : null,
+        ins.salary ? ['שכר מבוטח', fmt(ins.salary)] : null,
+        ins.disability ? [`קצבת נכות${ins.disabilityPct ? ` (${pct(ins.disabilityPct)})` : ''}`, fmt(ins.disability)] : null,
+        ins.waiver ? ['שחרור הפקדות בנכות', fmt(ins.waiver)] : null,
+        ins.widow ? [`אלמנה${ins.widowPct ? ` (${pct(ins.widowPct)})` : ''}`, fmt(ins.widow)] : null,
+        ins.orphan ? [`יתום${ins.orphanPct ? ` (${pct(ins.orphanPct)})` : ''}`, fmt(ins.orphan)] : null,
+        ins.parent ? [`הורה${ins.parentPct ? ` (${pct(ins.parentPct)})` : ''}`, fmt(ins.parent)] : null,
+      ]));
+    }
+    return html;
+  }
   if (Array.isArray(d.accounts) && d.accounts.length) {
-    d.accounts.forEach((a, i) => products.push({
-      name: a.name || a.kind, value: a.value, color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
-      meta: [
-        a.number ? `חשבון <b>${a.number}</b>` : null,
-        a.asOf ? `שערוך ${new Date(a.asOf).toLocaleDateString('he-IL')}` : null,
-      ].filter(Boolean),
-    }));
+    d.accounts.forEach((a, i) => {
+      const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length];
+      const fees = [a.feeDeposit ? pct(a.feeDeposit) : null, a.feeSavings != null ? pct(a.feeSavings) : null].filter(Boolean);
+      products.push({
+        name: a.name || a.kind, value: a.value, color,
+        /* Three chips on the card; everything else is a click away. */
+        meta: [
+          a.track ? `מסלול <b class="txt">${a.track}</b>` : null,
+          a.ytdReturn != null ? `תשואה מתחילת השנה <b>${pct(a.ytdReturn)}</b>` : null,
+          fees.length ? `דמי ניהול <b>${fees.join(' · ')}</b>` : null,
+        ].filter(Boolean),
+        details: (share) => fundExtra(a, color, share),
+      });
+    });
   } else {
     if (d.current) {
       products.push({
@@ -1949,8 +2028,11 @@ function showBankDetail(instId, catKey, catLabel) {
         <div class="mort-route-bar"><div style="width:${share.toFixed(2)}%;background:${p.color}"></div></div>
         <div class="mort-route-meta">
           ${p.meta.map((m) => `<span>${m}</span>`).join('')}
-          <span>${share.toFixed(1)}% מהבנק</span>
+          ${products.length > 1 && !p.details ? `<span>${share.toFixed(1)}% מהסה"כ</span>` : ''}
         </div>
+        ${p.details ? `
+          <button type="button" class="fund-info-btn" onclick="toggleFundInfo(this)">${INFO_ICON}<span>מידע</span></button>
+          <div class="fund-info" hidden>${p.details(products.length > 1 ? share : null)}</div>` : ''}
       </div>`;
   }).join('');
 
@@ -1971,6 +2053,49 @@ function showBankDetail(instId, catKey, catLabel) {
           ${x.date ? `<span>${new Date(x.date).toLocaleDateString('he-IL')}</span>` : ''}
         </div>
       </div>`).join('')}` : '';
+
+  /* "How much have I made this year" — one place, both funds, as a ledger:
+     investment result, costs (fees and insurance), net. Money that entered
+     this year is measured from the day it arrived, which is why the figure
+     can differ from the track's own year-to-date return. */
+  const ytdRows = (d.accounts || []).filter((a) => a.year && a.year.profit != null).map((a) => {
+    const y = a.year;
+    const costs = (y.feesSavings || 0) + (y.feesDeposits || 0) + (y.insurance || 0);
+    const invested = (y.opening || 0) + (y.transfersIn || 0) + (y.deposits || 0);
+    return {
+      name: a.name || a.kind, track: a.track, ytd: a.ytdReturn, to: y.to,
+      gross: y.profit, costs, net: y.profit + costs,
+      onMoney: invested > 0 ? (y.profit + costs) / invested * 100 : null,
+      enteredThisYear: !(y.opening > 0) && (y.transfersIn || 0) > 0,
+    };
+  });
+  const ytdSum = (k) => ytdRows.reduce((s, r) => s + (r[k] || 0), 0);
+  const ytdTo = ytdRows.map((r) => r.to).filter(Boolean).sort().pop();
+  const money = (v, muted) => `<b class="${muted ? 'muted' : v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${v > 0 && !muted ? '+' : ''}${fmt(v)}</b>`;
+  const ytdBlock = ytdRows.length ? `
+    <div class="chb-history-header" style="margin:0 -20px 0;padding-right:20px;padding-left:20px"><span>רווח מתחילת השנה</span>${ytdTo ? `<span class="chb-history-sub">עד ${heDate(ytdTo)}</span>` : ''}</div>
+    <div class="mort-route ytd-box">
+      <div class="ytd-table">
+        <div class="ytd-head"><span>קופה</span><span>השקעה</span><span>עלויות</span><span>נטו</span></div>
+        ${ytdRows.map((r) => `
+          <div class="ytd-line">
+            <span class="ytd-name">${r.name}</span>
+            ${money(r.gross)}${money(r.costs, true)}${money(r.net)}
+          </div>
+          <div class="ytd-sub">
+            ${r.track ? `מסלול ${r.track}${r.ytd != null ? ` · ${pct(r.ytd)}` : ''}` : (r.ytd != null ? `המסלול ${pct(r.ytd)}` : '')}
+            ${r.onMoney != null ? `<i>·</i> ≈ ${pct(r.onMoney)} על הכסף שנכנס` : ''}
+          </div>`).join('')}
+        ${ytdRows.length > 1 ? `
+          <div class="ytd-line ytd-total">
+            <span class="ytd-name">סה"כ</span>
+            ${money(ytdSum('gross'))}${money(ytdSum('costs'), true)}${money(ytdSum('net'))}
+          </div>` : ''}
+      </div>
+      <div class="ytd-note">
+        ${ytdRows.some((r) => r.enteredThisYear) ? 'הקופות נפתחו במיטב השנה בהעברה, ולכן הרווח נמדד מיום ההעברה ולא מינואר — בעוד שתשואת המסלול נמדדת מתחילת השנה. ' : ''}עלויות = דמי ניהול וביטוחים.
+      </div>
+    </div>` : '';
 
   const charges = (d.cards?.byDebitDate || []).filter((c) => c.amount);
   const cardsBlock = d.cards ? `
@@ -2003,9 +2128,11 @@ function showBankDetail(instId, catKey, catLabel) {
      read as a duplicate. */
   const tickerItems = [
     products.length
-      ? `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">סה"כ בבנק: <strong>${fmt(bankTotal)}</strong></bdi></span>`
+      ? `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">סה"כ ב${spec.name}: <strong>${fmt(bankTotal)}</strong></bdi></span>`
       : `<span class="tkr-item">${ICONS_JS.bank} <bdi dir="rtl" class="tkr-text">${catLabel}: <strong>${fmt(own)}</strong></bdi></span>`,
     ...products.map((p) => `<span class="tkr-item">${ICONS_JS.trending} <bdi dir="rtl" class="tkr-text">${p.name}: <strong>${fmt(p.value)}</strong></bdi></span>`),
+    ...(ytdRows.length ? [`<span class="tkr-item">${ICONS_JS.trending} <bdi dir="rtl" class="tkr-text">רווח מתחילת השנה: <strong style="color:var(${ytdSum('net') < 0 ? '--red' : '--green'})">${ytdSum('net') > 0 ? '+' : ''}${fmt(ytdSum('net'))}</strong></bdi></span>`] : []),
+    ...((d.accounts || []).filter((a) => a.retirement?.monthly).map((a) => `<span class="tkr-item">${ICONS_JS.piggy} <bdi dir="rtl" class="tkr-text">קצבה צפויה: <strong>${fmt(a.retirement.monthly)}</strong> לחודש</bdi></span>`)),
     ...(d.cards?.total ? [`<span class="tkr-item">${ICONS_JS.alert} <bdi dir="rtl" class="tkr-text">אשראי: <strong style="color:var(--red)">${fmt(d.cards.total)}</strong></bdi></span>`] : []),
     ...(deposits.length ? [`<span class="tkr-item">${ICONS_JS.piggy} <bdi dir="rtl" class="tkr-text">הופקד: <strong>${fmt(deposits.reduce((a, x) => a + x.total, 0))}</strong></bdi></span>`] : []),
   ];
@@ -2036,13 +2163,14 @@ function showBankDetail(instId, catKey, catLabel) {
         ${deltaHtml}
         <div style="font-size:.72rem;color:var(--ink-4);margin-top:8px">
           ${spec.name}${snap ? ` · נכון ל-${new Date(snap.snapshot_date).toLocaleDateString('he-IL')}` : ' · טרם יובאו נתונים'}
-          ${bankTotal && products.length > 1 ? ` · סה"כ בבנק ${fmt(bankTotal)}` : ''}
+          ${bankTotal && products.length > 1 ? ` · סה"כ ב${spec.name} ${fmt(bankTotal)}` : ''}
         </div>
       </div>
 
       <div class="chb-body">
+        ${ytdBlock}
         ${productCards ? `
-          <div class="chb-history-header" style="margin:0 -20px 0;padding-right:20px;padding-left:20px"><span>החשבונות בבנק</span></div>
+          <div class="chb-history-header" style="margin:${ytdBlock ? '16px' : '0'} -20px 0;padding-right:20px;padding-left:20px"><span>${spec.accountsTitle || `החשבונות ב${spec.name}`}</span></div>
           ${productCards}` : ''}
         ${depositsBlock}
         ${cardsBlock}
@@ -2082,6 +2210,51 @@ function openCategory(catKey, catLabel) {
 }
 window.openCategory = openCategory;
 
+function showNeedsMonth(instId, accounts) {
+  const spec = IMPORTABLE[instId] || { name: instId };
+  const month = new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+  const rows = accounts.map((a) => `
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem">
+      <span style="color:var(--ink-2)">${a.label || a.kind}</span>
+      <span style="font-family:var(--mono);font-weight:700;color:var(--ink)">${fmt(a.balance)}</span>
+    </div>`).join('');
+  document.getElementById('needs-month-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'needs-month-modal';
+  modal.className = 'info-modal-overlay cat-history-overlay';
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div class="chb-header">
+        <div class="chb-title">${MORT_IMPORT_ICON} הנתונים נקלטו מ${spec.name}</div>
+        <button onclick="document.getElementById('needs-month-modal').remove()" class="chb-close">${ICONS_JS.x}</button>
+      </div>
+      <div class="chb-body">
+        ${rows}
+        <p style="font-size:.85rem;color:var(--ink-2);line-height:1.6;margin:14px 0 4px">
+          אין עדיין דוח ל<b>${month}</b>, אז אין לאן לכתוב אותם. הוסף את החודש —
+          האשף ימלא את שאר הקטגוריות מהחודש שעבר — ואז ייבא שוב.
+        </p>
+        <button class="mort-import-btn"
+          onclick="document.getElementById('needs-month-modal').remove();document.getElementById('bank-detail-modal')?.remove();openWizard()">
+          ${ICONS_JS.plus} הוסף את ${month}
+        </button>
+      </div>
+    </div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+window.showNeedsMonth = showNeedsMonth;
+
+function toggleFundInfo(btn) {
+  const panel = btn.nextElementSibling;
+  if (!panel) return;
+  panel.hidden = !panel.hidden;
+  btn.classList.toggle('open', !panel.hidden);
+  const label = btn.querySelector('span');
+  if (label) label.textContent = panel.hidden ? 'מידע' : 'סגור';
+}
+window.toggleFundInfo = toggleFundInfo;
+
 async function importFromInstitution(instId, btn) {
   const spec = IMPORTABLE[instId];
   if (!spec) { showToast('אין ייבוא מוגדר למוסד הזה'); return; }
@@ -2117,9 +2290,13 @@ async function importFromInstitution(instId, btn) {
       if (p.state === 'error') { showToast(p.message || 'הייבוא נכשל'); stop(); return; }
       await Promise.all([loadRecords(), loadMortgageSnapshot(), loadBankSnapshots()]);
       renderCurrentReport();
+      stop();
+      /* Captured, but there is no record this month to write into. A toast
+         vanished with the window and read as "it just closed" — this stays
+         up and offers the one action that unblocks it. */
+      if (p.result?.needs_month) { showNeedsMonth(instId, p.result.accounts || []); return; }
       showToast(p.result?.push?.message || 'היתרות עודכנו');
       setStatus(p.result?.push?.message || '');
-      stop();
       // Redraw the open detail view so the new numbers show without reopening.
       if (document.getElementById('bank-detail-modal')) showBankDetail(instId, lastBankCat.key, lastBankCat.label);
     });

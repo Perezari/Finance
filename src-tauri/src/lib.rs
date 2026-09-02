@@ -495,6 +495,7 @@ fn meitav_script() -> String {
   var NL = String.fromCharCode(10);
   var nativeFetch = window.fetch.bind(window);
   var payload = null, done = false, tries = 0, lastErr = "ממתין להתחברות";
+  var fullText = null, enrichPromise = null, enrichNote = "";
 
   function alreadySubmitted() {
     try { return sessionStorage.getItem("__budgySubmitted") === "1"; } catch (e) { return false; }
@@ -530,7 +531,9 @@ fn meitav_script() -> String {
 
   /* Pull out the numbers and nothing else. */
   function consider(text) {
-    if (done || typeof text !== "string" || text.indexOf("AmitAccounts") === -1) return;
+    if (done || typeof text !== "string") return;
+    if (text.indexOf("CustomAccountMain") !== -1) { fullText = text; if (payload) mergeFull(text); return; }
+    if (text.indexOf("AmitAccounts") === -1) return;
     var j; try { j = JSON.parse(text); } catch (e) { return; }
     var lobby = j && j.lobbyData;
     var list = lobby && lobby.AmitAccounts;
@@ -582,6 +585,143 @@ fn meitav_script() -> String {
     return _send.apply(this, arguments);
   };
 
+  function num(v) { return typeof v === "number" && isFinite(v) ? v : null; }
+  function day(v) { return typeof v === "string" && v.length >= 10 ? v.slice(0, 10) : null; }
+  /* "מיטב השתלמות מניות" inside fund "מיטב השתלמות " is the track "מניות". */
+  function trackName(full, fund) {
+    if (typeof full !== "string") return null;
+    var f = full.trim(), p = (typeof fund === "string" ? fund : "").trim();
+    if (p && f.indexOf(p) === 0 && f.length > p.length) return f.slice(p.length).trim();
+    return f;
+  }
+
+  /* The year-to-date ledger every product carries. It reconciles to the
+     balance to the agora, which is what makes it worth showing. */
+  function ledger(m) {
+    var ins = (num(m.KisuyBituachSum) || 0) + (num(m.KisuiBituachDisabilitysum) || 0);
+    return {
+      from: day(m.PrevRevaluationDate), to: day(m.LastRevaluationDate),
+      opening: num(m.YitratPtihaSum), deposits: num(m.HafkadotSum),
+      transfersIn: num(m.HaavarotToKupaSum), transfersOut: num(m.HaavarotFromKupaSum),
+      withdrawals: num(m.MeshihotSum), profit: num(m.RevahimBeforeDmeyNihulSum),
+      feesSavings: num(m.DmeyNihulSumZvira), feesDeposits: num(m.DmeyNihulSumHf),
+      insurance: ins || null, lastMonthDeposit: num(m.HafkadotLastMonth)
+    };
+  }
+  function split(m) {
+    return { employee: num(m.YitrotAccountOved), employer: num(m.YitrotAccountEmployer), severance: num(m.YitrotAccountPizuim) };
+  }
+
+  /* The AllAccounts response is the one place the investment track, this
+     year's return, the fees and the liquidity date all appear. Only those
+     are copied — it also carries the member's birth date, employer and ID. */
+  function mergeFull(text) {
+    if (!payload) return false;
+    var j; try { j = JSON.parse(text); } catch (e) { return false; }
+    var t = j && j.t; if (!t) return false;
+    var byNum = {}, byKind = {};
+    function reg(number, kind, info) {
+      if (!info.tracks.length) return;
+      if (number) byNum[String(number)] = info;
+      (byKind[kind] = byKind[kind] || []).push(info);
+    }
+    (t.CustomAccountMain || []).forEach(function (m) {
+      var info = { tracks: [], since: day(m.VetekDate), liquidDate: day(m.NezilutDate),
+                   split: split(m), year: ledger(m) };
+      (m.CustomAccountMaslul || []).forEach(function (s) {
+        info.tracks.push({
+          name: trackName(s.MaslulNameShort, s.KupaType), share: num(s.HafrashaPercent),
+          value: num(s.YitrotAccountSum), ytd: num(s.TsuaMitstaberet),
+          feeDeposit: null, feeSavings: num(s.PercentDmeyNihulAmit)
+        });
+        if (!info.since) info.since = day(s.VetekDate);
+      });
+      reg(m.AccountNumForShow, /השתלמות/.test(m.KupaName || "") ? "study" : "kupa", info);
+    });
+    (t.CustomPensionAccountMain || []).forEach(function (m) {
+      var info = { tracks: [], since: day(m.HiztarfutDate), liquidDate: null,
+                   split: split(m), year: ledger(m),
+                   retirement: { age: num(m.GilPrisha), monthly: num(m.KizbatZiknaBePrisha), rate: num(m.RibitOmdan) },
+                   insurance: {
+                     status: typeof m.InsuredMemberStatus === "string" ? m.InsuredMemberStatus : null,
+                     salary: num(m.MaskoretLeNechutIsherim),
+                     disabilityPct: num(m.ShihurKisuiNechut), disability: num(m.PensionZfuyaNechut),
+                     widowPct: num(m.ShihurKisuiLeHalmana), widow: num(m.PensionZfuyaLeHalmana),
+                     orphanPct: num(m.ShihurKisuiLeYatom), orphan: num(m.PensionZfuyaLeYatom),
+                     parentPct: num(m.ShihurKisuiLeHore), parent: num(m.PensionZfuyaLeHore),
+                     waiver: num(m.ShichrurHafkadotBeMikreNehut)
+                   } };
+      (m.pensionMaslulHashkaaKerenDTOs || []).forEach(function (s) {
+        info.tracks.push({
+          name: trackName(s.MaslulName, m.KupaName), share: num(s.PercentFromKeren),
+          value: num(s.YitraBmaslul), ytd: num(s.TsuaMitstaberet),
+          feeDeposit: num(s.PercentDmeyNihulHafkadaShotefet), feeSavings: num(s.PercentDmeyNihulChisachonTzavur)
+        });
+      });
+      reg(m.AccountNumForShow, "pension", info);
+    });
+    var applied = 0;
+    payload.details.accounts.forEach(function (acc) {
+      var same = byKind[acc.kind] || [];
+      var info = byNum[String(acc.number)] || (same.length === 1 ? same[0] : null);
+      if (!info) return;
+      var main = info.tracks.slice().sort(function (a, b) { return (b.share || 0) - (a.share || 0); })[0];
+      acc.track = main.name; acc.tracks = info.tracks;
+      acc.ytdReturn = main.ytd; acc.feeDeposit = main.feeDeposit; acc.feeSavings = main.feeSavings;
+      acc.since = info.since; acc.liquidDate = info.liquidDate;
+      acc.split = info.split || null; acc.year = info.year || null;
+      acc.retirement = info.retirement || null; acc.insurance = info.insurance || null;
+      applied++;
+    });
+    return applied > 0;
+  }
+
+  /* One pass over the richer endpoint, then submit either way: the balances
+     never wait on the tracks. The action's exact signature is not public
+     knowledge yet, so several shapes are tried in turn and each attempt is
+     logged with its status and the head of its body. */
+  function enrich() {
+    if (enrichPromise) return enrichPromise;
+    say("Budgy — קורא מסלולים…");
+    var url = "/v2/api/AllAccounts/GetAllAmitAccounts";
+    /* The site's own gateway is $http.get with an empty params object, and
+       its user service keeps a token in localStorage["t"] — so the page's
+       requests carry a bearer this plain fetch was missing. The token goes
+       only back to the same origin, and is never logged. */
+    var token = null;
+    try { token = localStorage.getItem("t"); } catch (e) {}
+    var ACCEPT = "application/json, text/plain, */*";
+    var withBearer = { accept: ACCEPT, authorization: token && /^bearer /i.test(token) ? token : "Bearer " + token };
+    var plain = { accept: ACCEPT };
+    var attempts = [];
+    if (token) {
+      attempts.push(["GET bearer", url, { credentials: "include", headers: withBearer }]);
+      attempts.push(["GET bearer amitId", url + "?amitId=", { credentials: "include", headers: withBearer }]);
+    }
+    attempts.push(["GET", url, { credentials: "include", headers: plain }]);
+    attempts.push(["GET amitId", url + "?amitId=", { credentials: "include", headers: plain }]);
+    if (!token) enrichNote += "no token; ";
+    function head(t) { return String(t || "").replace(/\s+/g, " ").slice(0, 60); }
+    function attempt(i) {
+      if (i >= attempts.length) return Promise.resolve(false);
+      var a = attempts[i];
+      return nativeFetch(a[1], a[2]).then(function (r) {
+        return r.text().then(function (t) {
+          if (r.status === 200 && mergeFull(t)) { enrichNote += a[0] + " ok; "; return true; }
+          enrichNote += a[0] + " " + r.status + " [" + head(t) + "]; ";
+          return attempt(i + 1);
+        });
+      }, function (e) { enrichNote += a[0] + " err " + head(e && e.message || e) + "; "; return attempt(i + 1); });
+    }
+    var work = (fullText && mergeFull(fullText)) ? Promise.resolve(true) : attempt(0);
+    var deadline = new Promise(function (res) { setTimeout(function () { enrichNote += "timeout; "; res(false); }, 15000); });
+    enrichPromise = Promise.race([work, deadline]).then(function (ok) {
+      try { window.__TAURI__.event.emit("budgy://result", { progress: true, tracks: ok ? "ok" : "none", note: enrichNote }); } catch (e) {}
+      return ok;
+    });
+    return enrichPromise;
+  }
+
   function probe() {
     return nativeFetch("/v2/api/AmitLobby/getAllAmitAccounts", {
       credentials: "include", headers: { accept: "application/json" }
@@ -608,9 +748,9 @@ fn meitav_script() -> String {
   var timer = setInterval(function () {
     if (done) { clearInterval(timer); return; }
     tries++;
-    probe().then(function () {
+    (payload ? Promise.resolve() : probe()).then(function () {
       if (done) return;
-      if (payload) { submitNow(); return; }
+      if (payload) { enrich().then(submitNow, submitNow); return; }
       say("Budgy — ממתין לנתונים…" + NL + lastErr + NL + "ניסיון " + tries);
       try { window.__TAURI__.event.emit("budgy://result", { progress: true, error: lastErr, tries: tries }); } catch (e) {}
     });
@@ -654,7 +794,24 @@ fn capture_script() -> String {
       (failed ? " · " + failed + " נכשלו" : "") + "\nעבור בין המסכים, ואז סגור את החלון.";
   }
 
-  function keep(url, text) {
+  function hdr(h, name) {
+    try {
+      if (!h) return null;
+      if (typeof h.get === "function") return h.get(name);
+      for (var k in h) if (String(k).toLowerCase() === name) return String(h[k]);
+    } catch (e) {}
+    return null;
+  }
+  /* The shape is what matters, never the secrets: login-looking requests are
+     not stored at all, and long digit runs are masked. */
+  function safeBody(url, body) {
+    if (body == null) return null;
+    if (typeof body !== "string") return "[" + ((body.constructor && body.constructor.name) || "body") + "]";
+    if (/login|logon|auth|password|otp|token|sms|verify/i.test(url)) return "[redacted]";
+    return body.slice(0, 2000).replace(/\d{8,}/g, function (m) { return new Array(m.length + 1).join("#"); });
+  }
+
+  function keep(url, text, req) {
     if (!text || typeof text !== "string" || text.length > 2000000) return;
     if (SKIP.test(url)) return;
     var t = text.replace(/^\s+/, "");
@@ -664,7 +821,7 @@ fn capture_script() -> String {
     seen[key] = 1;
     count++;
     try {
-      window.__TAURI__.event.emit("budgy://capture", { url: url, body: text });
+      window.__TAURI__.event.emit("budgy://capture", { url: url, body: text, request: req || null });
       sent++;
     } catch (e) {
       failed++;
@@ -675,16 +832,31 @@ fn capture_script() -> String {
   var _fetch = window.fetch;
   window.fetch = function () {
     var url = (arguments[0] && arguments[0].url) || String(arguments[0] || "");
+    var init = arguments[1] || {};
+    var req = {
+      method: String(init.method || (arguments[0] && arguments[0].method) || "GET").toUpperCase(),
+      type: hdr(init.headers, "content-type"),
+      body: safeBody(url, init.body)
+    };
     var out = _fetch.apply(this, arguments);
-    try { out.then(function (r) { try { r.clone().text().then(function (t) { keep(url, t); }, function () {}); } catch (e) {} }, function () {}); } catch (e) {}
+    try { out.then(function (r) { try { r.clone().text().then(function (t) { keep(url, t, req); }, function () {}); } catch (e) {} }, function () {}); } catch (e) {}
     return out;
   };
 
   var _open = XMLHttpRequest.prototype.open, _send = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function (m, u) { this.__budgyUrl = String(u || ""); return _open.apply(this, arguments); };
-  XMLHttpRequest.prototype.send = function () {
+  var _srh = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.open = function (m, u) {
+    this.__budgyUrl = String(u || ""); this.__budgyMethod = String(m || "GET").toUpperCase();
+    return _open.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.setRequestHeader = function (k, v) {
+    try { if (String(k).toLowerCase() === "content-type") this.__budgyType = String(v); } catch (e) {}
+    return _srh.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function (body) {
     var self = this;
-    try { this.addEventListener("load", function () { try { keep(self.__budgyUrl || location.href, self.responseText); } catch (e) {} }); } catch (e) {}
+    var req = { method: this.__budgyMethod || "GET", type: this.__budgyType || null, body: safeBody(this.__budgyUrl || "", body) };
+    try { this.addEventListener("load", function () { try { keep(self.__budgyUrl || location.href, self.responseText, req); } catch (e) {} }); } catch (e) {}
     return _send.apply(this, arguments);
   };
 
@@ -698,7 +870,11 @@ fn capture_script() -> String {
     var text = document.body.innerText || "";
     if (text.length < 200) return;
     /* Re-send only when the page actually changed. */
-    var fingerprint = text.length + ":" + text.slice(0, 200);
+    /* Keyed by URL as well: the site keeps the same header on every page,
+       so two pages could otherwise look like one. A client-rendered page is
+       also re-snapshotted as its text grows, so a slow React route is caught
+       once it has actually painted. */
+    var fingerprint = location.pathname + "|" + text.length + ":" + text.slice(0, 200);
     if (fingerprint === lastText) return;
     lastText = fingerprint;
 
@@ -719,6 +895,11 @@ fn capture_script() -> String {
 
   setInterval(snapshotDom, 3000);
   window.addEventListener("load", function () { setTimeout(snapshotDom, 1500); });
+  /* SPA route changes never fire load; watch the URL too. */
+  var lastPath = location.pathname;
+  setInterval(function () {
+    if (location.pathname !== lastPath) { lastPath = location.pathname; setTimeout(snapshotDom, 2000); }
+  }, 500);
 
   /* The IPC channel only exists for hosts listed in the bank capability. A
      missing one produced an empty dump with no hint why — say it out loud. */
@@ -861,6 +1042,21 @@ fn wire_page_channels(app: &AppHandle) {
             });
             match post_json(&url, &s.secret, body) {
                 Ok(v) => {
+                    /* Captured fine, but Budgy has no record for this month
+                       to write into. That is a decision for the user, not a
+                       failure — pass it through so the app can offer to add
+                       the month. */
+                    if v.get("needs_month").and_then(|b| b.as_bool()) == Some(true) {
+                        let reason = v.get("reason").and_then(|r| r.as_str())
+                            .unwrap_or("אין עדיין דוח לחודש הזה").to_string();
+                        log_line(&app2, format!("relay needs_month {reason}"));
+                        emit(&app2, "done", reason.clone(), Some(serde_json::json!({
+                            "needs_month": true,
+                            "accounts": v.get("accounts").cloned().unwrap_or(Value::Null),
+                            "push": { "title": "הנתונים נקלטו", "message": reason }
+                        })));
+                        return;
+                    }
                     let changes = v.get("changes").and_then(|c| c.as_array()).cloned().unwrap_or_default();
                     let summary = changes
                         .iter()
@@ -907,7 +1103,10 @@ fn wire_page_channels(app: &AppHandle) {
         let name = format!("{:03}-{}.json", session.n, &safe[..safe.len().min(90)]);
         if fs::write(dir.join(&name), body).is_ok() {
             session.n += 1;
-            session.index.push(serde_json::json!({ "file": name, "url": url }));
+            session.index.push(serde_json::json!({
+                "file": name, "url": url,
+                "request": parsed.get("request").cloned().unwrap_or(Value::Null)
+            }));
             let _ = fs::write(
                 dir.join("_index.json"),
                 serde_json::to_string_pretty(&session.index).unwrap_or_default(),

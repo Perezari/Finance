@@ -2843,6 +2843,48 @@ input[type="date"]::-webkit-date-and-time-value {
 }
 .mort-route-meta b,
 .mort-file-meta b { color: var(--ink-2); font-family: var(--mono); font-weight: 700; }
+/* Hebrew never goes through the mono face — it has no Hebrew glyphs. */
+.mort-route-meta b.txt,
+.mort-file-meta b.txt { font-family: var(--font); }
+
+/* Fund extras: balance split, year ledger, pension stats. */
+.fund-split { display: flex; height: 6px; border-radius: 4px; overflow: hidden; background: var(--surface2); margin: 10px 0 8px; }
+.fund-split > div { min-width: 3px; }
+.fund-ledger { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.fund-ledger-title { font-size: .72rem; font-weight: 700; color: var(--ink-3); margin-bottom: 2px; }
+.fund-ledger-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: .8rem; color: var(--ink-2); }
+.fund-ledger-row b { font-family: var(--mono); font-weight: 700; color: var(--ink); }
+.fund-ledger-row b.pos { color: var(--green); }
+.fund-ledger-row b.neg { color: var(--red); }
+.fund-ledger-row.total { border-top: 1px solid var(--border); margin-top: 2px; padding-top: 6px; }
+.fund-stat { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--green-light); }
+.fund-stat span { font-size: .78rem; color: var(--ink-2); }
+.fund-stat b { font-family: var(--mono); font-size: 1.05rem; color: var(--green); white-space: nowrap; }
+.fund-ledger-row b.txt { font-family: var(--font); }
+.fund-info-btn { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--ink-2); font: 600 .74rem var(--font); cursor: pointer; }
+.fund-info-btn svg { width: 13px; height: 13px; }
+.fund-info-btn:hover, .fund-info-btn.open { color: var(--ink); border-color: var(--ink-3); }
+.fund-info { margin-top: 2px; }
+.fund-info .fund-stat { margin-top: 12px; }
+/* Year-to-date ledger: a real table — fund, investment result, costs, net. */
+.chb-history-header:has(.chb-history-sub) { display: flex; justify-content: space-between; align-items: baseline; }
+.chb-history-header .chb-history-sub { font-weight: 500; color: var(--ink-3); letter-spacing: 0; text-transform: none; }
+.ytd-table { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); column-gap: 8px; align-items: baseline; }
+.ytd-table > div { display: contents; }
+.ytd-table > div.ytd-sub { display: block; grid-column: 1 / -1; }
+.ytd-head > span { font-size: .68rem; font-weight: 700; color: var(--ink-3); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.ytd-line > * { padding: 8px 0 2px; font-size: .84rem; }
+.ytd-line .ytd-name { font-weight: 600; color: var(--ink); }
+.ytd-line b { font-family: var(--mono); font-weight: 700; color: var(--ink); direction: ltr; text-align: right; white-space: nowrap; }
+.ytd-head > span:not(:first-child), .ytd-line b { text-align: left; }
+.ytd-line b.pos { color: var(--green); }
+.ytd-line b.neg { color: var(--red); }
+.ytd-line b.muted { color: var(--ink-2); font-weight: 500; }
+.ytd-sub { font-size: .72rem; color: var(--ink-3); padding: 0 0 6px; }
+.ytd-sub i { font-style: normal; margin: 0 4px; }
+.ytd-total > * { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 10px; font-size: .9rem; }
+.ytd-total .ytd-name { font-weight: 700; }
+.ytd-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-size: .72rem; line-height: 1.5; color: var(--ink-3); }
 
 .mort-file {
   background: var(--surface2);

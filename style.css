@@ -4,6 +4,7 @@
   --green:       #0e9e7e; --green-mid:#13b891; --green-dark:#0a7a62; --green-light:#e6f7f3; --green-glow:rgba(14,158,126,.18); --shadow-green:0 6px 24px rgba(14,158,126,.35); --green-shadow-sm:0 4px 14px rgba(14,158,126,.5);
   --blue:        #4f8ef7; --blue-light:#eff6ff;
   --amber:       #f59e0b; --red:#ef4444; --red-light:#fef2f2;
+  --accent-ink-dark:#17140e; --accent-ink-light:#ffffff; --on-green:var(--accent-ink-light);
   --bg:#ffffff; --surface:#ffffff; --surface2:#f8f9fb;
   --border:#e5e9f0; --ink:#454545; --ink-2:#374151; --ink-3:#6b7280; --ink-4:#9ca3af;
   --shadow-xs:0 1px 3px rgba(0,0,0,.06); --shadow-sm:0 2px 8px rgba(0,0,0,.07);
@@ -1293,9 +1294,10 @@ select option{background:var(--surface)}
 .icon-btn-new-month {
   background: var(--green) !important;
   border-color: var(--green) !important;
-  color: #fff;
+  color: var(--on-green) !important;
+  font-weight: 700 !important;
 }
-.icon-btn-new-month svg { stroke: #fff !important; }
+.icon-btn-new-month svg { stroke: var(--on-green) !important; }
 .icon-btn-new-month:hover {
   background: var(--green-mid, #13b891) !important;
   border-color: var(--green-mid, #13b891) !important;
@@ -1845,7 +1847,8 @@ select option{background:var(--surface)}
   background: var(--green) !important;
   border-color: var(--green) !important;
 }
-[data-theme="dark"] .icon-btn-new-month svg { stroke: #fff !important; }
+[data-theme="dark"] .icon-btn-new-month { color: var(--on-green) !important; }
+[data-theme="dark"] .icon-btn-new-month svg { stroke: var(--on-green) !important; }
 [data-theme="dark"] .cat-quick-add-btn {
   background: var(--surface2);
   border-color: var(--border);
@@ -2344,6 +2347,22 @@ input[type="date"]::-webkit-date-and-time-value {
   padding: 4px 0 8px !important;
   outline: none !important;
 }
+.wz-import-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 14px; padding: 9px 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--ink-2);
+  font: 600 .84rem var(--font); cursor: pointer;
+}
+.wz-import-btn:hover:not(:disabled) { border-color: var(--green); color: var(--ink); }
+.wz-import-btn:disabled { opacity: .7; cursor: default; }
+.wz-import-btn svg { width: 15px; height: 15px; }
+.wz-imported { margin-top: 12px; font-size: .78rem; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 6px; }
+.wz-imported svg { width: 13px; height: 13px; flex-shrink: 0; }
+.wz-unlock { border: 0; background: none; padding: 0 0 0 0; margin-right: 6px; color: var(--ink-3); font: 500 .76rem var(--font); text-decoration: underline; cursor: pointer; }
+.wz-unlock:hover { color: var(--ink); }
+.wz-amount-input.wz-locked { color: var(--ink-2); background: var(--surface2); cursor: default; }
+.wz-amount-input.wz-locked::-webkit-inner-spin-button,
+.wz-amount-input.wz-locked::-webkit-outer-spin-button { display: none; }
 .wz-prev-hint {
   font-size: .78rem;
   color: var(--ink-4);

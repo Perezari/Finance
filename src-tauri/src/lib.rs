@@ -1070,6 +1070,7 @@ fn wire_page_channels(app: &AppHandle) {
                     let msg = if summary.is_empty() { "אין שינוי".to_string() } else { summary };
                     log_line(&app2, format!("relay ok {msg}"));
                     emit(&app2, "done", msg.clone(), Some(serde_json::json!({
+                        "accounts": parsed.get("accounts").cloned().unwrap_or(Value::Null),
                         "push": { "title": "הנתונים מהבנק עודכנו", "message": msg }
                     })));
                 }

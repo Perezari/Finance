@@ -1239,6 +1239,7 @@ function openWizard() {
   }
   wizardData.notes  = '';
   wizardData.editId = null;
+  wizardData.imported = {};
   wizardStep = 0;
   renderWizard();
   document.getElementById('wizard-modal').style.display = 'flex';
@@ -1253,7 +1254,8 @@ function openWizardEdit(record) {
     date:     record.record_date,
     mortgage: record.mortgage_balance || 0,
     values:   { ...(record.values || {}) },
-    notes:    record.notes || ''
+    notes:    record.notes || '',
+    imported: {}
   };
   wizardStep = 0;
   renderWizard();
@@ -1305,6 +1307,7 @@ function renderWizard() {
     const cat  = step.cat;
     const inst = cat.institution_id ? getInstitution(cat.institution_id) : null;
     const val  = wizardData.values?.[cat.key] || '';
+    const locked = wizardFieldLocked(cat.key);
     const logoHtml = inst
       ? `<img src="${logoUrl(inst.domain)}" alt="${inst.name}" style="width:40px;height:40px;border-radius:10px;object-fit:contain;margin-bottom:4px" onerror="this.style.display='none'"/>`
       : `<div style="color:var(--ink-3);margin-bottom:4px">${getCatSvg({...cat, key:cat.key})}</div>`;
@@ -1317,10 +1320,11 @@ function renderWizard() {
       ${instHtml}
       <div class="wz-amount-wrap">
         <span class="wz-currency">₪</span>
-        <input type="number" id="wz-cat-val" class="form-input wz-amount-input"
-          value="${val}" placeholder="0" inputmode="numeric"/>
+        <input type="number" id="wz-cat-val" class="form-input wz-amount-input${locked ? ' wz-locked' : ''}"
+          value="${val}" placeholder="0" inputmode="numeric"${locked ? ' readonly' : ''}/>
       </div>
-      <div class="wz-prev-hint" id="wz-prev-hint"></div>`;
+      <div class="wz-prev-hint" id="wz-prev-hint"></div>
+      ${wizardImportHtml(cat.institution_id && IMPORTABLE[cat.institution_id] ? IMPORTABLE[cat.institution_id].name : null, locked, cat.key)}`;
   }
   else if (step.type === 'mortgage') {
     const mortInstId = localStorage.getItem('mortgage_inst_v1');
@@ -1337,9 +1341,10 @@ function renderWizard() {
       ${instHtml}
       <div class="wz-amount-wrap">
         <span class="wz-currency">₪</span>
-        <input type="number" id="wz-mortgage-val" class="form-input wz-amount-input"
-          value="${wizardData.mortgage || ''}" placeholder="0" inputmode="numeric"/>
-      </div>`;
+        <input type="number" id="wz-mortgage-val" class="form-input wz-amount-input${wizardFieldLocked('__mortgage') ? ' wz-locked' : ''}"
+          value="${wizardData.mortgage || ''}" placeholder="0" inputmode="numeric"${wizardFieldLocked('__mortgage') ? ' readonly' : ''}/>
+      </div>
+      ${wizardImportHtml(mortInstId === 'mizrahi' ? mortInst?.name || 'מזרחי טפחות' : null, wizardFieldLocked('__mortgage'), '__mortgage')}`;
   }
   else if (step.type === 'summary') {
     const dateLabel = wizardData.date
@@ -1389,17 +1394,116 @@ function renderWizard() {
     }
     // Auto-focus — immediate focus keeps keyboard open on mobile
     const catInput = document.getElementById('wz-cat-val');
-    if (catInput) { catInput.focus(); catInput.select(); }
+    if (catInput) { catInput.focus(); if (!catInput.readOnly) catInput.select(); }
   }
   if (step.type === 'mortgage') {
     const mortInput = document.getElementById('wz-mortgage-val');
-    if (mortInput) { mortInput.focus(); mortInput.select(); }
+    if (mortInput) { mortInput.focus(); if (!mortInput.readOnly) mortInput.select(); }
   }
 
   // Button labels
   document.getElementById('wz-prev-btn').style.visibility = isFirst ? 'hidden' : 'visible';
   document.getElementById('wz-next-btn').textContent = isLast ? '💾 שמור' : 'הבא ←';
 }
+
+/* Import from inside the wizard (desktop app only). What the bank reports
+   lands in the wizard's fields — every category the institution feeds, not
+   just the one on screen — and is saved with the month. */
+const WZ_LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
+/* Imported and not released by the user. */
+function wizardFieldLocked(key) {
+  return !!(wizardData.imported?.[key] && !wizardData.unlocked?.[key]);
+}
+
+function wizardImportHtml(instName, locked, key) {
+  if (locked) {
+    return `<div class="wz-imported">${WZ_LOCK_ICON}<span>יובא מ${instName || 'הבנק'} · נעול</span>
+      <button type="button" class="wz-unlock" onclick="wizardUnlock('${key}')">ערוך ידנית</button></div>`;
+  }
+  if (!instName || !inTauri()) return '';
+  return `<button type="button" class="wz-import-btn" onclick="wizardImport(this)">${MORT_IMPORT_ICON}<span>ייבא מ${instName}</span></button>`;
+}
+
+function wizardUnlock(key) {
+  wizardData.unlocked = wizardData.unlocked || {};
+  wizardData.unlocked[key] = true;
+  renderWizard();
+}
+window.wizardUnlock = wizardUnlock;
+
+function wizardAccountsImport(instId, label) {
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+  return new Promise(async (resolve, reject) => {
+    let unlisten = null;
+    const settle = async (fn, arg) => {
+      if (unlisten) { unlisten(); unlisten = null; }
+      await invoke('close_bank_window').catch(() => {});
+      fn(arg);
+    };
+    unlisten = await listen('budgy://import', (e) => {
+      const { state, message, result } = e.payload || {};
+      if (state === 'running') { label(); return; }
+      if (state === 'error') { settle(reject, new Error(message || 'הייבוא נכשל')); return; }
+      settle(resolve, result || {});
+    });
+    invoke('import_accounts_from_bank', { url: IMPORTABLE[instId].url, institution: instId })
+      .catch((e) => settle(reject, new Error(String(e))));
+  });
+}
+
+async function wizardImport(btn) {
+  const step = wizardSteps()[wizardStep];
+  if (!step || (step.type !== 'cat' && step.type !== 'mortgage')) return;
+  wizardSaveStep();                       // keep anything typed on this step
+  const original = btn.innerHTML;
+  const waiting = () => { if (document.body.contains(btn)) btn.innerHTML = `${MORT_IMPORT_ICON}<span>התחבר בחלון הבנק…</span>`; };
+  btn.disabled = true;
+  waiting();
+  wizardData.imported = wizardData.imported || {};
+  try {
+    if (step.type === 'mortgage') {
+      const r = await importViaTauri(waiting);
+      const bal = Number(r?.balance);
+      if (!Number.isFinite(bal) || bal <= 0) throw new Error('לא התקבלה יתרת משכנתא');
+      wizardData.mortgage = Math.round(bal * 100) / 100;
+      wizardData.imported.__mortgage = true;
+      if (wizardData.unlocked) delete wizardData.unlocked.__mortgage;
+      showToast(`יתרת משכנתא: ${fmt(bal)}`);
+      loadMortgageSnapshot().catch(() => {});
+    } else {
+      const instId = step.cat.institution_id;
+      const r = await wizardAccountsImport(instId, waiting);
+      const accounts = Array.isArray(r.accounts) ? r.accounts : [];
+      if (!accounts.length) throw new Error('לא התקבלו יתרות מהבנק');
+      const { data: maps, error } = await db.from('bank_account_map')
+        .select('kind,category_key').eq('institution_id', instId);
+      if (error) throw new Error(error.message);
+      const map = {};
+      (maps || []).forEach((m) => { map[m.kind] = m.category_key; });
+      const filled = [];
+      accounts.forEach((a) => {
+        const key = map[a.kind];
+        const bal = Number(a.balance);
+        if (!key || !Number.isFinite(bal)) return;
+        wizardData.values = wizardData.values || {};
+        wizardData.values[key] = Math.round(bal * 100) / 100;
+        wizardData.imported[key] = true;
+        if (wizardData.unlocked) delete wizardData.unlocked[key];
+        filled.push(categories.find((c) => c.key === key)?.label || key);
+      });
+      if (!filled.length) throw new Error('החשבונות עוד לא משויכים לקטגוריות — ייבא פעם אחת מהכרטיסייה');
+      showToast(`עודכן באשף: ${filled.join(' · ')}`);
+      loadBankSnapshots().catch(() => {});
+    }
+    if (document.getElementById('wizard-modal')?.style.display !== 'none') renderWizard();
+  } catch (e) {
+    showToast(String(e && e.message ? e.message : e));
+    if (document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = original; }
+  }
+}
+window.wizardImport = wizardImport;
 
 function wizardSaveStep() {
   const steps = wizardSteps();
@@ -4359,6 +4463,18 @@ const COLOR_THEMES = [
   { id:'olive',      label:'זית',        primary:'#7d9240', mid:'#97ac5a', dark:'#5d6e2c', light:'rgba(125,146,64,.12)',  glow:'rgba(125,146,64,.18)',  shadowSm:'0 4px 14px rgba(125,146,64,.5)',  shadow:'0 6px 24px rgba(125,146,64,.25)'  },
 ];
 
+/* Text on an accent fill: dark on light accents (gold, sand), white on deep
+   ones — whichever has the higher contrast ratio. */
+function onAccent(hex) {
+  const c = String(hex).replace('#', '');
+  const ch = (i) => {
+    const v = parseInt(c.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const L = 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+  return L > 0.2 ? 'var(--accent-ink-dark)' : 'var(--accent-ink-light)';
+}
+
 function applyColorTheme(themeId) {
   const theme = COLOR_THEMES.find(t => t.id === themeId) || COLOR_THEMES[0];
   const root  = document.documentElement;
@@ -4369,6 +4485,7 @@ function applyColorTheme(themeId) {
   root.style.setProperty('--green-glow',     theme.glow);
   root.style.setProperty('--green-shadow-sm',theme.shadowSm);
   root.style.setProperty('--shadow-green',   theme.shadow);
+  root.style.setProperty('--on-green',       onAccent(theme.primary));
   localStorage.setItem('color_theme_v1', themeId);
   // Sync to Supabase
   if (currentUser) db.auth.updateUser({ data: { color_theme: themeId } });

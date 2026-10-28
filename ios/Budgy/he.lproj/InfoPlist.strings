@@ -1,0 +1,5 @@
+/* The name under the icon on the home screen. */
+CFBundleDisplayName = "Budgy";
+
+/* Asked the first time the app opens with Face ID. */
+NSFaceIDUsageDescription = "כדי לפתוח את Budgy עם Face ID.";
